@@ -104,20 +104,21 @@ const Ticket = () => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
+    if (ticketId) {
+      socket.emit("joinChatBox", ticketId);
+    }
 
-    socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update" && data.ticket.id === ticket.id) {
+    const onTicket = (data) => {
+      if (data.action === "update" && data.ticket.id === +ticketId) {
         setTicket(data.ticket);
       }
 
-      if (data.action === "delete" && data.ticketId === ticket.id) {
-        // toast.success("Ticket deleted sucessfully.");
+      if (data.action === "delete" && data.ticketId === +ticketId) {
         history.push("/tickets");
       }
-    });
+    }
 
-    socket.on(`company-${companyId}-contact`, (data) => {
+    const onContact = (data) => {
       if (data.action === "update") {
         setContact((prevState) => {
           if (prevState.id === data.contact?.id) {
@@ -126,12 +127,19 @@ const Ticket = () => {
           return prevState;
         });
       }
-    });
+    }
+
+    socket.on(`company-${companyId}-ticket`, onTicket);
+    socket.on(`company-${companyId}-contact`, onContact);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company-${companyId}-ticket`, onTicket);
+      socket.off(`company-${companyId}-contact`, onContact);
+      if (ticketId) {
+        socket.emit("leaveChatBox", ticketId);
+      }
     };
-  }, [ticketId, ticket, history, socketManager]);
+  }, [ticketId, history, socketManager]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);

@@ -52,11 +52,16 @@ const useStyles = makeStyles((theme) => ({
     marginTop: "-15px",
     marginBottom: "-10px",
   },
+  listItemText: {
+    fontWeight: 300,
+    color: 'black',
+  },
 }));
 
 
 function ListItemLink(props) {
   const { icon, primary, to, className } = props;
+  const classes = useStyles();
 
   const renderLink = React.useMemo(
     () =>
@@ -70,7 +75,7 @@ function ListItemLink(props) {
     <li>
       <ListItem button dense component={renderLink} className={className}>
         {icon ? <ListItemIcon>{icon}</ListItemIcon> : null}
-        <ListItemText primary={primary} />
+        <ListItemText primary={primary} classes={{ primary: classes.listItemText }} />
       </ListItem>
     </li>
   );
@@ -379,6 +384,7 @@ const MainListItems = (props) => {
                   </ListItemIcon>
                   <ListItemText
                     primary={i18n.t("mainDrawer.listItems.campaigns")}
+                    classes={{ primary: classes.listItemText }}
                   />
                   {openCampaignSubmenu ? (
                     <ExpandLessIcon />
@@ -397,7 +403,7 @@ const MainListItems = (props) => {
                       <ListItemIcon>
                         <ListIcon />
                       </ListItemIcon>
-                      <ListItemText primary="Listagem" />
+                      <ListItemText primary="Listagem" classes={{ primary: classes.listItemText }} />
                     </ListItem>
                     <ListItem
                       onClick={() => history.push("/contact-lists")}
@@ -406,7 +412,7 @@ const MainListItems = (props) => {
                       <ListItemIcon>
                         <PeopleIcon />
                       </ListItemIcon>
-                      <ListItemText primary="Listas de Contatos" />
+                      <ListItemText primary="Listas de Contatos" classes={{ primary: classes.listItemText }} />
                     </ListItem>
                     <ListItem
                       onClick={() => history.push("/campaigns-config")}
@@ -415,7 +421,7 @@ const MainListItems = (props) => {
                       <ListItemIcon>
                         <SettingsOutlinedIcon />
                       </ListItemIcon>
-                      <ListItemText primary="Configurações" />
+                      <ListItemText primary="Configurações" classes={{ primary: classes.listItemText }} />
                     </ListItem>
                   </List>
                 </Collapse>
@@ -429,6 +435,7 @@ const MainListItems = (props) => {
                   </ListItemIcon>
                   <ListItemText
                       primary={i18n.t("mainDrawer.listItems.flows")}
+                      classes={{ primary: classes.listItemText }}
                   />
                   {openCampaignSubmenu ? (
                       <ExpandLessIcon />
@@ -451,7 +458,7 @@ const MainListItems = (props) => {
                       <ListItemIcon>
                         <EventAvailableIcon />
                       </ListItemIcon>
-                      <ListItemText primary="Campanha" />
+                      <ListItemText primary="Campanha" classes={{ primary: classes.listItemText }} />
                     </ListItem>
 
                     <ListItem
@@ -461,7 +468,7 @@ const MainListItems = (props) => {
                       <ListItemIcon>
                         <ShapeLine />
                       </ListItemIcon>
-                      <ListItemText primary="Conversa" />
+                      <ListItemText primary="Conversa" classes={{ primary: classes.listItemText }} />
                     </ListItem>
                   </List>
                 </Collapse>
