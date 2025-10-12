@@ -1,0 +1,53 @@
+/* Ícones aparecem ao passar o mouse */
+.event-container {
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.delete-icon,
+.edit-icon {
+  opacity: 0;
+  transition: opacity 0.3s, transform 80ms ease, background-color 140ms ease;
+  margin-left: 5px;
+  z-index: 1;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.event-container:hover .delete-icon,
+.event-container:hover .edit-icon {
+  opacity: 1;
+}
+
+.edit-icon {
+  background: rgba(26, 86, 219, 0.10);
+  color: #1A56DB;
+}
+.edit-icon:hover {
+  background: rgba(26, 86, 219, 0.16);
+  transform: translateY(-1px);
+}
+
+.delete-icon {
+  background: rgba(239, 68, 68, 0.10);
+  color: #EF4444;
+}
+.delete-icon:hover {
+  background: rgba(239, 68, 68, 0.16);
+  transform: translateY(-1px);
+}
+
+/* Dot da tag (tarefas pessoais) */
+.tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 10px;
+}

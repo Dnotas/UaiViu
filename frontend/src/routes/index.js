@@ -167,15 +167,17 @@ const Routes = () => {
                       isPrivate
                     />
 
+                    {/* antes: /phrase-lists */}
                     <Route
                       exact
-                      path="/phrase-lists"
+                      path="/flow-campaigns"
                       component={CampaignsPhrase}
                       isPrivate
                     />
+                    {/* antes: /flowbuilders */}
                     <Route
                       exact
-                      path="/flowbuilders"
+                      path="/flowbuilder"
                       component={FlowBuilder}
                       isPrivate
                     />
