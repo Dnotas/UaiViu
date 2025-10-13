@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
 import { toast } from "react-toastify";
+
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
@@ -12,14 +13,15 @@ import IconButton from "@material-ui/core/IconButton";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
-import { Tooltip } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
+
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
@@ -32,17 +34,23 @@ const reducer = (state, action) => {
   if (action.type === "LOAD_USERS") {
     const users = action.payload;
     const newUsers = [];
+
     users.forEach((user) => {
       const userIndex = state.findIndex((u) => u.id === user.id);
-      if (userIndex !== -1) state[userIndex] = user;
-      else newUsers.push(user);
+      if (userIndex !== -1) {
+        state[userIndex] = user;
+      } else {
+        newUsers.push(user);
+      }
     });
+
     return [...state, ...newUsers];
   }
 
   if (action.type === "UPDATE_USERS") {
     const user = action.payload;
     const userIndex = state.findIndex((u) => u.id === user.id);
+
     if (userIndex !== -1) {
       state[userIndex] = user;
       return [...state];
@@ -53,12 +61,17 @@ const reducer = (state, action) => {
 
   if (action.type === "DELETE_USER") {
     const userId = action.payload;
+
     const userIndex = state.findIndex((u) => u.id === userId);
-    if (userIndex !== -1) state.splice(userIndex, 1);
+    if (userIndex !== -1) {
+      state.splice(userIndex, 1);
+    }
     return [...state];
   }
 
-  if (action.type === "RESET") return [];
+  if (action.type === "RESET") {
+    return [];
+  }
 };
 
 const useStyles = makeStyles((theme) => ({
@@ -67,38 +80,12 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor: theme.palette.background.paper,
-  },
-  tableRow: {
-    transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "rgba(255, 215, 0, 0.08)",
-      boxShadow: "0px 3px 10px rgba(255, 215, 0, 0.25)",
-      transform: "scale(1.01)",
-    },
-  },
-  iconButton: {
-    color: theme.palette.text.secondary,
-    transition: "color 0.3s ease",
-    "&:hover": {
-      color: "#FFD700",
-    },
-  },
-  goldButton: {
-    backgroundColor: "#1b4332",
-    color: "#fff",
-    fontWeight: "bold",
-    transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#2d6a4f",
-      color: "#FFD700",
-      boxShadow: "0 0 10px rgba(255, 215, 0, 0.4)",
-    },
   },
 }));
 
 const Users = () => {
   const classes = useStyles();
+
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -108,6 +95,7 @@ const Users = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [users, dispatch] = useReducer(reducer, []);
+
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
@@ -138,28 +126,41 @@ const Users = () => {
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
+
     socket.on(`company-${companyId}-user`, (data) => {
-      if (data.action === "update" || data.action === "create")
+      if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_USERS", payload: data.user });
-      if (data.action === "delete")
+      }
+
+      if (data.action === "delete") {
         dispatch({ type: "DELETE_USER", payload: +data.userId });
+      }
     });
-    return () => socket.disconnect();
+
+    return () => {
+      socket.disconnect();
+    };
   }, [socketManager]);
 
   const handleOpenUserModal = () => {
     setSelectedUser(null);
     setUserModalOpen(true);
   };
+
   const handleCloseUserModal = () => {
     setSelectedUser(null);
     setUserModalOpen(false);
   };
-  const handleSearch = (event) => setSearchParam(event.target.value.toLowerCase());
+
+  const handleSearch = (event) => {
+    setSearchParam(event.target.value.toLowerCase());
+  };
+
   const handleEditUser = (user) => {
     setSelectedUser(user);
     setUserModalOpen(true);
   };
+
   const handleDeleteUser = async (userId) => {
     try {
       await api.delete(`/users/${userId}`);
@@ -171,11 +172,17 @@ const Users = () => {
     setSearchParam("");
     setPageNumber(1);
   };
-  const loadMore = () => setPageNumber((prevState) => prevState + 1);
+
+  const loadMore = () => {
+    setPageNumber((prevState) => prevState + 1);
+  };
+
   const handleScroll = (e) => {
     if (!hasMore || loading) return;
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - (scrollTop + 100) < clientHeight) loadMore();
+    if (scrollHeight - (scrollTop + 100) < clientHeight) {
+      loadMore();
+    }
   };
 
   return (
@@ -183,7 +190,9 @@ const Users = () => {
       <ConfirmationModal
         title={
           deletingUser &&
-          `${i18n.t("users.confirmationModal.deleteTitle")} ${deletingUser.name}?`
+          `${i18n.t("users.confirmationModal.deleteTitle")} ${
+            deletingUser.name
+          }?`
         }
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
@@ -191,14 +200,12 @@ const Users = () => {
       >
         {i18n.t("users.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-
       <UserModal
         open={userModalOpen}
         onClose={handleCloseUserModal}
         aria-labelledby="form-dialog-title"
         userId={selectedUser && selectedUser.id}
       />
-
       <MainHeader>
         <Title>{i18n.t("users.title")}</Title>
         <MainHeaderButtonsWrapper>
@@ -215,51 +222,56 @@ const Users = () => {
               ),
             }}
           />
-          <Button variant="contained" className={classes.goldButton} onClick={handleOpenUserModal}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleOpenUserModal}
+          >
             {i18n.t("users.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
-
-      <Paper className={classes.mainPaper} variant="outlined" onScroll={handleScroll}>
+      <Paper
+        className={classes.mainPaper}
+        variant="outlined"
+        onScroll={handleScroll}
+      >
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center">{i18n.t("users.table.id")}</TableCell>
+			<TableCell align="center">
+                {i18n.t("users.table.id")}
+              </TableCell>
               <TableCell align="center">{i18n.t("users.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("users.table.email")}</TableCell>
-              <TableCell align="center">{i18n.t("users.table.profile")}</TableCell>
-              <TableCell align="center">{i18n.t("users.table.actions")}</TableCell>
+              <TableCell align="center">
+                {i18n.t("users.table.email")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("users.table.profile")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("users.table.actions")}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map((user) => (
-              <Tooltip
-                key={user.id}
-                title={
-                  <div style={{ fontSize: 14 }}>
-                    <strong>{user.name}</strong>
-                    <br />
-                    ✉️ {user.email || "Sem e-mail"}
-                    <br />
-                    🧩 Perfil: {user.profile || "Não definido"}
-                  </div>
-                }
-                placement="top"
-                arrow
-              >
-                <TableRow className={classes.tableRow}>
-                  <TableCell align="center">{user.id}</TableCell>
+            <>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+				  <TableCell align="center">{user.id}</TableCell>
                   <TableCell align="center">{user.name}</TableCell>
                   <TableCell align="center">{user.email}</TableCell>
                   <TableCell align="center">{user.profile}</TableCell>
                   <TableCell align="center">
-                    <IconButton size="small" className={classes.iconButton} onClick={() => handleEditUser(user)}>
-                      <EditIcon />
-                    </IconButton>
                     <IconButton
                       size="small"
-                      className={classes.iconButton}
+                      onClick={() => handleEditUser(user)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
                       onClick={(e) => {
                         setConfirmModalOpen(true);
                         setDeletingUser(user);
@@ -269,9 +281,9 @@ const Users = () => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              </Tooltip>
-            ))}
-            {loading && <TableRowSkeleton columns={4} />}
+              ))}
+              {loading && <TableRowSkeleton columns={4} />}
+            </>
           </TableBody>
         </Table>
       </Paper>

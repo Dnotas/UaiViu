@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
+
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 import { Tooltip } from "@material-ui/core";
@@ -15,6 +16,7 @@ import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
@@ -22,6 +24,7 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
+
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
@@ -32,13 +35,15 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
-import { CSVLink } from "react-csv";
+
+import {CSVLink} from "react-csv";
 import ImportContactsModal from "../../components/ImportContactsModal";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
     const contacts = action.payload;
     const newContacts = [];
+
     contacts.forEach((contact) => {
       const contactIndex = state.findIndex((c) => c.id === contact.id);
       if (contactIndex !== -1) {
@@ -47,11 +52,14 @@ const reducer = (state, action) => {
         newContacts.push(contact);
       }
     });
+
     return [...state, ...newContacts];
   }
+
   if (action.type === "UPDATE_CONTACTS") {
     const contact = action.payload;
     const contactIndex = state.findIndex((c) => c.id === contact.id);
+
     if (contactIndex !== -1) {
       state[contactIndex] = contact;
       return [...state];
@@ -59,14 +67,17 @@ const reducer = (state, action) => {
       return [contact, ...state];
     }
   }
+
   if (action.type === "DELETE_CONTACT") {
     const contactId = action.payload;
+
     const contactIndex = state.findIndex((c) => c.id === contactId);
     if (contactIndex !== -1) {
       state.splice(contactIndex, 1);
     }
     return [...state];
   }
+
   if (action.type === "RESET") {
     return [];
   }
@@ -78,40 +89,15 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor: theme.palette.background.paper,
-  },
-  tableRow: {
-    transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "rgba(255, 215, 0, 0.1)",
-      boxShadow: "0px 4px 10px rgba(255, 215, 0, 0.3)",
-      transform: "scale(1.01)",
-    },
-  },
-  iconButton: {
-    color: theme.palette.text.secondary,
-    transition: "color 0.3s ease",
-    "&:hover": {
-      color: "#FFD700",
-    },
-  },
-  goldButton: {
-    backgroundColor: "#1b4332",
-    color: "#fff",
-    fontWeight: "bold",
-    transition: "all 0.3s ease",
-    "&:hover": {
-      backgroundColor: "#2d6a4f",
-      color: "#FFD700",
-      boxShadow: "0 0 10px rgba(255, 215, 0, 0.4)",
-    },
   },
 }));
 
 const Contacts = () => {
   const classes = useStyles();
   const history = useHistory();
+
   const { user } = useContext(AuthContext);
+
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [searchParam, setSearchParam] = useState("");
@@ -124,6 +110,7 @@ const Contacts = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [openModalImport, setOpenModalImport] = useState(false);
+
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
@@ -154,38 +141,64 @@ const Contacts = () => {
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
+
     socket.on(`company-${companyId}-contact`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_CONTACTS", payload: data.contact });
       }
+
       if (data.action === "delete") {
         dispatch({ type: "DELETE_CONTACT", payload: +data.contactId });
       }
     });
+
     return () => {
       socket.disconnect();
     };
-  }, [socketManager]);
+  }, [ socketManager]);
 
-  const handleSearch = (event) => setSearchParam(event.target.value.toLowerCase());
+  const handleSearch = (event) => {
+    setSearchParam(event.target.value.toLowerCase());
+  };
+
   const handleOpenContactModal = () => {
     setSelectedContactId(null);
     setContactModalOpen(true);
   };
+
   const handleCloseContactModal = () => {
     setSelectedContactId(null);
     setContactModalOpen(false);
   };
+
+  // const handleSaveTicket = async contactId => {
+  // 	if (!contactId) return;
+  // 	setLoading(true);
+  // 	try {
+  // 		const { data: ticket } = await api.post("/tickets", {
+  // 			contactId: contactId,
+  // 			userId: user?.id,
+  // 			status: "open",
+  // 		});
+  // 		history.push(`/tickets/${ticket.id}`);
+  // 	} catch (err) {
+  // 		toastError(err);
+  // 	}
+  // 	setLoading(false);
+  // };
+
   const handleCloseOrOpenTicket = (ticket) => {
     setNewTicketModalOpen(false);
     if (ticket !== undefined && ticket.uuid !== undefined) {
       history.push(`/tickets/${ticket.uuid}`);
     }
   };
+
   const hadleEditContact = (contactId) => {
     setSelectedContactId(contactId);
     setContactModalOpen(true);
   };
+
   const handleDeleteContact = async (contactId) => {
     try {
       await api.delete(`/contacts/${contactId}`);
@@ -197,47 +210,75 @@ const Contacts = () => {
     setSearchParam("");
     setPageNumber(1);
   };
-  const handleOpenImportModal = () => setOpenModalImport(true);
-  const handleCloseModalImport = () => setOpenModalImport(false);
 
-  const loadMore = () => setPageNumber((prevState) => prevState + 1);
+  const handleimportContact = async () => {
+    try {
+      await api.post("/contacts/import");
+      history.go(0);
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const handleOpenImportModal = (  ) => {
+    setOpenModalImport(true);
+  }
+
+  const loadMore = () => {
+    setPageNumber((prevState) => prevState + 1);
+  };
+
   const handleScroll = (e) => {
     if (!hasMore || loading) return;
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - (scrollTop + 100) < clientHeight) loadMore();
+    if (scrollHeight - (scrollTop + 100) < clientHeight) {
+      loadMore();
+    }
   };
+
+  const handleCloseModalImport = (  ) => {
+    setOpenModalImport(false);
+  }
 
   return (
     <MainContainer className={classes.mainContainer}>
-      <ImportContactsModal open={openModalImport} onClose={handleCloseModalImport} />
+      <ImportContactsModal
+        open={openModalImport}
+        onClose={handleCloseModalImport}
+      />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         initialContact={contactTicket}
-        onClose={(ticket) => handleCloseOrOpenTicket(ticket)}
+        onClose={(ticket) => {
+          handleCloseOrOpenTicket(ticket);
+        }}
       />
       <ContactModal
         open={contactModalOpen}
         onClose={handleCloseContactModal}
         aria-labelledby="form-dialog-title"
         contactId={selectedContactId}
-      />
+      ></ContactModal>
       <ConfirmationModal
         title={
           deletingContact
-            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${deletingContact.name}?`
+            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${
+                deletingContact.name
+              }?`
             : `${i18n.t("contacts.confirmationModal.importTitlte")}`
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
         onConfirm={(e) =>
-          deletingContact ? handleDeleteContact(deletingContact.id) : handleOpenImportModal()
+          deletingContact
+            ? handleDeleteContact(deletingContact.id)
+            : handleimportContact()
         }
       >
         {deletingContact
           ? `${i18n.t("contacts.confirmationModal.deleteMessage")}`
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
-
       <MainHeader>
         <Title>{i18n.t("contacts.title")}</Title>
         <MainHeaderButtonsWrapper>
@@ -254,67 +295,62 @@ const Contacts = () => {
               ),
             }}
           />
+          {/*<Button
+            variant="contained"
+            color="primary"
+            onClick={(e) => setConfirmOpen(true)}
+          >
+            {i18n.t("contacts.buttons.import")}
+          </Button>*/}
           <Button
             variant="contained"
-            className={classes.goldButton}
+            color="primary"
             onClick={handleOpenImportModal}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>
           <Button
             variant="contained"
-            className={classes.goldButton}
+            color="primary"
             onClick={handleOpenContactModal}
           >
             {i18n.t("contacts.buttons.add")}
           </Button>
-          <CSVLink
-            style={{ textDecoration: "none" }}
-            separator=";"
-            filename={"contatos.csv"}
-            data={contacts.map((contact) => ({
-              name: contact.name,
-              number: contact.number,
-              email: contact.email,
-            }))}
-          >
-            <Button variant="contained" className={classes.goldButton}>
-              {i18n.t("contacts.buttons.export")}
-            </Button>
-          </CSVLink>
+         <CSVLink style={{ textDecoration:'none'}} separator=";" filename={'contatos.csv'} data={contacts.map((contact) => ({ name: contact.name, number: contact.number, email: contact.email }))}>
+          <Button	variant="contained" color="primary"> 
+            {i18n.t("contacts.buttons.export")}
+          </Button>
+          </CSVLink>		  
+
         </MainHeaderButtonsWrapper>
       </MainHeader>
-
-      <Paper className={classes.mainPaper} variant="outlined" onScroll={handleScroll}>
+      <Paper
+        className={classes.mainPaper}
+        variant="outlined"
+        onScroll={handleScroll}
+      >
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox" />
               <TableCell>{i18n.t("contacts.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("contacts.table.whatsapp")}</TableCell>
-              <TableCell align="center">{i18n.t("contacts.table.email")}</TableCell>
-              <TableCell align="center">{i18n.t("contacts.table.actions")}</TableCell>
+              <TableCell align="center">
+                {i18n.t("contacts.table.whatsapp")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("contacts.table.email")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("contacts.table.actions")}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {contacts.map((contact) => (
-              <Tooltip
-                key={contact.id}
-                title={
-                  <div style={{ fontSize: 14 }}>
-                    <strong>{contact.name}</strong>
-                    <br />
-                    📞 {contact.number || "Sem número"}
-                    <br />
-                    ✉️ {contact.email || "Sem e-mail"}
-                  </div>
-                }
-                placement="top"
-                arrow
-              >
-                <TableRow className={classes.tableRow}>
+            <>
+              {contacts.map((contact) => (
+                <TableRow key={contact.id}>
                   <TableCell style={{ paddingRight: 0 }}>
-                    <Avatar src={contact.profilePicUrl} />
+                    {<Avatar src={contact.profilePicUrl} />}
                   </TableCell>
                   <TableCell>{contact.name}</TableCell>
                   <TableCell align="center">{contact.number}</TableCell>
@@ -322,7 +358,6 @@ const Contacts = () => {
                   <TableCell align="center">
                     <IconButton
                       size="small"
-                      className={classes.iconButton}
                       onClick={() => {
                         setContactTicket(contact);
                         setNewTicketModalOpen(true);
@@ -332,7 +367,6 @@ const Contacts = () => {
                     </IconButton>
                     <IconButton
                       size="small"
-                      className={classes.iconButton}
                       onClick={() => hadleEditContact(contact.id)}
                     >
                       <EditIcon />
@@ -343,7 +377,6 @@ const Contacts = () => {
                       yes={() => (
                         <IconButton
                           size="small"
-                          className={classes.iconButton}
                           onClick={(e) => {
                             setConfirmOpen(true);
                             setDeletingContact(contact);
@@ -355,9 +388,9 @@ const Contacts = () => {
                     />
                   </TableCell>
                 </TableRow>
-              </Tooltip>
-            ))}
-            {loading && <TableRowSkeleton avatar columns={3} />}
+              ))}
+              {loading && <TableRowSkeleton avatar columns={3} />}
+            </>
           </TableBody>
         </Table>
       </Paper>

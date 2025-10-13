@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useState, useEffect } from "react";
 
 import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
@@ -15,73 +15,56 @@ import CallIcon from "@material-ui/icons/Call";
 import GroupAddIcon from "@material-ui/icons/GroupAdd";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
-import AccessAlarmIcon from "@material-ui/icons/AccessAlarm";
-import TimerIcon from "@material-ui/icons/Timer";
+import AccessAlarmIcon from '@material-ui/icons/AccessAlarm';
+import TimerIcon from '@material-ui/icons/Timer';
 
 import { makeStyles } from "@material-ui/core/styles";
+import { grey, blue } from "@material-ui/core/colors";
 import { toast } from "react-toastify";
 
 import ButtonWithSpinner from "../../components/ButtonWithSpinner";
+
 import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
-import { isArray, isEmpty } from "lodash";
+import { isArray } from "lodash";
 
 import useDashboard from "../../hooks/useDashboard";
 import useContacts from "../../hooks/useContacts";
-import { ChatsUser } from "./ChartsUser";
-import { ChartsDate } from "./ChartsDate";
+import { ChatsUser } from "./ChartsUser"
+
+import { isEmpty } from "lodash";
 import moment from "moment";
+import { ChartsDate } from "./ChartsDate";
 import { i18n } from "../../translate/i18n";
 
-// -----------------------------
-// 🎨 ESTILOS ATUALIZADOS E SEGUROS
-// -----------------------------
 const useStyles = makeStyles((theme) => ({
   container: {
-    paddingTop: theme.spacing(4),
-    paddingBottom: theme.spacing(4),
-    animation: `$fadeIn 0.6s ease-out`,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.padding,
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(2),
   },
-  "@keyframes fadeIn": {
-    "0%": { opacity: 0, transform: "translateY(10px)" },
-    "100%": { opacity: 1, transform: "translateY(0)" },
-  },
-  cardBase: {
-    padding: theme.spacing(3),
-    borderRadius: 20,
+  fixedHeightPaper: {
+    padding: theme.spacing(2),
     display: "flex",
     flexDirection: "column",
-    height: "100%",
-    color: "#EEE",
-    background:
-      "linear-gradient(145deg, #0B3B33 0%, #145C50 100%)",
-    border: "1px solid rgba(196,154,108,0.25)",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-    transition: "all 0.3s ease-in-out",
-    "&:hover": {
-      transform: "translateY(-6px)",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.45)",
-      border: "1px solid rgba(196,154,108,0.6)",
-    },
+    height: 240,
+    overflowY: "auto",
+    ...theme.scrollbarStyles,
   },
-  icon: {
-    fontSize: 80,
-    color: "#C49A6C",
-    transition: "transform 0.3s ease, color 0.3s ease",
-    "&:hover": {
-      color: "#d9b57b",
-      transform: "scale(1.05)",
-    },
+  cardAvatar: {
+    fontSize: "55px",
+    color: grey[500],
+    backgroundColor: "#ffffff",
+    width: theme.spacing(7),
+    height: theme.spacing(7),
   },
-  title: {
-    fontSize: "1.1rem",
-    fontWeight: 500,
-    color: "#C49A6C",
-    letterSpacing: 0.5,
+  cardTitle: {
+    fontSize: "18px",
+    color: blue[700],
   },
-  number: {
-    fontSize: "2.2rem",
-    fontWeight: 600,
-    color: "#ffffff",
+  cardSubtitle: {
+    color: grey[600],
+    fontSize: "14px",
   },
   alignRight: {
     textAlign: "right",
@@ -93,20 +76,136 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     textAlign: "left",
   },
+  iframeDashboard: {
+    width: "100%",
+    height: "calc(100vh - 64px)",
+    border: "none",
+  },
+  container: {
+    paddingTop: theme.spacing(4),
+    paddingBottom: theme.spacing(4),
+  },
+  fixedHeightPaper: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: 240,
+  },
+  customFixedHeightPaper: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: 120,
+  },
+  customFixedHeightPaperLg: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+  },
+  card1: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: "palette",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card2: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: "palette",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card3: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+  //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card4: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card5: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card6: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card7: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card8: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
+  card9: {
+    padding: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column",
+    height: "100%",
+    //backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
+    color: "#eee",
+  },
   fixedHeightPaper2: {
     padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column",
-    borderRadius: "14px",
-    background: theme.palette.background.paper,
-    boxShadow: "0 3px 12px rgba(0,0,0,0.2)",
   },
 }));
 
-// -----------------------------
-// 💼 COMPONENTE PRINCIPAL
-// -----------------------------
 const Dashboard = () => {
   const classes = useStyles();
   const [counters, setCounters] = useState({});
@@ -125,9 +224,10 @@ const Dashboard = () => {
     setTimeout(() => {
       firstLoad();
     }, 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function handleChangePeriod(value) {
+  
+    async function handleChangePeriod(value) {
     setPeriod(value);
   }
 
@@ -143,13 +243,28 @@ const Dashboard = () => {
 
   async function fetchData() {
     setLoading(true);
+
     let params = {};
 
-    if (period > 0) params.days = period;
-    if (!isEmpty(dateFrom) && moment(dateFrom).isValid())
-      params.date_from = moment(dateFrom).format("YYYY-MM-DD");
-    if (!isEmpty(dateTo) && moment(dateTo).isValid())
-      params.date_to = moment(dateTo).format("YYYY-MM-DD");
+    if (period > 0) {
+      params = {
+        days: period,
+      };
+    }
+
+    if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+      params = {
+        ...params,
+        date_from: moment(dateFrom).format("YYYY-MM-DD"),
+      };
+    }
+
+    if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
+      params = {
+        ...params,
+        date_to: moment(dateTo).format("YYYY-MM-DD"),
+      };
+    }
 
     if (Object.keys(params).length === 0) {
       toast.error(i18n.t("dashboard.toasts.selectFilterError"));
@@ -158,21 +273,34 @@ const Dashboard = () => {
     }
 
     const data = await find(params);
+
     setCounters(data.counters);
-    setAttendants(isArray(data.attendants) ? data.attendants : []);
+    if (isArray(data.attendants)) {
+      setAttendants(data.attendants);
+    } else {
+      setAttendants([]);
+    }
+
     setLoading(false);
   }
 
   function formatTime(minutes) {
-    return moment().startOf("day").add(minutes, "minutes").format("HH[h] mm[m]");
+    return moment()
+      .startOf("day")
+      .add(minutes, "minutes")
+      .format("HH[h] mm[m]");
   }
 
-  const GetContacts = (all) => {
-    const { count } = useContacts(all ? {} : {});
+    const GetContacts = (all) => {
+    let props = {};
+    if (all) {
+      props = {};
+    }
+    const { count } = useContacts(props);
     return count;
   };
-
-  function renderFilters() {
+  
+    function renderFilters() {
     if (filterType === 1) {
       return (
         <>
@@ -183,7 +311,9 @@ const Dashboard = () => {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className={classes.fullWidth}
-              InputLabelProps={{ shrink: true }}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
@@ -193,7 +323,9 @@ const Dashboard = () => {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className={classes.fullWidth}
-              InputLabelProps={{ shrink: true }}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
           </Grid>
         </>
@@ -226,89 +358,288 @@ const Dashboard = () => {
     }
   }
 
-  const Card = ({ icon: Icon, title, value }) => (
-    <Paper className={classes.cardBase} elevation={6}>
-      <Grid container alignItems="center" spacing={2}>
-        <Grid item xs={8}>
-          <Typography className={classes.title}>{title}</Typography>
-          <Typography className={classes.number}>{value}</Typography>
-        </Grid>
-        <Grid item xs={4} style={{ textAlign: "right" }}>
-          <Icon className={classes.icon} />
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-
   return (
     <div>
       <Container maxWidth="lg" className={classes.container}>
         <Grid container spacing={3} justifyContent="flex-end">
+		
+
+          {/* EM ATENDIMENTO */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={CallIcon}
-              title={i18n.t("dashboard.counters.inTalk")}
-              value={counters.supportHappening}
-            />
+            <Paper
+              className={classes.card1}
+              style={{ overflow: "hidden" }}
+              elevation={4}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.inTalk")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {counters.supportHappening}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={2}>
+                  <CallIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
+          {/* AGUARDANDO */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={HourglassEmptyIcon}
-              title={i18n.t("dashboard.counters.waiting")}
-              value={counters.supportPending}
-            />
+            <Paper
+              className={classes.card2}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.waiting")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {counters.supportPending}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <HourglassEmptyIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
+          {/* ATENDENTES ATIVOS */}
+			  {/*<Grid item xs={12} sm={6} md={4}>
+            <Paper
+              className={classes.card6}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    Conversas Ativas
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {GetUsers()}
+                      <span
+                        style={{ color: "#805753" }}
+                      >
+                        /{attendants.length}
+                      </span>
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <RecordVoiceOverIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#805753",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+</Grid>*/}
+
+          {/* FINALIZADOS */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={CheckCircleIcon}
-              title={i18n.t("dashboard.counters.finished")}
-              value={counters.supportFinished}
-            />
+            <Paper
+              className={classes.card3}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.finished")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {counters.supportFinished}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <CheckCircleIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
+          {/* NOVOS CONTATOS */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={GroupAddIcon}
-              title={i18n.t("dashboard.counters.newContacts")}
-              value={GetContacts(true)}
-            />
+            <Paper
+              className={classes.card4}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.newContacts")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {GetContacts(true)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <GroupAddIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
+          
+          {/* T.M. DE ATENDIMENTO */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={AccessAlarmIcon}
-              title={i18n.t("dashboard.counters.averageTalkTime")}
-              value={formatTime(counters.avgSupportTime)}
-            />
+            <Paper
+              className={classes.card8}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.averageTalkTime")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {formatTime(counters.avgSupportTime)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <AccessAlarmIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
 
+          {/* T.M. DE ESPERA */}
           <Grid item xs={12} sm={6} md={4}>
-            <Card
-              icon={TimerIcon}
-              title={i18n.t("dashboard.counters.averageWaitTime")}
-              value={formatTime(counters.avgWaitTime)}
-            />
+            <Paper
+              className={classes.card9}
+              style={{ overflow: "hidden" }}
+              elevation={6}
+            >
+              <Grid container spacing={3}>
+                <Grid item xs={8}>
+                  <Typography
+                    component="h3"
+                    variant="h6"
+                    paragraph
+                  >
+                    {i18n.t("dashboard.counters.averageWaitTime")}
+                  </Typography>
+                  <Grid item>
+                    <Typography
+                      component="h1"
+                      variant="h4"
+                    >
+                      {formatTime(counters.avgWaitTime)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Grid item xs={4}>
+                  <TimerIcon
+                    style={{
+                      fontSize: 100,
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
           </Grid>
-
-          {/* FILTROS */}
+		  
+		  {/* FILTROS */}
           <Grid item xs={12} sm={6} md={4}>
             <FormControl className={classes.selectContainer}>
-              <InputLabel id="period-selector-label">
-                {i18n.t("dashboard.filters.filterType.title")}
-              </InputLabel>
+              <InputLabel id="period-selector-label">{i18n.t("dashboard.filters.filterType.title")}</InputLabel>
               <Select
                 labelId="period-selector-label"
                 value={filterType}
                 onChange={(e) => handleChangeFilterType(e.target.value)}
               >
-                <MenuItem value={1}>
-                  {i18n.t("dashboard.filters.filterType.options.perDate")}
-                </MenuItem>
-                <MenuItem value={2}>
-                  {i18n.t("dashboard.filters.filterType.options.perPeriod")}
-                </MenuItem>
+                <MenuItem value={1}>{i18n.t("dashboard.filters.filterType.options.perDate")}</MenuItem>
+                <MenuItem value={2}>{i18n.t("dashboard.filters.filterType.options.perPeriod")}</MenuItem>
               </Select>
               <FormHelperText>
                 {i18n.t("dashboard.filters.filterType.helper")}
@@ -318,7 +649,7 @@ const Dashboard = () => {
 
           {renderFilters()}
 
-          {/* BOTÃO FILTRAR */}
+          {/* BOTAO FILTRAR */}
           <Grid item xs={12} className={classes.alignRight}>
             <ButtonWithSpinner
               loading={loading}
@@ -330,27 +661,33 @@ const Dashboard = () => {
             </ButtonWithSpinner>
           </Grid>
 
-          {/* USUÁRIOS ONLINE */}
+          {/* USUARIOS ONLINE */}
           <Grid item xs={12}>
             {attendants.length ? (
-              <TableAttendantsStatus attendants={attendants} loading={loading} />
+              <TableAttendantsStatus
+                attendants={attendants}
+                loading={loading}
+              />
             ) : null}
           </Grid>
 
+          {/* TOTAL DE ATENDIMENTOS POR USUARIO */}
           <Grid item xs={12}>
             <Paper className={classes.fixedHeightPaper2}>
               <ChatsUser />
             </Paper>
           </Grid>
 
+          {/* TOTAL DE ATENDIMENTOS */}
           <Grid item xs={12}>
             <Paper className={classes.fixedHeightPaper2}>
               <ChartsDate />
             </Paper>
           </Grid>
+
         </Grid>
-      </Container>
-    </div>
+      </Container >
+    </div >
   );
 };
 

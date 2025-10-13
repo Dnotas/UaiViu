@@ -26,19 +26,20 @@ import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 
-import "./Schedules.css";
+import "./Schedules.css"; // Importe o arquivo CSS
 import { createMomentLocalizer } from "../../translate/calendar-locale";
 
+// Defina a função getUrlParam antes de usá-la
 function getUrlParam(paramName) {
   const searchParams = new URLSearchParams(window.location.search);
   return searchParams.get(paramName);
 }
 
 const eventTitleStyle = {
-  fontSize: "14px",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  textOverflow: "ellipsis",
+  fontSize: "14px", // Defina um tamanho de fonte menor
+  overflow: "hidden", // Oculte qualquer conteúdo excedente
+  whiteSpace: "nowrap", // Evite a quebra de linha do texto
+  textOverflow: "ellipsis", // Exiba "..." se o texto for muito longo
 };
 
 var defaultMessages = {
@@ -66,9 +67,11 @@ const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
     return [...state, ...action.payload];
   }
+
   if (action.type === "UPDATE_SCHEDULES") {
     const schedule = action.payload;
     const scheduleIndex = state.findIndex((s) => s.id === schedule.id);
+
     if (scheduleIndex !== -1) {
       state[scheduleIndex] = schedule;
       return [...state];
@@ -76,13 +79,16 @@ const reducer = (state, action) => {
       return [schedule, ...state];
     }
   }
+
   if (action.type === "DELETE_SCHEDULE") {
     const scheduleId = action.payload;
     return state.filter((s) => s.id !== scheduleId);
   }
+
   if (action.type === "RESET") {
     return [];
   }
+
   return state;
 };
 
@@ -113,14 +119,13 @@ const Schedules = () => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [contactId, setContactId] = useState(+getUrlParam("contactId"));
 
-  // NOVO: data pré-selecionada ao clicar no calendário
-  const [selectedDate, setSelectedDate] = useState(null);
 
   const fetchSchedules = useCallback(async () => {
     try {
       const { data } = await api.get("/schedules/", {
         params: { searchParam, pageNumber },
       });
+
       dispatch({ type: "LOAD_SCHEDULES", payload: data.schedules });
       setHasMore(data.hasMore);
       setLoading(false);
@@ -148,19 +153,28 @@ const Schedules = () => {
       fetchSchedules();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchParam, pageNumber, contactId, fetchSchedules, handleOpenScheduleModalFromContactId]);
+  }, [
+    searchParam,
+    pageNumber,
+    contactId,
+    fetchSchedules,
+    handleOpenScheduleModalFromContactId,
+  ]);
 
   useEffect(() => {
     handleOpenScheduleModalFromContactId();
     const socket = socketManager.getSocket(user.companyId);
+
     socket.on(`company${user.companyId}-schedule`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }
+
       if (data.action === "delete") {
         dispatch({ type: "DELETE_SCHEDULE", payload: +data.scheduleId });
       }
     });
+
     return () => {
       socket.disconnect();
     };
@@ -177,7 +191,6 @@ const Schedules = () => {
 
   const handleCloseScheduleModal = () => {
     setSelectedSchedule(null);
-    setSelectedDate(null); // limpar a data ao fechar
     setScheduleModalOpen(false);
   };
 
@@ -187,7 +200,6 @@ const Schedules = () => {
 
   const handleEditSchedule = (schedule) => {
     setSelectedSchedule(schedule);
-    setSelectedDate(new Date(schedule.sendAt)); // opcional: preencher ao editar
     setScheduleModalOpen(true);
   };
 
@@ -201,6 +213,7 @@ const Schedules = () => {
     setDeletingSchedule(null);
     setSearchParam("");
     setPageNumber(1);
+
     dispatch({ type: "RESET" });
     setPageNumber(1);
     await fetchSchedules();
@@ -225,24 +238,19 @@ const Schedules = () => {
     return str;
   };
 
-  // NOVO: abrir modal ao clicar num dia/slot
-  const handleSelectSlot = useCallback(({ start /*, end, slots, action*/ }) => {
-    setSelectedSchedule(null);
-    setSelectedDate(start);
-    setScheduleModalOpen(true);
-  }, []);
-
   return (
     <MainContainer>
       <ConfirmationModal
-        title={deletingSchedule && `${i18n.t("schedules.confirmationModal.deleteTitle")}`}
+        title={
+          deletingSchedule &&
+          `${i18n.t("schedules.confirmationModal.deleteTitle")}`
+        }
         open={confirmModalOpen}
         onClose={() => setConfirmModalOpen(false)}
         onConfirm={() => handleDeleteSchedule(deletingSchedule.id)}
       >
         {i18n.t("schedules.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-
       <ScheduleModal
         open={scheduleModalOpen}
         onClose={handleCloseScheduleModal}
@@ -251,13 +259,9 @@ const Schedules = () => {
         scheduleId={selectedSchedule && selectedSchedule.id}
         contactId={contactId}
         cleanContact={cleanContact}
-        selectedDate={selectedDate} // <<< passamos a data pré-selecionada
       />
-
       <MainHeader>
-        <Title>
-          {i18n.t("schedules.title")} ({schedules.length})
-        </Title>
+        <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
@@ -272,18 +276,22 @@ const Schedules = () => {
               ),
             }}
           />
-          <Button variant="contained" color="primary" onClick={handleOpenScheduleModal}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleOpenScheduleModal}
+          >
             {i18n.t("schedules.buttons.add")}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
-
       <Paper className={classes.mainPaper} variant="outlined" onScroll={handleScroll}>
         <Calendar
-          selectable
-          onSelectSlot={handleSelectSlot}
           messages={defaultMessages}
-          formats={{ agendaDateFormat: "DD/MM ddd", weekdayFormat: "dddd" }}
+          formats={{
+          agendaDateFormat: "DD/MM ddd",
+          weekdayFormat: "dddd"
+      }}
           localizer={localizer}
           events={schedules.map((schedule) => ({
             title: (
