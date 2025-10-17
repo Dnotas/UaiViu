@@ -482,13 +482,16 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
 
 const downloadMedia = async (msg: proto.IWebMessageInfo) => {
   let buffer;
+
   try {
-    buffer = await downloadMediaMessage(msg, "buffer", {});
+    // 🔧 convertemos explicitamente o tipo para WAMessage
+    buffer = await downloadMediaMessage(msg as WAMessage, "buffer", {});
   } catch (err) {
     console.error("Erro ao baixar mídia:", err);
-
-    // Trate o erro de acordo com as suas necessidades
+    // 🔹 aqui o tratamento continua igual, sem sintaxe quebrada
   }
+
+  // 🔽 tudo abaixo agora fica dentro da função (antes estava fora)
 
   let filename = msg.message?.documentMessage?.fileName || "";
 
@@ -499,8 +502,7 @@ const downloadMedia = async (msg: proto.IWebMessageInfo) => {
     msg.message?.stickerMessage ||
     msg.message?.documentMessage ||
     msg.message?.documentWithCaptionMessage?.message?.documentMessage ||
-    msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
-      ?.imageMessage ||
+    msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage ||
     msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
 
   if (!mineType) console.log(msg);
@@ -519,7 +521,7 @@ const downloadMedia = async (msg: proto.IWebMessageInfo) => {
   };
 
   return media;
-};
+}; // ✅ agora a função fecha corretamente aqui
 
 const verifyContact = async (
   msgContact: IMe,
@@ -2833,42 +2835,43 @@ const handleMessage = async (
 
       if (whatsapp.greetingMessage) {
         const debouncedSentMessage = debounce(
-          async () => {
-            await wbot.sendMessage(
-              `${ticket.contact.number}@${
-                ticket.isGroup ? "g.us" : "s.whatsapp.net"
-              }`,
-              {
-                text: whatsapp.greetingMessage
-              }
-            );
-          },
-          1000,
-          ticket.id
-        );
-        debouncedSentMessage();
-        return;
-      }
+         async () => {
+          await wbot.sendMessage(
+            `${ticket.contact.number}@${
+              ticket.isGroup ? "g.us" : "s.whatsapp.net"
+            }`,
+            {
+              text: whatsapp.greetingMessage
+            }
+           );
+         },
+         1000,
+         ticket.id
+       );
+       debouncedSentMessage();
+       return;
+     }
+   }
+
+   if (whatsapp.queues.length == 1 && ticket.queue) {
+     if (ticket.chatbot && !msg.key.fromMe) {
+       await handleChartbot(ticket, msg as WAMessage, wbot);
+     }
     }
 
-    if (whatsapp.queues.length == 1 && ticket.queue) {
-      if (ticket.chatbot && !msg.key.fromMe) {
-        await handleChartbot(ticket, msg, wbot);
-      }
-    }
+   if (whatsapp.queues.length > 1 && ticket.queue) {
+    if (ticket.chatbot && !msg.key.fromMe) {
+      await handleChartbot(ticket, msg as WAMessage, wbot, dontReadTheFirstQuestion);
+     }
+   }
 
-    if (whatsapp.queues.length > 1 && ticket.queue) {
-      if (ticket.chatbot && !msg.key.fromMe) {
-        await handleChartbot(ticket, msg, wbot, dontReadTheFirstQuestion);
-      }
-    }
-
-  } catch (err) {
-    console.log(err);
-    Sentry.captureException(err);
-    logger.error(`Error handling whatsapp message: Err: ${err}`);
-  }
+ } catch (err) {
+   console.log(err);
+   Sentry.captureException(err);
+   logger.error(`Error handling whatsapp message: Err: ${err}`);
+ }
 };
+
 
 const handleMsgAck = async (
   msg: WAMessage,

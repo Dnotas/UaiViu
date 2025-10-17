@@ -28,8 +28,8 @@
     "@types/fs-extra": "^11.0.4",
     "@types/mime-types": "^2.1.4",
     "@types/multer": "^1.4.7",
-
-    "baileys": "^6.7.18",
+    "axios": "^1.12.2",
+    "baileys": "github:WhiskeySockets/Baileys",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "bull": "^4.8.2",
