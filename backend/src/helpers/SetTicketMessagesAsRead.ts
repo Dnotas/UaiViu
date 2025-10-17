@@ -1,5 +1,4 @@
 import { proto, WASocket } from "baileys";
-// import cacheLayer from "../libs/cache";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
 import Ticket from "../models/Ticket";
@@ -8,7 +7,6 @@ import GetTicketWbot from "./GetTicketWbot";
 
 const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
   await ticket.update({ unreadMessages: 0 });
-  // await cacheLayer.set(`contacts:${ticket.contactId}:unreads`, "0");
 
   try {
     const wbot = await GetTicketWbot(ticket);
@@ -29,10 +27,11 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
 
       if (lastMessages.key && lastMessages.key.fromMe === false) {
         await (wbot as WASocket).chatModify(
-          { markRead: true, lastMessages: [lastMessages] },
-          `${ticket.contact.number}@${
-            ticket.isGroup ? "g.us" : "s.whatsapp.net"
-          }`
+          {
+            markRead: true,
+            lastMessages: [{ key: lastMessages.key }]
+          },
+          `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`
         );
       }
     }
@@ -60,3 +59,4 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
 };
 
 export default SetTicketMessagesAsRead;
+

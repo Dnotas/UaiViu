@@ -5,16 +5,14 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  // makeInMemoryStore,
   isJidBroadcast,
   CacheStore
 } from "baileys";
-import makeWALegacySocket from "baileys";
+
 import P from "pino";
 
 import Whatsapp from "../models/Whatsapp";
 import { logger } from "../utils/logger";
-import MAIN_LOGGER from "baileys/lib/Utils/logger";
 import authState from "../helpers/authState";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
@@ -22,10 +20,19 @@ import { getIO } from "./socket";
 import { Store } from "./store";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
 import DeleteBaileysService from "../services/BaileysServices/DeleteBaileysService";
-import NodeCache from 'node-cache';
+import NodeCache from "node-cache";
+
+const MAIN_LOGGER = P({
+  level: "error",
+  transport: {
+    target: "pino-pretty",
+    options: { colorize: true }
+  }
+});
 
 const loggerBaileys = MAIN_LOGGER.child({});
 loggerBaileys.level = "error";
+
 
 type Session = WASocket & {
   id?: number;
