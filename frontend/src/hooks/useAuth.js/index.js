@@ -9,6 +9,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import moment from "moment";
+
 const useAuth = () => {
   const history = useHistory();
   const [isAuth, setIsAuth] = useState(false);
@@ -39,7 +40,11 @@ const useAuth = () => {
     async (error) => {
       const originalRequest = error.config;
 
-      if (error?.response?.status === 403 && !originalRequest._retry) {
+      // MODIFICADO: Tenta refresh para 401 OU 403 que NÃO É retry
+      if (
+        (error?.response?.status === 401 || error?.response?.status === 403) &&
+        !originalRequest._retry
+      ) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedRequestsQueue.push({ resolve, reject });
@@ -71,6 +76,7 @@ const useAuth = () => {
 
           return api(originalRequest);
         } catch (refreshError) {
+          // Se o refresh falhar, aí sim, limpa a sessão e desautentica
           failedRequestsQueue.forEach((request) => {
             request.reject(refreshError);
           });
@@ -80,23 +86,16 @@ const useAuth = () => {
           localStorage.removeItem("companyId");
           api.defaults.headers.Authorization = undefined;
           setIsAuth(false);
-
+          // Opcional: Redirecionar para login aqui
+          history.push("/login"); // Adicionado para garantir redirecionamento
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
         }
       }
 
-      if (
-        error?.response?.status === 401 ||
-        (error?.response?.status === 403 && originalRequest._retry)
-      ) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("companyId");
-        api.defaults.headers.Authorization = undefined;
-        setIsAuth(false);
-      }
-
+      // Se o erro não for 401/403 ou se já foi um retry que falhou, apenas rejeita a promise
+      // Este bloco substitui o bloco de logout imediato anterior.
       return Promise.reject(error);
     }
   );
@@ -108,12 +107,19 @@ const useAuth = () => {
     (async () => {
       if (token) {
         try {
+          // Garante que o refresh_token seja usado também na montagem inicial
           const { data } = await api.post("/auth/refresh_token");
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
           setIsAuth(true);
           setUser(data.user);
         } catch (err) {
           toastError(err);
+          // Se o refresh_token falhar na montagem inicial, também desautentica
+          localStorage.removeItem("token");
+          localStorage.removeItem("companyId");
+          api.defaults.headers.Authorization = undefined;
+          setIsAuth(false);
+          history.push("/login"); // Redireciona para login se o refresh inicial falhar
         }
       }
       setLoading(false);
@@ -142,36 +148,55 @@ const useAuth = () => {
 
     try {
       const { data } = await api.post("/auth/login", userData);
-      const {
-        user: { companyId, id, company },
-      } = data;
+
+      // --- INÍCIO DAS LINHAS DE DEBUG CRÍTICAS (MANTIDAS, MAS PODEM SER REMOVIDAS EM PROD) ---
+      console.log("DEBUG FINAL: Resposta COMPLETA do Backend (objeto data):", data);
+      if (!data || !data.user) {
+        console.error("DEBUG FINAL: 'data' ou 'data.user' é undefined/null na resposta do backend.");
+        toastError("Erro: Resposta inesperada do servidor. Tente novamente.");
+        setLoading(false);
+        return;
+      }
+
+      const userFromResponse = data.user;
+      const tokenFromResponse = data.token;
+
+      if (!userFromResponse.companyId || !userFromResponse.company) {
+        console.error("DEBUG FINAL: 'companyId' ou 'company' está faltando no objeto 'user' da resposta do backend.", userFromResponse);
+        toastError("Erro: Dados da empresa ausentes na resposta do login.");
+        setLoading(false);
+        return;
+      }
+      // --- FIM DAS LINHAS DE DEBUG CRÍTICAS ---
+
+
+      const { companyId, id, company } = userFromResponse; // Desestrutura a partir de userFromResponse
 
       if (has(company, "settings") && isArray(company.settings)) {
         const setting = company.settings.find(
           (s) => s.key === "campaignsEnabled"
         );
         if (setting && setting.value === "true") {
-          localStorage.setItem("cshow", null); //regra pra exibir campanhas
+          localStorage.setItem("cshow", null);
         }
       }
 
       moment.locale("pt-br");
-      const dueDate = data.user.company.dueDate;
+      const dueDate = userFromResponse.company.dueDate; // Use userFromResponse
       const hoje = moment(moment()).format("DD/MM/yyyy");
       const vencimento = moment(dueDate).format("DD/MM/yyyy");
 
       var diff = moment(dueDate).diff(moment(moment()).format());
-
       var before = moment(moment().format()).isBefore(dueDate);
       var dias = moment.duration(diff).asDays();
 
       if (before === true) {
-        localStorage.setItem("token", JSON.stringify(data.token));
+        localStorage.setItem("token", JSON.stringify(tokenFromResponse)); // Use tokenFromResponse
         localStorage.setItem("companyId", companyId);
         localStorage.setItem("userId", id);
         localStorage.setItem("companyDueDate", vencimento);
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
-        setUser(data.user);
+        api.defaults.headers.Authorization = `Bearer ${tokenFromResponse}`;
+        setUser(userFromResponse); // Use userFromResponse
         setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
         if (Math.round(dias) < 5) {
@@ -189,8 +214,8 @@ Entre em contato com o Suporte para mais informações! `);
         setLoading(false);
       }
 
-      //quebra linha
     } catch (err) {
+      console.error("DEBUG FINAL: Erro detalhado no handleLogin (catch):", err);
       toastError(err);
       setLoading(false);
     }

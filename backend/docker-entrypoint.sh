@@ -73,4 +73,4 @@ fi
 
 # Inicia a aplicação
 echo -e "${YELLOW}🚀 Iniciando aplicação...${NC}"
-exec yarn start 
+exec npm start 

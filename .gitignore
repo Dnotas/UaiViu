@@ -1,7 +1,44 @@
-node_modules/
-.env
-dist/
-build/
-instances.json
-brands/
-certificates/
+    # Ignorar variáveis de ambiente (contêm segredos)
+    .env
+    backend/.env
+    frontend/.env
+    *.env.local
+    *.env.production
+    *.env.development
+
+    # Ignorar diretórios de dependências
+    node_modules/
+    backend/node_modules/
+    frontend/node_modules/
+
+    # Ignorar diretórios de build/compilação
+    build/
+    backend/dist/
+    frontend/build/
+
+    # Ignorar volumes Docker
+    .volumes/
+    postgres_data/
+    redis_data/
+
+    # Ignorar logs
+    *.log
+    logs/
+
+    # Ignorar arquivos temporários e de cache
+    .DS_Store
+    *.sqlite
+    npm-debug.log*
+    yarn-debug.log*
+    yarn-error.log*
+    .npm/
+    .yarn/
+
+    # Ignorar certificados (se estiverem sendo copiados para o projeto e não são para controle de versão)
+    # certs-temp/
+    # *.pem
+    # *.key
+
+    # Outros
+    .dockerignore
+    manage-stacks.sh # Se for um script local que você não quer versionar
