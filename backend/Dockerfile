@@ -13,17 +13,14 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN rm -f package-lock.json
 
 COPY backend/package*.json ./
-COPY backend/package-lock.json ./
-COPY backend/.env ./
+COPY backend/yarn.lock ./
 COPY backend/node_modules ./node_modules
-# ADICIONE ESTA LINHA: Copia o arquivo .env para o local esperado dentro do contêiner
-
 COPY backend/ .
 
 # Configure git to use HTTPS instead of SSH
 RUN git config --global url."https://".insteadOf ssh://
 
-RUN npm install
+RUN yarn add fluent-ffmpeg @ffmpeg-installer/ffmpeg
 
 COPY certificates ./certs-temp
 
@@ -37,7 +34,7 @@ RUN ./copy_cert_assets.sh
 
 RUN rm -rf ./certs-temp
 
-RUN npm run build
+RUN yarn build
 
 EXPOSE 3000
 
@@ -48,4 +45,4 @@ ENV PORT=3000
 COPY backend/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-CMD ["/app/docker-entrypoint.sh"]
+CMD ["/app/docker-entrypoint.sh"] 
