@@ -122,23 +122,44 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
 
     const companyId = whatsapp.companyId;
 
-    const CheckValidNumber = await CheckContactNumber(numberToTest, companyId);
-    const number = CheckValidNumber.jid.replace(/\D/g, "");
-    const profilePicUrl = await GetProfilePicUrl(
-      number,
-      companyId
-    );
+    // Detectar se é grupo ou contato pessoal
+    // Grupos têm IDs longos (ex: 120363142926103927 - ~18 dígitos)
+    // Contatos pessoais têm números normais (ex: 5537991470016 - 13 dígitos)
+    const cleanNumber = numberToTest.replace(/\D/g, "");
+    const isGroup = cleanNumber.length > 13;
+
+    let number;
+    let profilePicUrl;
+
+    if (isGroup) {
+      // Para grupos: não valida com CheckContactNumber
+      number = cleanNumber;
+      profilePicUrl = "";
+    } else {
+      // Para contatos pessoais: valida normalmente
+      const CheckValidNumber = await CheckContactNumber(numberToTest, companyId);
+      number = CheckValidNumber.jid.replace(/\D/g, "");
+      profilePicUrl = await GetProfilePicUrl(number, companyId);
+    }
+
     const contactData = {
       name: `${number}`,
       number,
       profilePicUrl,
-      isGroup: false,
+      isGroup: isGroup,
       companyId
     };
 
     const contact = await CreateOrUpdateContactService(contactData);
 
-    const ticket = await FindOrCreateTicketService(contact, whatsapp.id!, 0, companyId);
+    // Se for grupo, o ticket deve ser associado ao grupo (passando contact como groupContact)
+    const ticket = await FindOrCreateTicketService(
+      contact,
+      whatsapp.id!,
+      0,
+      companyId,
+      isGroup ? contact : undefined
+    );
 
     if (medias) {
       await Promise.all(
