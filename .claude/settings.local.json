@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdicionar suporte para envio de mensagens em grupos via API\n\n- Modificado endpoint POST /api/messages/send para aceitar IDs de grupo\n- Detecção automática: números >13 dígitos = grupo, <=13 = contato pessoal\n- Grupos não passam por CheckContactNumber (evita erro ERR_CHECK_NUMBER)\n- Mantém compatibilidade total com envio para contatos pessoais\n- Ticket de grupo associado corretamente com flag isGroup=true\n\nFormato de uso:\n- Contato pessoal: {\"number\": \"5537991470016\", \"body\": \"mensagem\"}\n- Grupo: {\"number\": \"120363142926103927\", \"body\": \"mensagem\"}\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(curl:*)",
+      "Bash(npx png-to-ico:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAtualizar branding para UaiViu - Substituir logos e ícones\n\n- Substituída logo principal horizontal (logo.png)\n- Gerado novo favicon.ico com logo UaiViu\n- Atualizados todos os ícones PWA (apple-touch-icon, android-chrome, mstile, etc)\n- Alterado nome do app no manifest.json: Atendechat → UaiViu\n- Atualizado título da página no index.html\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
