@@ -684,21 +684,35 @@ const MessageInputCustom = (props) => {
   };
 
   const handleImproveText = async () => {
-    if (inputMessage.trim() === "") return;
+    console.log("✨ handleImproveText chamado!");
+    console.log("✨ Texto atual:", inputMessage);
+
+    if (inputMessage.trim() === "") {
+      console.log("✨ Texto vazio, abortando...");
+      return;
+    }
 
     setImprovingText(true);
+    console.log("✨ improvingText = true");
+
     try {
+      console.log("✨ Chamando geminiService.improveText...");
       const improvedText = await geminiService.improveText(inputMessage);
+      console.log("✨ Texto recebido:", improvedText);
+
       setInputMessage(improvedText);
+      console.log("✨ InputMessage atualizado!");
 
       // Foca no input após melhorar o texto
       if (inputRef.current) {
         inputRef.current.focus();
       }
     } catch (err) {
+      console.error("✨ Erro capturado:", err);
       toastError(err);
     } finally {
       setImprovingText(false);
+      console.log("✨ improvingText = false");
     }
   };
 

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const GEMINI_API_KEY = "AIzaSyDDH2CMELlWqf2RRY5LkrHoY-QyZoYOEDs";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 /**
  * Serviço para melhorar e corrigir textos usando Google Gemini AI
@@ -13,6 +13,8 @@ class GeminiService {
    * @returns {Promise<string>} - Texto melhorado e corrigido
    */
   async improveText(text) {
+    console.log("🤖 Iniciando melhoria de texto:", text);
+
     try {
       const prompt = `Você é um assistente de correção e melhoria de textos profissionais para atendimento ao cliente.
 
@@ -27,6 +29,8 @@ Texto original:
 "${text}"
 
 Texto melhorado:`;
+
+      console.log("🤖 Enviando requisição para Gemini API...");
 
       const response = await axios.post(
         `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
@@ -54,27 +58,36 @@ Texto melhorado:`;
         }
       );
 
+      console.log("🤖 Resposta da API:", response.data);
+
       // Extrai o texto melhorado da resposta
       const improvedText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!improvedText) {
+        console.error("🤖 Resposta inválida da API:", response.data);
         throw new Error("Resposta inválida da API");
       }
 
       // Remove aspas extras se houver
-      return improvedText.trim().replace(/^["']|["']$/g, '');
+      const finalText = improvedText.trim().replace(/^["']|["']$/g, '');
+      console.log("🤖 Texto melhorado:", finalText);
+
+      return finalText;
     } catch (error) {
-      console.error("Erro ao melhorar texto com Gemini:", error);
+      console.error("🤖 Erro ao melhorar texto com Gemini:", error);
+      console.error("🤖 Detalhes do erro:", error.response?.data);
 
       // Mensagens de erro mais amigáveis
       if (error.response?.status === 429) {
         throw new Error("Limite de requisições atingido. Tente novamente em alguns segundos.");
       } else if (error.response?.status === 403) {
         throw new Error("Chave de API inválida ou sem permissão.");
+      } else if (error.response?.status === 400) {
+        throw new Error("Erro na requisição: " + (error.response?.data?.error?.message || "Dados inválidos"));
       } else if (!navigator.onLine) {
         throw new Error("Sem conexão com a internet.");
       } else {
-        throw new Error("Não foi possível melhorar o texto. Tente novamente.");
+        throw new Error("Não foi possível melhorar o texto. " + (error.message || "Tente novamente."));
       }
     }
   }
