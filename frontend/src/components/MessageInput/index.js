@@ -19,10 +19,12 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { FormControlLabel, Switch, Tooltip } from "@material-ui/core";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import geminiService from "../../services/geminiService";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -116,6 +118,15 @@ const useStyles = makeStyles(theme => ({
 		color: "green",
 	},
 
+	aiIcon: {
+		color: "#2EB05C",
+	},
+
+	aiIconLoading: {
+		color: "#2EB05C",
+		opacity: 0.5,
+	},
+
 	replyginMsgWrapper: {
 		display: "flex",
 		width: "100%",
@@ -172,6 +183,7 @@ const MessageInput = ({ ticketStatus }) => {
 	const [showEmoji, setShowEmoji] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [recording, setRecording] = useState(false);
+	const [improvingText, setImprovingText] = useState(false);
 	const inputRef = useRef();
 	const { setReplyingMessage, replyingMessage } = useContext(
 		ReplyMessageContext
@@ -308,6 +320,25 @@ const MessageInput = ({ ticketStatus }) => {
 			setRecording(false);
 		} catch (err) {
 			toastError(err);
+		}
+	};
+
+	const handleImproveText = async () => {
+		if (inputMessage.trim() === "") return;
+
+		setImprovingText(true);
+		try {
+			const improvedText = await geminiService.improveText(inputMessage);
+			setInputMessage(improvedText);
+
+			// Foca no input após melhorar o texto
+			if (inputRef.current) {
+				inputRef.current.focus();
+			}
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setImprovingText(false);
 		}
 	};
 
@@ -458,14 +489,30 @@ const MessageInput = ({ ticketStatus }) => {
 						/>
 					</div>
 					{inputMessage ? (
-						<IconButton
-							aria-label="sendMessage"
-							component="span"
-							onClick={handleSendMessage}
-							disabled={loading}
-						>
-							<SendIcon className={classes.sendMessageIcons} />
-						</IconButton>
+						<>
+							<Tooltip title="Melhorar texto com IA" placement="top">
+								<IconButton
+									aria-label="improveText"
+									component="span"
+									onClick={handleImproveText}
+									disabled={loading || improvingText}
+								>
+									{improvingText ? (
+										<CircularProgress size={24} className={classes.aiIconLoading} />
+									) : (
+										<AutoAwesomeIcon className={classes.aiIcon} />
+									)}
+								</IconButton>
+							</Tooltip>
+							<IconButton
+								aria-label="sendMessage"
+								component="span"
+								onClick={handleSendMessage}
+								disabled={loading || improvingText}
+							>
+								<SendIcon className={classes.sendMessageIcons} />
+							</IconButton>
+						</>
 					) : recording ? (
 						<div className={classes.recorderWrapper}>
 							<IconButton
