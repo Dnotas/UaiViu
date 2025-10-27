@@ -10,15 +10,15 @@ echo -e "${YELLOW}🎨 Atualizando cor da aplicação...${NC}"
 
 # Verifica se a variável de ambiente está definida
 if [[ -z "$REACT_APP_COLOR" ]]; then
-    echo -e "${YELLOW}⚠️  REACT_APP_COLOR não definida, usando valor padrão: #682EE3${NC}"
-    APP_COLOR="#682EE3"
+    echo -e "${YELLOW}⚠️  REACT_APP_COLOR não definida, usando valor padrão: #25D366${NC}"
+    APP_COLOR="#25D366"
 else
     APP_COLOR="$REACT_APP_COLOR"
 fi
 
 # Valida se a cor é um hex válido
 if [[ ! "$APP_COLOR" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
-    echo -e "${RED}❌ Erro: Cor inválida '$APP_COLOR'. Use formato hexadecimal (ex: #682EE3)${NC}"
+    echo -e "${RED}❌ Erro: Cor inválida '$APP_COLOR'. Use formato hexadecimal (ex: #25D366)${NC}"
     exit 1
 fi
 

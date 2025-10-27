@@ -8,7 +8,8 @@
       "Bash(curl:*)",
       "Bash(npx png-to-ico:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nAtualizar branding para UaiViu - Substituir logos e ícones\n\n- Substituída logo principal horizontal (logo.png)\n- Gerado novo favicon.ico com logo UaiViu\n- Atualizados todos os ícones PWA (apple-touch-icon, android-chrome, mstile, etc)\n- Alterado nome do app no manifest.json: Atendechat → UaiViu\n- Atualizado título da página no index.html\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
