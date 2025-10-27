@@ -12,8 +12,8 @@
 const { Sequelize } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
-// Configuração do banco de dados (mesmas credenciais do docker-compose.yml)
-const sequelize = new Sequelize('codatende', 'postgres', 'postgres123', {
+// Configuração do banco de dados (mesmas credenciais do .env)
+const sequelize = new Sequelize('uaiviu', 'uaiviu', 'DnotasUaiViu147', {
   host: 'localhost',  // Se estiver rodando fora do Docker
   // host: 'postgres',  // Se estiver rodando dentro do Docker, descomente esta linha e comente a de cima
   port: 5432,

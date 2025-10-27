@@ -48,7 +48,7 @@ O Super Admin foi deletado? Sem problemas! Use um dos métodos abaixo para criar
 
 1. **Conecte ao PostgreSQL:**
    ```bash
-   docker exec -it uaiviu-postgres-1 psql -U postgres -d codatende
+   docker exec -it uaiviu-postgres-1 psql -U uaiviu -d uaiviu
    ```
    (Substitua `uaiviu-postgres-1` pelo nome do container do PostgreSQL)
 
@@ -86,9 +86,9 @@ O Super Admin foi deletado? Sem problemas! Use um dos métodos abaixo para criar
 
 1. **Conecte ao PostgreSQL:**
    ```bash
-   psql -U postgres -d codatende
+   psql -U uaiviu -d uaiviu
    ```
-   Senha: `postgres123`
+   Senha: `DnotasUaiViu147`
 
 2. **Execute o script SQL:**
    ```bash

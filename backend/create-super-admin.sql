@@ -1,6 +1,6 @@
 -- Script para criar/restaurar Super Administrador
--- Banco de dados: codatende
--- Credenciais no docker-compose.yml
+-- Banco de dados: uaiviu
+-- Credenciais no .env
 
 -- 1. Verificar se já existe algum super admin
 SELECT id, name, email, profile, super FROM "Users" WHERE super = true;
