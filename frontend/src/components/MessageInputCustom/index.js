@@ -20,12 +20,14 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { FormControlLabel, Switch, Tooltip } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import geminiService from "../../services/geminiService";
 import axios from "axios";
 
 import RecordingTimer from "./RecordingTimer";
@@ -121,6 +123,15 @@ const useStyles = makeStyles((theme) => ({
 
   sendAudioIcon: {
     color: "green",
+  },
+
+  aiIcon: {
+    color: "#2EB05C",
+  },
+
+  aiIconLoading: {
+    color: "#2EB05C",
+    opacity: 0.5,
   },
 
   replyginMsgWrapper: {
@@ -258,18 +269,36 @@ const ActionButtons = (props) => {
     handleCancelAudio,
     handleUploadAudio,
     handleStartRecording,
+    handleImproveText,
+    improvingText,
   } = props;
   const classes = useStyles();
   if (inputMessage) {
     return (
-      <IconButton
-        aria-label="sendMessage"
-        component="span"
-        onClick={handleSendMessage}
-        disabled={loading}
-      >
-        <SendIcon className={classes.sendMessageIcons} />
-      </IconButton>
+      <>
+        <Tooltip title="Melhorar texto com IA" placement="top">
+          <IconButton
+            aria-label="improveText"
+            component="span"
+            onClick={handleImproveText}
+            disabled={loading || improvingText}
+          >
+            {improvingText ? (
+              <CircularProgress size={24} className={classes.aiIconLoading} />
+            ) : (
+              <AutoAwesomeIcon className={classes.aiIcon} />
+            )}
+          </IconButton>
+        </Tooltip>
+        <IconButton
+          aria-label="sendMessage"
+          component="span"
+          onClick={handleSendMessage}
+          disabled={loading || improvingText}
+        >
+          <SendIcon className={classes.sendMessageIcons} />
+        </IconButton>
+      </>
     );
   } else if (recording) {
     return (
@@ -472,6 +501,7 @@ const MessageInputCustom = (props) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [improvingText, setImprovingText] = useState(false);
   const inputRef = useRef();
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -653,6 +683,25 @@ const MessageInputCustom = (props) => {
     }
   };
 
+  const handleImproveText = async () => {
+    if (inputMessage.trim() === "") return;
+
+    setImprovingText(true);
+    try {
+      const improvedText = await geminiService.improveText(inputMessage);
+      setInputMessage(improvedText);
+
+      // Foca no input após melhorar o texto
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setImprovingText(false);
+    }
+  };
+
   const disableOption = () => {
     return loading || recording || ticketStatus !== "open";
   };
@@ -763,6 +812,8 @@ const MessageInputCustom = (props) => {
             handleCancelAudio={handleCancelAudio}
             handleUploadAudio={handleUploadAudio}
             handleStartRecording={handleStartRecording}
+            handleImproveText={handleImproveText}
+            improvingText={improvingText}
           />
         </div>
       </Paper>
