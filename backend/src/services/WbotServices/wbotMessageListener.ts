@@ -2916,7 +2916,7 @@ const handleMsgAck = async (
     });
 
     if (!messageToUpdate) return;
-    await messageToUpdate.update({ ack: chat });
+    await messageToUpdate.update({ ack: normalizeAckStatus(chat) });
     io.to(messageToUpdate.ticketId.toString()).emit(
       `company-${messageToUpdate.companyId}-appMessage`,
       {
