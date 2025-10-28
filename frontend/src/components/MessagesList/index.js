@@ -514,10 +514,8 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   };
 
   const renderMessageAck = (message) => {
-    if (message.ack === 1) {
-      return <AccessTime fontSize="small" className={classes.ackIcons} />;
-    }
-    if (message.ack === 2) {
+    // Removido ícone de relógio - sempre mostra checkmark
+    if (message.ack === 1 || message.ack === 2) {
       return <Done fontSize="small" className={classes.ackIcons} />;
     }
     if (message.ack === 3) {
