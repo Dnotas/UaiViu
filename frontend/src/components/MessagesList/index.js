@@ -666,6 +666,16 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                 <span>{message.quotedMsg.body}</span>
               )
           }
+
+          {/* Renderiza mensagens de texto citadas (conversation, extendedTextMessage, etc) */}
+          {(message.quotedMsg.mediaType === "conversation" ||
+            message.quotedMsg.mediaType === "extendedTextMessage" ||
+            (!["audio", "video", "application", "image", "contactMessage"].includes(message.quotedMsg.mediaType)))
+            && message.quotedMsg.body
+            && (
+                <span>{message.quotedMsg.body}</span>
+              )
+          }
         </div>
       </div>
     );

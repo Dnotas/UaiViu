@@ -101,6 +101,32 @@ interface IMessage {
 
 export const isNumeric = (value: string) => /^-?\d+$/.test(value);
 
+/**
+ * Normaliza o status de ack para sempre retornar um número
+ * Converte strings como 'PENDING' para valores numéricos
+ * Necessário porque em grupos, Baileys retorna 'PENDING' como string
+ */
+const normalizeAckStatus = (status: any): number => {
+  // Se já é um número válido, retorna
+  if (typeof status === 'number' && !isNaN(status)) {
+    return status;
+  }
+
+  // Converte para string e normaliza
+  const statusStr = String(status);
+
+  // Substitui valores conhecidos
+  const normalized = statusStr
+    .replace('PENDING', '2')   // PENDING = SENT (enviado)
+    .replace('NaN', '1');       // NaN = PENDING (aguardando)
+
+  // Converte para número
+  const ackNumber = Number(normalized);
+
+  // Se ainda não é um número válido, retorna 2 (enviado) como padrão
+  return isNaN(ackNumber) ? 2 : ackNumber;
+};
+
 const writeFileAsync = promisify(writeFile);
 
 const getTypeMessage = (msg: proto.IWebMessageInfo): string => {
@@ -917,7 +943,7 @@ export const verifyMediaMessage = async (
     mediaUrl: media.filename,
     mediaType: media.mimetype.split("/")[0],
     quotedMsgId: quotedMsg?.id,
-    ack: msg.status,
+    ack: normalizeAckStatus(msg.status),
     remoteJid: msg.key.remoteJid,
     participant: msg.key.participant,
     dataJson: JSON.stringify(msg),
@@ -985,7 +1011,7 @@ export const verifyMessage = async (
     mediaType: getTypeMessage(msg),
     read: msg.key.fromMe,
     quotedMsgId: quotedMsg?.id,
-    ack: msg.status,
+    ack: normalizeAckStatus(msg.status),
     remoteJid: msg.key.remoteJid,
     participant: msg.key.participant,
     dataJson: JSON.stringify(msg),
