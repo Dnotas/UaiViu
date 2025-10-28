@@ -140,13 +140,8 @@ const NotificationsPopOver = (volume) => {
 		});
 
 		socket.on(`company-${user.companyId}-appMessage`, data => {
-			if (
-				data.action === "create" && !data.message.fromMe && 
-				(data.ticket.status !== "pending" ) &&
-				(!data.message.read || data.ticket.status === "pending") &&
-				(data.ticket.userId === user?.id || !data.ticket.userId) &&
-				(user?.queues?.some(queue => (queue.id === data.ticket.queueId)) || !data.ticket.queueId)
-			) {
+			// Lógica simplificada: toca SEMPRE que chegar mensagem de cliente (não enviada por mim)
+			if (data.action === "create" && !data.message.fromMe) {
 				setNotifications(prevState => {
 					const ticketIndex = prevState.findIndex(t => t.id === data.ticket.id);
 					if (ticketIndex !== -1) {
@@ -156,14 +151,7 @@ const NotificationsPopOver = (volume) => {
 					return [data.ticket, ...prevState];
 				});
 
-				const shouldNotNotificate =
-					(data.message.ticketId === ticketIdRef.current &&
-						document.visibilityState === "visible") ||
-					(data.ticket.userId && data.ticket.userId !== user?.id) ||
-					data.ticket.isGroup;
-
-				if (shouldNotNotificate) return;
-
+				// SEMPRE toca notificação quando chegar mensagem de cliente
 				handleNotifications(data);
 			}
 		});
