@@ -502,7 +502,10 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
               target="_blank"
               href={message.mediaUrl}
             >
-              {i18n.t("messagesList.header.buttons.download")}
+              {/* Mostra nome do arquivo extraído da URL ou body */}
+              {message.mediaUrl
+                ? decodeURIComponent(message.mediaUrl.split("/").pop())
+                : i18n.t("messagesList.header.buttons.download")}
             </Button>
           </div>
           <div style={{marginBottom: message.body === "" ? 8 : 0}}>
@@ -670,10 +673,32 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
               )
           }
 
+          {/* Renderiza outros tipos de arquivo (documentMessage, etc) que não foram capturados */}
+          {message.quotedMsg.mediaUrl &&
+            !["audio", "video", "application", "image", "contactMessage", "conversation", "extendedTextMessage"].includes(message.quotedMsg.mediaType)
+            && (
+              <div className={classes.downloadMedia}>
+                <Button
+                  startIcon={<GetApp />}
+                  color="primary"
+                  variant="outlined"
+                  target="_blank"
+                  href={message.quotedMsg.mediaUrl}
+                  size="small"
+                >
+                  {message.quotedMsg.body && message.quotedMsg.body !== "-"
+                    ? message.quotedMsg.body
+                    : message.quotedMsg.mediaUrl
+                      ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
+                      : i18n.t("messagesList.header.buttons.download")}
+                </Button>
+              </div>
+            )
+          }
+
           {/* Renderiza mensagens de texto citadas (conversation, extendedTextMessage, etc) */}
           {(message.quotedMsg.mediaType === "conversation" ||
-            message.quotedMsg.mediaType === "extendedTextMessage" ||
-            (!["audio", "video", "application", "image", "contactMessage"].includes(message.quotedMsg.mediaType)))
+            message.quotedMsg.mediaType === "extendedTextMessage")
             && message.quotedMsg.body
             && (
                 <span>{message.quotedMsg.body}</span>
