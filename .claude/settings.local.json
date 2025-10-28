@@ -13,7 +13,8 @@
       "Read(//c/Users/willi/Downloads/**)",
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:ai.google.dev)",
-      "Read(//c/**)"
+      "Read(//c/**)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nCorrigir modelo da API Gemini de 1.5-flash para 2.5-flash\n\n- Alterado GEMINI_API_URL para usar gemini-2.5-flash (modelo válido)\n- Modelo anterior gemini-1.5-flash não existe e causava erro 404\n- Testado e confirmado funcionamento com API key\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
