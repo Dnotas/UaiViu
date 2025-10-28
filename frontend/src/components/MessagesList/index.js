@@ -492,8 +492,33 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
         />
       );
     } else {
+      // Verifica se é PDF para mostrar prévia
+      const isPDF = message.mediaUrl && message.mediaUrl.toLowerCase().endsWith('.pdf');
+
       return (
         <>
+          {/* Prévia do PDF */}
+          {isPDF && (
+            <div style={{
+              width: '100%',
+              height: '200px',
+              marginBottom: '8px',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              <iframe
+                src={`${message.mediaUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                title="PDF Preview"
+              />
+            </div>
+          )}
+
           <div className={classes.downloadMedia}>
             <Button
               startIcon={<GetApp />}
@@ -644,24 +669,52 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
             )
           }
           {message.quotedMsg.mediaType === "application"
-            && (
-              <div className={classes.downloadMedia}>
-                <Button
-                  startIcon={<GetApp />}
-                  color="primary"
-                  variant="outlined"
-                  target="_blank"
-                  href={message.quotedMsg.mediaUrl}
-                >
-                  {/* Mostra o body se existir e não for "-", senão extrai nome do arquivo da URL */}
-                  {message.quotedMsg.body && message.quotedMsg.body !== "-"
-                    ? message.quotedMsg.body
-                    : message.quotedMsg.mediaUrl
-                      ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
-                      : i18n.t("messagesList.header.buttons.download")}
-                </Button>
-              </div>
-            )
+            && (() => {
+              const isPDF = message.quotedMsg.mediaUrl && message.quotedMsg.mediaUrl.toLowerCase().endsWith('.pdf');
+              return (
+                <>
+                  {/* Prévia do PDF citado */}
+                  {isPDF && (
+                    <div style={{
+                      width: '100%',
+                      height: '120px',
+                      marginBottom: '8px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      overflow: 'hidden'
+                    }}>
+                      <iframe
+                        src={`${message.quotedMsg.mediaUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          pointerEvents: 'none'
+                        }}
+                        title="PDF Preview"
+                      />
+                    </div>
+                  )}
+                  <div className={classes.downloadMedia}>
+                    <Button
+                      startIcon={<GetApp />}
+                      color="primary"
+                      variant="outlined"
+                      target="_blank"
+                      href={message.quotedMsg.mediaUrl}
+                      size="small"
+                    >
+                      {/* Mostra o body se existir e não for "-", senão extrai nome do arquivo da URL */}
+                      {message.quotedMsg.body && message.quotedMsg.body !== "-"
+                        ? message.quotedMsg.body
+                        : message.quotedMsg.mediaUrl
+                          ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
+                          : i18n.t("messagesList.header.buttons.download")}
+                    </Button>
+                  </div>
+                </>
+              );
+            })()
           }
 
           {message.quotedMsg.mediaType === "image"
@@ -676,24 +729,51 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
           {/* Renderiza outros tipos de arquivo (documentMessage, etc) que não foram capturados */}
           {message.quotedMsg.mediaUrl &&
             !["audio", "video", "application", "image", "contactMessage", "conversation", "extendedTextMessage"].includes(message.quotedMsg.mediaType)
-            && (
-              <div className={classes.downloadMedia}>
-                <Button
-                  startIcon={<GetApp />}
-                  color="primary"
-                  variant="outlined"
-                  target="_blank"
-                  href={message.quotedMsg.mediaUrl}
-                  size="small"
-                >
-                  {message.quotedMsg.body && message.quotedMsg.body !== "-"
-                    ? message.quotedMsg.body
-                    : message.quotedMsg.mediaUrl
-                      ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
-                      : i18n.t("messagesList.header.buttons.download")}
-                </Button>
-              </div>
-            )
+            && (() => {
+              const isPDF = message.quotedMsg.mediaUrl && message.quotedMsg.mediaUrl.toLowerCase().endsWith('.pdf');
+              return (
+                <>
+                  {/* Prévia do PDF citado */}
+                  {isPDF && (
+                    <div style={{
+                      width: '100%',
+                      height: '120px',
+                      marginBottom: '8px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      overflow: 'hidden'
+                    }}>
+                      <iframe
+                        src={`${message.quotedMsg.mediaUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          pointerEvents: 'none'
+                        }}
+                        title="PDF Preview"
+                      />
+                    </div>
+                  )}
+                  <div className={classes.downloadMedia}>
+                    <Button
+                      startIcon={<GetApp />}
+                      color="primary"
+                      variant="outlined"
+                      target="_blank"
+                      href={message.quotedMsg.mediaUrl}
+                      size="small"
+                    >
+                      {message.quotedMsg.body && message.quotedMsg.body !== "-"
+                        ? message.quotedMsg.body
+                        : message.quotedMsg.mediaUrl
+                          ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
+                          : i18n.t("messagesList.header.buttons.download")}
+                    </Button>
+                  </div>
+                </>
+              );
+            })()
           }
 
           {/* Renderiza mensagens de texto citadas (conversation, extendedTextMessage, etc) */}
