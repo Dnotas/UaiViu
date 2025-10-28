@@ -123,7 +123,26 @@ const SendWhatsAppMedia = async ({
     const wbot = await GetTicketWbot(ticket);
 
     const pathMedia = media.path;
-    const typeMessage = media.mimetype.split("/")[0];
+
+    // Detectar tipo de arquivo pela extensão se mimetype for genérico
+    let mimetype = media.mimetype;
+    let typeMessage = mimetype.split("/")[0];
+
+    // Se mimetype for genérico (octet-stream), detectar pela extensão
+    if (mimetype === "application/octet-stream" || typeMessage === "application") {
+      const ext = media.originalname.toLowerCase().split('.').pop();
+      if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "gif" || ext === "webp") {
+        mimetype = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        typeMessage = "image";
+      } else if (ext === "mp4" || ext === "avi" || ext === "mov" || ext === "mkv") {
+        mimetype = `video/${ext}`;
+        typeMessage = "video";
+      } else if (ext === "mp3" || ext === "ogg" || ext === "wav" || ext === "m4a") {
+        mimetype = `audio/${ext}`;
+        typeMessage = "audio";
+      }
+    }
+
     let options: AnyMessageContent;
     const bodyMessage = formatBody(body, ticket.contact);
 
