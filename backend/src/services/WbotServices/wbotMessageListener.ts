@@ -2916,14 +2916,23 @@ const handleMsgAck = async (
     });
 
     if (!messageToUpdate) return;
-    await messageToUpdate.update({ ack: normalizeAckStatus(chat) });
-    io.to(messageToUpdate.ticketId.toString()).emit(
-      `company-${messageToUpdate.companyId}-appMessage`,
-      {
-        action: "update",
-        message: messageToUpdate
-      }
-    );
+
+    // Normaliza o novo status de ack
+    const newAck = normalizeAckStatus(chat);
+    const currentAck = messageToUpdate.ack;
+
+    // Só atualiza se o novo ack for maior que o atual
+    // Evita que mensagens de grupo regridam de 2 (enviado) para 1 (pendente)
+    if (newAck >= currentAck) {
+      await messageToUpdate.update({ ack: newAck });
+      io.to(messageToUpdate.ticketId.toString()).emit(
+        `company-${messageToUpdate.companyId}-appMessage`,
+        {
+          action: "update",
+          message: messageToUpdate
+        }
+      );
+    }
   } catch (err) {
     Sentry.captureException(err);
     logger.error(`Error handling message ack. Err: ${err}`);

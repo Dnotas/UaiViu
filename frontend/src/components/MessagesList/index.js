@@ -652,8 +652,12 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                   target="_blank"
                   href={message.quotedMsg.mediaUrl}
                 >
-                  {/* Mostra o body se existir (nome do arquivo ou legenda), senão mostra "Download" */}
-                  {message.quotedMsg.body || i18n.t("messagesList.header.buttons.download")}
+                  {/* Mostra o body se existir e não for "-", senão extrai nome do arquivo da URL */}
+                  {message.quotedMsg.body && message.quotedMsg.body !== "-"
+                    ? message.quotedMsg.body
+                    : message.quotedMsg.mediaUrl
+                      ? decodeURIComponent(message.quotedMsg.mediaUrl.split("/").pop())
+                      : i18n.t("messagesList.header.buttons.download")}
                 </Button>
               </div>
             )
