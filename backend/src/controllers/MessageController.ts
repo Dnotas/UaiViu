@@ -174,19 +174,11 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
     if (medias) {
       await Promise.all(
         medias.map(async (media: Express.Multer.File) => {
-          await req.app.get("queues").messageQueue.add(
-            "SendMessage",
-            {
-              whatsappId,
-              data: {
-                number,
-                body: body ? formatBody(body, contact) : media.originalname,
-                mediaPath: media.path,
-                fileName: media.originalname
-              }
-            },
-            { removeOnComplete: true, attempts: 3 }
-          );
+          await SendWhatsAppMedia({
+            media,
+            ticket,
+            body: body ? formatBody(body, contact) : media.originalname
+          });
         })
       );
     } else {
