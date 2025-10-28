@@ -1,10 +1,7 @@
-import axios from "axios";
-
-const GEMINI_API_KEY = "AIzaSyDDH2CMELlWqf2RRY5LkrHoY-QyZoYOEDs";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+import api from "./api";
 
 /**
- * Serviço para melhorar e corrigir textos usando Google Gemini AI
+ * Serviço para melhorar e corrigir textos usando Google Gemini AI através do backend
  */
 class GeminiService {
   /**
@@ -16,65 +13,26 @@ class GeminiService {
     console.log("🤖 Iniciando melhoria de texto:", text);
 
     try {
-      const prompt = `Você é um assistente de correção e melhoria de textos profissionais para atendimento ao cliente.
+      console.log("🤖 Enviando requisição para o backend...");
 
-Seu trabalho é:
-1. Corrigir todos os erros de ortografia e gramática
-2. Melhorar a clareza e profissionalismo do texto
-3. Manter o tom cordial e respeitoso
-4. Preservar a intenção e significado original
-5. Retornar APENAS o texto melhorado, sem explicações adicionais
+      const response = await api.post("/ai/improve-text", {
+        text: text
+      });
 
-Texto original:
-"${text}"
+      console.log("🤖 Resposta do backend:", response.data);
 
-Texto melhorado:`;
-
-      console.log("🤖 Enviando requisição para Gemini API...");
-
-      const response = await axios.post(
-        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("🤖 Resposta da API:", response.data);
-
-      // Extrai o texto melhorado da resposta
-      const improvedText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const improvedText = response.data?.improvedText;
 
       if (!improvedText) {
-        console.error("🤖 Resposta inválida da API:", response.data);
-        throw new Error("Resposta inválida da API");
+        console.error("🤖 Resposta inválida do backend:", response.data);
+        throw new Error("Resposta inválida do servidor");
       }
 
-      // Remove aspas extras se houver
-      const finalText = improvedText.trim().replace(/^["']|["']$/g, '');
-      console.log("🤖 Texto melhorado:", finalText);
+      console.log("🤖 Texto melhorado:", improvedText);
 
-      return finalText;
+      return improvedText;
     } catch (error) {
-      console.error("🤖 Erro ao melhorar texto com Gemini:", error);
+      console.error("🤖 Erro ao melhorar texto:", error);
       console.error("🤖 Detalhes do erro:", error.response?.data);
 
       // Mensagens de erro mais amigáveis
@@ -82,12 +40,18 @@ Texto melhorado:`;
         throw new Error("Limite de requisições atingido. Tente novamente em alguns segundos.");
       } else if (error.response?.status === 403) {
         throw new Error("Chave de API inválida ou sem permissão.");
+      } else if (error.response?.status === 503) {
+        throw new Error("Serviço temporariamente indisponível. Tente novamente.");
+      } else if (error.response?.status === 408) {
+        throw new Error("Tempo limite excedido (3s). Tente com um texto menor.");
       } else if (error.response?.status === 400) {
-        throw new Error("Erro na requisição: " + (error.response?.data?.error?.message || "Dados inválidos"));
+        throw new Error(error.response?.data?.error || "Texto não pode estar vazio.");
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error("Tempo limite excedido. Tente com um texto menor.");
       } else if (!navigator.onLine) {
         throw new Error("Sem conexão com a internet.");
       } else {
-        throw new Error("Não foi possível melhorar o texto. " + (error.message || "Tente novamente."));
+        throw new Error(error.response?.data?.error || "Não foi possível melhorar o texto. Tente novamente.");
       }
     }
   }
@@ -97,7 +61,7 @@ Texto melhorado:`;
    * @returns {boolean}
    */
   isConfigured() {
-    return !!GEMINI_API_KEY;
+    return true; // Sempre configurado pois a chave está no backend
   }
 }
 

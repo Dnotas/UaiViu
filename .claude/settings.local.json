@@ -12,7 +12,8 @@
       "Bash(test:*)",
       "Read(//c/Users/willi/Downloads/**)",
       "mcp__ide__getDiagnostics",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Read(//c/**)"
     ],
     "deny": [],
     "ask": []
