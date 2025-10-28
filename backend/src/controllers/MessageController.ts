@@ -106,6 +106,16 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
   const messageData: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
 
+  // LOG: Chamada da API externa
+  console.log("========================================");
+  console.log("📨 [API EXTERNA] Requisição recebida");
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("WhatsApp ID:", whatsappId);
+  console.log("Número destino:", messageData.number);
+  console.log("Mensagem:", messageData.body);
+  console.log("Tem mídia?:", !!medias);
+  console.log("========================================");
+
   try {
     const whatsapp = await Whatsapp.findByPk(whatsappId);
 
@@ -200,8 +210,20 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
 
     SetTicketMessagesAsRead(ticket);
 
+    // LOG: Sucesso
+    console.log("✅ [API EXTERNA] Mensagem enviada com sucesso");
+    console.log("Número:", messageData.number);
+    console.log("Ticket ID:", ticket.id);
+    console.log("========================================\n");
+
     return res.send({ mensagem: "Mensagem enviada" });
   } catch (err: any) {
+    // LOG: Erro
+    console.error("❌ [API EXTERNA] Erro ao enviar mensagem");
+    console.error("Número:", messageData.number);
+    console.error("Erro:", err.message);
+    console.error("========================================\n");
+
     if (Object.keys(err).length === 0) {
       throw new AppError(
         "Não foi possível enviar a mensagem, tente novamente em alguns instantes"
