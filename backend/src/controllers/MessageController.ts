@@ -114,6 +114,15 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
   console.log("Número destino:", messageData.number);
   console.log("Mensagem:", messageData.body);
   console.log("Tem mídia?:", !!medias);
+  if (medias && medias.length > 0) {
+    medias.forEach((media, index) => {
+      console.log(`Arquivo ${index + 1}:`, {
+        nome: media.originalname,
+        mimetype: media.mimetype,
+        tamanho: media.size
+      });
+    });
+  }
   console.log("========================================");
 
   try {
