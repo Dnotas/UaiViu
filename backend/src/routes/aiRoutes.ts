@@ -7,5 +7,6 @@ const aiRoutes = Router();
 
 aiRoutes.post("/ai/improve-text", isAuth, AIController.improveText);
 aiRoutes.post("/ai/generate-reply", isAuth, AIController.generateReply);
+aiRoutes.post("/ai/transcribe/:messageId", isAuth, AIController.transcribeAudio);
 
 export default aiRoutes;

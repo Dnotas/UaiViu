@@ -291,6 +291,24 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     padding: 10,
   },
+
+  audioTranscription: {
+    marginTop: 8,
+    padding: "8px 12px",
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    borderRadius: 8,
+    fontSize: 13,
+    fontStyle: "italic",
+    color: "#555",
+    maxWidth: 300,
+  },
+
+  transcribeButton: {
+    marginTop: 4,
+    padding: "4px 8px",
+    fontSize: 11,
+    textTransform: "none",
+  },
 }));
 
 const reducer = (state, action) => {
@@ -354,6 +372,7 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const currentTicketId = useRef(ticketId);
 
   const [generatingReplyForId, setGeneratingReplyForId] = useState(null);
+  const [transcribingAudioId, setTranscribingAudioId] = useState(null);
 
   const socketManager = useContext(SocketContext);
   const { setAIGeneratedReply } = useContext(AIReplyContext);
@@ -495,6 +514,26 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
     }
   };
 
+  const handleTranscribeAudio = async (message) => {
+    if (!message || !message.mediaType || !message.mediaType.includes("audio")) return;
+
+    setTranscribingAudioId(message.id);
+
+    try {
+      const { data } = await api.post(`/ai/transcribe/${message.id}`);
+
+      // Atualiza a mensagem na lista com a transcrição
+      dispatch({
+        type: "UPDATE_MESSAGE",
+        payload: { ...message, transcription: data.transcription }
+      });
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setTranscribingAudioId(null);
+    }
+  };
+
   const checkMessageMedia = (message) => {
 
     if (message.mediaType === "locationMessage" && message.body.split('|').length >= 2) {
@@ -548,9 +587,35 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
       return (
-        <audio controls>
-          <source src={message.mediaUrl} type="audio/ogg"></source>
-        </audio>
+        <div>
+          <audio controls>
+            <source src={message.mediaUrl} type="audio/ogg"></source>
+          </audio>
+
+          {/* Botão para transcrever */}
+          {!message.transcription && (
+            <div>
+              <Button
+                size="small"
+                color="primary"
+                variant="outlined"
+                className={classes.transcribeButton}
+                onClick={() => handleTranscribeAudio(message)}
+                disabled={transcribingAudioId === message.id}
+                startIcon={transcribingAudioId === message.id ? <CircularProgress size={14} /> : null}
+              >
+                {transcribingAudioId === message.id ? "Transcrevendo..." : "Transcrever áudio"}
+              </Button>
+            </div>
+          )}
+
+          {/* Exibir transcrição se existir */}
+          {message.transcription && (
+            <div className={classes.audioTranscription}>
+              {message.transcription}
+            </div>
+          )}
+        </div>
       );
     } else if (message.mediaType === "video") {
       return (

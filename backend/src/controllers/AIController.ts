@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import ImproveTextService from "../services/AIService/ImproveTextService";
 import GenerateReplyService from "../services/AIService/GenerateReplyService";
+import TranscribeAudioService from "../services/AIService/TranscribeAudioService";
 
 export const improveText = async (req: Request, res: Response): Promise<Response> => {
   const { text } = req.body;
@@ -25,6 +26,18 @@ export const generateReply = async (req: Request, res: Response): Promise<Respon
     });
 
     return res.status(200).json({ generatedReply });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
+
+export const transcribeAudio = async (req: Request, res: Response): Promise<Response> => {
+  const { messageId } = req.params;
+
+  try {
+    const transcription = await TranscribeAudioService({ messageId });
+
+    return res.status(200).json({ transcription });
   } catch (error: any) {
     return res.status(error.statusCode || 500).json({ error: error.message });
   }
