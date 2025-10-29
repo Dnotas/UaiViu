@@ -76,8 +76,9 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 8px",
-    minHeight: "48px",
+    padding: "8px 12px",
+    minHeight: "56px",
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)',
     [theme.breakpoints.down("sm")]: {
       height: "48px"
     }
@@ -166,13 +167,13 @@ const useStyles = makeStyles((theme) => ({
     // color: theme.barraSuperior.secondary.main,
   },
   logo: {
-    width: "80%",
-    height: "auto",
-    maxWidth: 180,
+    width: "auto",
+    height: "36px",
+    maxWidth: 140,
+    objectFit: "contain",
     [theme.breakpoints.down("sm")]: {
-      width: "auto",
-      height: "80%",
-      maxWidth: 180,
+      height: "32px",
+      maxWidth: 120,
     },
     logo: theme.logo
   },

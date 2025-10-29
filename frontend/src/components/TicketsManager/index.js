@@ -37,11 +37,20 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
+    backgroundColor: theme.palette.background.default,
   },
 
   tabsHeader: {
     flex: "none",
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+    "& .MuiTabs-root": {
+      minHeight: 48,
+    },
+    "& .MuiTabs-indicator": {
+      height: 3,
+      borderRadius: "3px 3px 0 0",
+    },
   },
 
   settingsIcon: {
@@ -51,16 +60,23 @@ const useStyles = makeStyles((theme) => ({
   },
 
   tab: {
-    minWidth: 120,
-    width: 120,
+    minWidth: 100,
+    textTransform: "none",
+    fontWeight: 500,
+    fontSize: "0.875rem",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    },
   },
 
   ticketOptionsBox: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(1),
+    backgroundColor: "transparent",
+    padding: theme.spacing(1.5, 2),
+    gap: theme.spacing(1),
   },
 
   serachInputWrapper: {
@@ -73,9 +89,9 @@ const useStyles = makeStyles((theme) => ({
   },
 
   searchIcon: {
-    color: theme.palette.primary.main,
-    marginLeft: 6,
-    marginRight: 6,
+    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+    marginLeft: 12,
+    marginRight: 8,
     alignSelf: "center",
   },
 
@@ -83,12 +99,27 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     border: "none",
     borderRadius: 25,
-    padding: "10px",
+    padding: "10px 12px",
     outline: "none",
+    backgroundColor: "transparent",
+    fontSize: "0.875rem",
+    color: theme.palette.text.primary,
+    "&::placeholder": {
+      color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
+    },
   },
 
   badge: {
-    right: 0,
+    "& .MuiBadge-badge": {
+      right: -16,
+      top: 2,
+      padding: "0 6px",
+      height: 20,
+      minWidth: 20,
+      borderRadius: 10,
+      fontSize: "0.7rem",
+      fontWeight: 600,
+    },
   },
   show: {
     display: "block",
@@ -98,8 +129,18 @@ const useStyles = makeStyles((theme) => ({
   },
   searchContainer: {
     display: "flex",
-    padding: "10px",
-    borderBottom: "2px solid rgba(0, 0, 0, .12)",
+    alignItems: "center",
+    padding: "12px 16px",
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: "12px",
+    margin: "12px 16px 0",
+    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+    transition: "all 0.2s ease",
+    "&:focus-within": {
+      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+      borderColor: theme.palette.primary.main,
+      boxShadow: `0 0 0 2px ${theme.palette.primary.main}20`,
+    },
   },
 }));
 
