@@ -142,6 +142,29 @@ const useStyles = makeStyles((theme) => ({
       boxShadow: `0 0 0 2px ${theme.palette.primary.main}20`,
     },
   },
+  newTicketButton: {
+    borderRadius: 10,
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.875rem",
+    padding: "8px 20px",
+    boxShadow: "0 2px 8px rgba(76, 175, 80, 0.25)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-1px)",
+      boxShadow: "0 4px 12px rgba(76, 175, 80, 0.35)",
+    },
+  },
+  switchControl: {
+    "& .MuiFormControlLabel-label": {
+      fontSize: "0.875rem",
+      fontWeight: 500,
+    },
+  },
+  tabIcon: {
+    opacity: 0.7,
+    transition: "opacity 0.2s ease",
+  },
 }));
 
 const TicketsManager = () => {
@@ -223,7 +246,7 @@ const TicketsManager = () => {
         >
           <Tab
             value={"open"}
-            icon={<MoveToInbox />}
+            icon={<MoveToInbox className={classes.tabIcon} />}
             label={
               <Badge
                 className={classes.badge}
@@ -238,7 +261,7 @@ const TicketsManager = () => {
           />
           <Tab
             value={"pending"}
-            icon={<HourglassEmptyRounded />}
+            icon={<HourglassEmptyRounded className={classes.tabIcon} />}
             label={
               <Badge
                 className={classes.badge}
@@ -253,7 +276,7 @@ const TicketsManager = () => {
           />
           <Tab
             value={"closed"}
-            icon={<AllInboxRounded />}
+            icon={<AllInboxRounded className={classes.tabIcon} />}
             label={i18n.t("tickets.tabs.closed.title")}
             classes={{ root: classes.tab }}
           />
@@ -261,9 +284,10 @@ const TicketsManager = () => {
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
         <Button
-          variant="outlined"
+          variant="contained"
           color="primary"
           onClick={() => setNewTicketModalOpen(true)}
+          className={classes.newTicketButton}
         >
           {i18n.t("ticketsManager.buttons.newTicket")}
         </Button>
@@ -274,6 +298,7 @@ const TicketsManager = () => {
             <FormControlLabel
               label={i18n.t("tickets.buttons.showAll")}
               labelPlacement="start"
+              className={classes.switchControl}
               control={
                 <Switch
                   size="small"
