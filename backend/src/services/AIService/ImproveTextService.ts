@@ -35,6 +35,8 @@ Texto original:
 
 Texto melhorado:`;
 
+    console.log("🤖 [ImproveText] Enviando requisição para Gemini API...");
+
     const response = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
       {
@@ -58,14 +60,20 @@ Texto melhorado:`;
         headers: {
           "Content-Type": "application/json",
         },
-        timeout: 3000,  // Timeout de 3 segundos
+        timeout: 10000,  // Timeout de 10 segundos (aumentado)
       }
     );
+
+    console.log("🤖 [ImproveText] Resposta recebida:");
+    console.log(JSON.stringify(response.data, null, 2));
 
     // Extrai o texto melhorado da resposta
     const improvedText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
+    console.log("🤖 [ImproveText] Texto extraído:", improvedText);
+
     if (!improvedText) {
+      console.error("🤖 [ImproveText] Estrutura da resposta:", JSON.stringify(response.data, null, 2));
       throw new AppError("Resposta inválida da API Gemini", 500);
     }
 
