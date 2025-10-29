@@ -168,12 +168,12 @@ const useStyles = makeStyles((theme) => ({
   },
   logo: {
     width: "auto",
-    height: "36px",
-    maxWidth: 140,
+    height: "42px",
+    maxWidth: 160,
     objectFit: "contain",
     [theme.breakpoints.down("sm")]: {
-      height: "32px",
-      maxWidth: 120,
+      height: "36px",
+      maxWidth: 140,
     },
     logo: theme.logo
   },
