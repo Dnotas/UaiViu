@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import ImproveTextService from "../services/AIService/ImproveTextService";
+import GenerateReplyService from "../services/AIService/GenerateReplyService";
 
 export const improveText = async (req: Request, res: Response): Promise<Response> => {
   const { text } = req.body;
@@ -8,6 +9,22 @@ export const improveText = async (req: Request, res: Response): Promise<Response
     const improvedText = await ImproveTextService({ text });
 
     return res.status(200).json({ improvedText });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
+
+export const generateReply = async (req: Request, res: Response): Promise<Response> => {
+  const { targetMessage, contextMessages, contactName } = req.body;
+
+  try {
+    const generatedReply = await GenerateReplyService({
+      targetMessage,
+      contextMessages,
+      contactName
+    });
+
+    return res.status(200).json({ generatedReply });
   } catch (error: any) {
     return res.status(error.statusCode || 500).json({ error: error.message });
   }

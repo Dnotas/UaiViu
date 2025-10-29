@@ -20,6 +20,8 @@ import {
   ExpandMore,
   GetApp,
 } from "@material-ui/icons";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import { Tooltip } from "@material-ui/core";
 
 import MarkdownWrapper from "../MarkdownWrapper";
 import ModalImageCors from "../ModalImageCors";
@@ -30,8 +32,10 @@ import LocationPreview from "../LocationPreview";
 import whatsBackgroundDark from "../../assets/wa-background-dark.png"; //DARK MODE PLW DESIGN//
 
 import api from "../../services/api";
+import geminiService from "../../services/geminiService";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AIReplyContext } from "../../context/AIReply/AIReplyContext";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -78,6 +82,12 @@ const useStyles = makeStyles((theme) => ({
       position: "absolute",
       top: 0,
       right: 0,
+    },
+    "&:hover #aiReplyButton": {
+      display: "flex",
+      position: "absolute",
+      top: 0,
+      right: 35,
     },
 
     whiteSpace: "pre-wrap",
@@ -179,6 +189,21 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     opacity: "90%",
     "&:hover, &.Mui-focusVisible": { backgroundColor: "inherit" },
+  },
+
+  aiReplyButton: {
+    display: "none",
+    position: "relative",
+    color: "#9c27b0",
+    zIndex: 1,
+    backgroundColor: "inherit",
+    opacity: "90%",
+    "&:hover, &.Mui-focusVisible": { backgroundColor: "inherit" },
+    marginLeft: 4,
+  },
+
+  aiReplyButtonIcon: {
+    fontSize: 20,
   },
 
   messageContactName: {
@@ -328,7 +353,10 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const messageOptionsMenuOpen = Boolean(anchorEl);
   const currentTicketId = useRef(ticketId);
 
+  const [generatingReplyForId, setGeneratingReplyForId] = useState(null);
+
   const socketManager = useContext(SocketContext);
+  const { setAIGeneratedReply } = useContext(AIReplyContext);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -424,6 +452,47 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
 
   const handleCloseMessageOptionsMenu = (e) => {
     setAnchorEl(null);
+  };
+
+  const handleGenerateReply = async (message) => {
+    if (!message || !message.body || message.body.trim() === "") return;
+
+    setGeneratingReplyForId(message.id);
+
+    try {
+      // Pega as últimas 10 mensagens como contexto (antes da mensagem alvo)
+      const messageIndex = messagesList.findIndex((m) => m.id === message.id);
+      const contextMessages = messagesList
+        .slice(Math.max(0, messageIndex - 10), messageIndex)
+        .map((m) => ({
+          body: m.body,
+          fromMe: m.fromMe,
+          contactName: m.contact?.name || ticket.contact?.name,
+          timestamp: m.createdAt,
+        }));
+
+      // Mensagem alvo (que será respondida)
+      const targetMessage = {
+        body: message.body,
+        fromMe: message.fromMe,
+        contactName: message.contact?.name || ticket.contact?.name,
+        timestamp: message.createdAt,
+      };
+
+      // Gera resposta
+      const generatedReply = await geminiService.generateReply(
+        targetMessage,
+        contextMessages,
+        ticket.contact?.name || "Cliente"
+      );
+
+      // Envia resposta para o MessageInput via Context
+      setAIGeneratedReply(generatedReply);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setGeneratingReplyForId(null);
+    }
   };
 
   const checkMessageMedia = (message) => {
@@ -842,6 +911,22 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                 >
                   <ExpandMore />
                 </IconButton>
+                <Tooltip title="Gerar resposta com IA" placement="top">
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="aiReplyButton"
+                    disabled={message.isDeleted || generatingReplyForId !== null}
+                    className={classes.aiReplyButton}
+                    onClick={() => handleGenerateReply(message)}
+                  >
+                    {generatingReplyForId === message.id ? (
+                      <CircularProgress size={18} className={classes.aiReplyButtonIcon} />
+                    ) : (
+                      <AutoAwesomeIcon className={classes.aiReplyButtonIcon} />
+                    )}
+                  </IconButton>
+                </Tooltip>
                 {isGroup && (
                   <span className={classes.messageContactName}>
                     {message.contact?.name}

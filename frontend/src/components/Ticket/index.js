@@ -14,6 +14,7 @@ import TicketActionButtons from "../TicketActionButtonsCustom";
 import MessagesList from "../MessagesList";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import { AIReplyProvider } from "../../context/AIReply/AIReplyContext";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TagsContainer } from "../TagsContainer";
@@ -182,7 +183,9 @@ const Ticket = () => {
         <Paper>
           <TagsContainer ticket={ticket} />
         </Paper>
-        <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+        <AIReplyProvider>
+          <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+        </AIReplyProvider>
       </Paper>
       <ContactDrawer
         open={drawerOpen}

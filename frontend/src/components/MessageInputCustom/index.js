@@ -32,6 +32,7 @@ import axios from "axios";
 
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import { AIReplyContext } from "../../context/AIReply/AIReplyContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
@@ -506,12 +507,26 @@ const MessageInputCustom = (props) => {
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
+  const { aiGeneratedReply, setAIGeneratedReply } = useContext(AIReplyContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
 
   useEffect(() => {
     inputRef.current.focus();
   }, [replyingMessage]);
+
+  // Escuta mudanças na resposta gerada pela IA
+  useEffect(() => {
+    if (aiGeneratedReply) {
+      setInputMessage(aiGeneratedReply);
+      setAIGeneratedReply(null); // Limpa o contexto após usar
+
+      // Foca no input após preencher
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
+  }, [aiGeneratedReply, setAIGeneratedReply]);
 
   useEffect(() => {
     inputRef.current.focus();

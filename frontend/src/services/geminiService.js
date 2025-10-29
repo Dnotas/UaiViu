@@ -57,6 +57,63 @@ class GeminiService {
   }
 
   /**
+   * Gera uma resposta automática baseada em uma mensagem e contexto
+   * @param {Object} targetMessage - Mensagem que precisa ser respondida
+   * @param {Array} contextMessages - Mensagens anteriores para contexto
+   * @param {string} contactName - Nome do contato
+   * @returns {Promise<string>} - Resposta gerada pela IA
+   */
+  async generateReply(targetMessage, contextMessages = [], contactName = "Cliente") {
+    console.log("🤖 Gerando resposta para mensagem:", targetMessage);
+    console.log("🤖 Contexto:", contextMessages);
+
+    try {
+      console.log("🤖 Enviando requisição para o backend...");
+
+      const response = await api.post("/ai/generate-reply", {
+        targetMessage,
+        contextMessages,
+        contactName
+      });
+
+      console.log("🤖 Resposta do backend:", response.data);
+
+      const generatedReply = response.data?.generatedReply;
+
+      if (!generatedReply) {
+        console.error("🤖 Resposta inválida do backend:", response.data);
+        throw new Error("Resposta inválida do servidor");
+      }
+
+      console.log("🤖 Resposta gerada:", generatedReply);
+
+      return generatedReply;
+    } catch (error) {
+      console.error("🤖 Erro ao gerar resposta:", error);
+      console.error("🤖 Detalhes do erro:", error.response?.data);
+
+      // Mensagens de erro mais amigáveis
+      if (error.response?.status === 429) {
+        throw new Error("Limite de requisições atingido. Tente novamente em alguns segundos.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Chave de API inválida ou sem permissão.");
+      } else if (error.response?.status === 503) {
+        throw new Error("Serviço temporariamente indisponível. Tente novamente.");
+      } else if (error.response?.status === 408) {
+        throw new Error("Tempo limite excedido. Tente novamente.");
+      } else if (error.response?.status === 400) {
+        throw new Error(error.response?.data?.error || "Mensagem inválida.");
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error("Tempo limite excedido. Tente novamente.");
+      } else if (!navigator.onLine) {
+        throw new Error("Sem conexão com a internet.");
+      } else {
+        throw new Error(error.response?.data?.error || "Não foi possível gerar resposta. Tente novamente.");
+      }
+    }
+  }
+
+  /**
    * Verifica se a API está configurada corretamente
    * @returns {boolean}
    */
