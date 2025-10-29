@@ -566,7 +566,7 @@ const useStyles = makeStyles((theme) => ({
               {i18n.t("ticketsList.buttons.accept")}
             </ButtonWithSpinner>
           )}
-          {(ticket.status === "open") && (
+          {(ticket.status === "open" && ticket.userId === user.id) && (
             <ButtonWithSpinner
               style={{
                 backgroundColor: '#f44336',
@@ -588,7 +588,7 @@ const useStyles = makeStyles((theme) => ({
               {i18n.t("ticketsList.buttons.closed")}
             </ButtonWithSpinner>
           )}
-          {(ticket.status === "closed") && (
+          {(ticket.status === "closed" && ticket.userId === user.id) && (
             <ButtonWithSpinner
               style={{
                 backgroundColor: '#FF9800',
