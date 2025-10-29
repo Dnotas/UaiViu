@@ -154,10 +154,16 @@ export const update = async (
 
   contactData.number = contactData.number.replace(/\D/g, "");
 
-  await CheckIsValidContact(contactData.number, companyId);
-  const validNumber = await CheckContactNumber(contactData.number, companyId);
-  const number = validNumber.jid.replace(/\D/g, "");
-  contactData.number = number;
+  // Detectar se é grupo (números com mais de 13 dígitos) e pular validações
+  const isGroup = contactData.number.length > 13;
+
+  if (!isGroup) {
+    // Apenas valida números de contatos pessoais
+    await CheckIsValidContact(contactData.number, companyId);
+    const validNumber = await CheckContactNumber(contactData.number, companyId);
+    const number = validNumber.jid.replace(/\D/g, "");
+    contactData.number = number;
+  }
 
   const { contactId } = req.params;
 
