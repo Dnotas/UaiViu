@@ -40,22 +40,29 @@ import ContactTag from "../ContactTag";
 const useStyles = makeStyles((theme) => ({
   ticket: {
     position: "relative",
+    padding: "12px 16px",
+    marginBottom: "4px",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      transform: "translateX(2px)",
+    },
   },
 
   pendingTicket: {
     cursor: "unset",
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 193, 7, 0.05)',
   },
   queueTag: {
     background: "#FCFCFC",
     color: "#000",
-    marginRight: 1,
-    padding: 1,
-    fontWeight: 'bold',
-    paddingLeft: 5,
-    paddingRight: 5,
-    borderRadius: 3,
-    fontSize: "0.8em",
-    whiteSpace: "nowrap"
+    marginRight: 4,
+    padding: "2px 8px",
+    fontWeight: 500,
+    borderRadius: 12,
+    fontSize: "0.75em",
+    whiteSpace: "nowrap",
   },
   noTicketsDiv: {
     display: "flex",
@@ -72,7 +79,9 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: "auto",
     top: "10px",
     left: "20px",
-    borderRadius: 0,
+    "& .MuiBadge-badge": {
+      borderRadius: "10px",
+    },
   },
   noTicketsText: {
     textAlign: "center",
@@ -81,16 +90,15 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: "1.4",
   },
   connectionTag: {
-    background: "green",
-    color: "#FFF",
-    marginRight: 1,
-    padding: 1,
-    fontWeight: 'bold',
-    paddingLeft: 5,
-    paddingRight: 5,
-    borderRadius: 3,
-    fontSize: "0.8em",
-    whiteSpace: "nowrap"
+    background: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(76, 175, 80, 0.15)',
+    color: theme.palette.mode === 'dark' ? '#81C784' : '#2E7D32',
+    marginRight: 4,
+    padding: "3px 10px",
+    fontWeight: 500,
+    borderRadius: 12,
+    fontSize: "0.7em",
+    whiteSpace: "nowrap",
+    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)'}`,
   },
   noTicketsTitle: {
     textAlign: "center",
@@ -103,13 +111,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     marginLeft: "5px",
+    alignItems: "center",
   },
 
   lastMessageTime: {
     justifySelf: "flex-end",
     textAlign: "right",
     position: "relative",
-    top: -21
+    top: -21,
+    fontSize: "0.75em",
+    opacity: 0.7,
   },
 
   closedBadge: {
@@ -124,64 +135,67 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: "5px",
   },
 
-
   badgeStyle: {
     color: "white",
     backgroundColor: green[500],
+    borderRadius: "10px",
   },
-
-  acceptButton: {
-    position: "absolute",
-    right: "108px",
-  },
-
 
   acceptButton: {
     position: "absolute",
     left: "50%",
+    borderRadius: "8px !important",
+    textTransform: "none",
+    fontWeight: 500,
+    fontSize: "0.7rem",
+    padding: "4px 12px",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    },
   },
-
 
   ticketQueueColor: {
     flex: "none",
-    width: "8px",
-    height: "100%",
+    width: "4px",
+    height: "calc(100% - 16px)",
     position: "absolute",
-    top: "0%",
+    top: "8px",
     left: "0%",
+    borderRadius: "0 4px 4px 0",
   },
 
   ticketInfo: {
     position: "relative",
-    top: -13
+    top: -13,
   },
   secondaryContentSecond: {
     display: 'flex',
-    // marginTop: 5,
-    //marginLeft: "5px",
-    alignItems: "flex-start",
+    marginTop: 6,
+    alignItems: "center",
     flexWrap: "wrap",
     flexDirection: "row",
-    alignContent: "flex-start",
+    gap: 4,
   },
   ticketInfo1: {
     position: "relative",
     top: 13,
-    right: 0
+    right: 0,
   },
   Radiusdot: {
     "& .MuiBadge-badge": {
-      borderRadius: 2,
+      borderRadius: 12,
       position: "inherit",
-      height: 16,
+      height: 18,
       margin: 2,
-      padding: 3
+      padding: "2px 8px",
+      fontWeight: 500,
     },
     "& .MuiBadge-anchorOriginTopRightRectangle": {
       transform: "scale(1) translate(0%, -40%)",
     },
-
-  }
+  },
 }));
   {/*PLW DESIGN INSERIDO O dentro do const handleChangeTab*/}
   const TicketListItemCustom = ({ ticket }) => {
@@ -385,9 +399,10 @@ const useStyles = makeStyles((theme) => ({
               style={{
                 marginTop: "-20px",
                 marginLeft: "-3px",
-                width: "55px",
-                height: "55px",
-                borderRadius: "10%",
+                width: "50px",
+                height: "50px",
+                borderRadius: "12px",
+                border: "2px solid rgba(0, 0, 0, 0.05)",
               }}
               src={ticket?.contact?.profilePicUrl}
             />
@@ -398,7 +413,8 @@ const useStyles = makeStyles((theme) => ({
                 marginLeft: "0px",
                 width: "50px",
                 height: "50px",
-                borderRadius: "10%",
+                borderRadius: "12px",
+                border: "2px solid rgba(255, 193, 7, 0.3)",
               }}
               src={ticket?.contact?.profilePicUrl}
             />
@@ -448,9 +464,40 @@ const useStyles = makeStyles((theme) => ({
                 color="textSecondary"
               > {ticket.lastMessage.includes('data:image/png;base64') ? <MarkdownWrapper> Localização</MarkdownWrapper> : <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>}
                 <span className={classes.secondaryContentSecond} >
-                  {ticket?.whatsapp?.name ? <Badge className={classes.connectionTag}>{ticket?.whatsapp?.name?.toUpperCase()}</Badge> : <br></br>}
-                  {ticketUser ? <Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticketUser}</Badge> : <br></br>}
-                  <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name?.toUpperCase() || i18n.t("ticketsListItem.noQueue")}</Badge>
+                  {ticket?.whatsapp?.name && (
+                    <Badge
+                      className={classes.connectionTag}
+                      style={{
+                        backgroundColor: 'rgba(76, 175, 80, 0.15)',
+                        color: '#2E7D32',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                      }}
+                    >
+                      {ticket?.whatsapp?.name?.toUpperCase()}
+                    </Badge>
+                  )}
+                  {ticketUser && (
+                    <Badge
+                      className={classes.connectionTag}
+                      style={{
+                        backgroundColor: 'rgba(33, 150, 243, 0.15)',
+                        color: '#1565C0',
+                        border: '1px solid rgba(33, 150, 243, 0.3)',
+                      }}
+                    >
+                      {ticketUser}
+                    </Badge>
+                  )}
+                  <Badge
+                    className={classes.connectionTag}
+                    style={{
+                      backgroundColor: ticket.queue?.color ? `${ticket.queue.color}20` : 'rgba(124, 124, 124, 0.15)',
+                      color: ticket.queue?.color || '#7c7c7c',
+                      border: `1px solid ${ticket.queue?.color ? `${ticket.queue.color}50` : 'rgba(124, 124, 124, 0.3)'}`,
+                    }}
+                  >
+                    {ticket.queue?.name?.toUpperCase() || i18n.t("ticketsListItem.noQueue")}
+                  </Badge>
                 </span>
                 <span style={{ paddingTop: "2px" }} className={classes.secondaryContentSecond} >
                   {tag?.map((tag) => {
@@ -499,23 +546,39 @@ const useStyles = makeStyles((theme) => ({
         <span className={classes.secondaryContentSecond} >
           {ticket.status === "pending" && (
             <ButtonWithSpinner
-              //color="primary"
-              style={{ backgroundColor: 'green', color: 'white', padding: '0px', bottom: '17px', borderRadius: '0px', left: '8px', fontSize: '0.6rem' }}
+              style={{
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                padding: '4px 12px',
+                bottom: '17px',
+                borderRadius: '8px',
+                left: '8px',
+                fontSize: '0.7rem',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
               variant="contained"
               className={classes.acceptButton}
               size="small"
               loading={loading}
-			  //PLW DESIGN INSERIDO O handleChangeTab
               onClick={e => handleAcepptTicket(ticket.id)}
             >
               {i18n.t("ticketsList.buttons.accept")}
             </ButtonWithSpinner>
-
           )}
           {(ticket.status !== "closed") && (
             <ButtonWithSpinner
-              //color="primary"
-              style={{ backgroundColor: 'red', color: 'white', padding: '0px', bottom: '0px', borderRadius: '0px', left: '8px', fontSize: '0.6rem' }}
+              style={{
+                backgroundColor: '#f44336',
+                color: 'white',
+                padding: '4px 12px',
+                bottom: '0px',
+                borderRadius: '8px',
+                left: '8px',
+                fontSize: '0.7rem',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
               variant="contained"
               className={classes.acceptButton}
               size="small"
@@ -524,12 +587,20 @@ const useStyles = makeStyles((theme) => ({
             >
               {i18n.t("ticketsList.buttons.closed")}
             </ButtonWithSpinner>
-
           )}
           {(ticket.status === "closed") && (
             <ButtonWithSpinner
-              //color="primary"
-              style={{ backgroundColor: 'red', color: 'white', padding: '0px', bottom: '0px', borderRadius: '0px', left: '8px', fontSize: '0.6rem' }}
+              style={{
+                backgroundColor: '#FF9800',
+                color: 'white',
+                padding: '4px 12px',
+                bottom: '0px',
+                borderRadius: '8px',
+                left: '8px',
+                fontSize: '0.7rem',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
               variant="contained"
               className={classes.acceptButton}
               size="small"
@@ -538,12 +609,19 @@ const useStyles = makeStyles((theme) => ({
             >
               {i18n.t("ticketsList.buttons.reopen")}
             </ButtonWithSpinner>
-
           )}
         </span>
       </ListItem>
 
-      <Divider variant="inset" component="li" />
+      <Divider
+        variant="inset"
+        component="li"
+        style={{
+          marginLeft: '72px',
+          marginRight: '16px',
+          opacity: 0.1,
+        }}
+      />
     </React.Fragment>
   );
 };
