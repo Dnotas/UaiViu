@@ -2,7 +2,8 @@ import axios from "axios";
 import AppError from "../../errors/AppError";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+// Flash-Lite: 2-3x mais rápido que Flash, ideal para textos curtos
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
 interface Request {
   text: string;
@@ -21,21 +22,13 @@ const ImproveTextService = async ({ text }: Request): Promise<string> => {
   }
 
   try {
-    const prompt = `Você é um assistente de correção e melhoria de textos profissionais para atendimento ao cliente.
+    // Prompt simplificado para reduzir "reasoning tokens"
+    const prompt = `Corrija a ortografia e gramática deste texto, mantendo o significado original. Responda APENAS com o texto corrigido:
 
-Seu trabalho é:
-1. Corrigir todos os erros de ortografia e gramática
-2. Melhorar a clareza e profissionalismo do texto
-3. Manter o tom cordial e respeitoso
-4. Preservar a intenção e significado original
-5. Retornar APENAS o texto melhorado, sem explicações adicionais
-
-Texto original:
-"${text}"
-
-Texto melhorado:`;
+"${text}"`;
 
     console.log("🤖 [ImproveText] Enviando requisição para Gemini API...");
+    console.log("🤖 [ImproveText] Texto original:", text);
 
     const response = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
@@ -50,17 +43,18 @@ Texto melhorado:`;
           }
         ],
         generationConfig: {
-          temperature: 0.3,        // Mais direto e rápido
-          topK: 20,                // Resposta mais rápida
-          topP: 0.8,               // Mais focado
-          maxOutputTokens: 256,    // Texto curto
+          temperature: 0.1,          // Mais determinístico = mais rápido
+          topK: 10,                  // Menos opções = mais rápido
+          topP: 0.7,                 // Mais focado = mais rápido
+          maxOutputTokens: 512,      // Suficiente para textos curtos
+          candidateCount: 1,
         }
       },
       {
         headers: {
           "Content-Type": "application/json",
         },
-        timeout: 10000,  // Timeout de 10 segundos (aumentado)
+        timeout: 8000,  // 8 segundos suficiente para flash-lite
       }
     );
 
@@ -92,7 +86,7 @@ Texto melhorado:`;
     } else if (error.response?.status === 503) {
       throw new AppError("Serviço temporariamente indisponível. Tente novamente.", 503);
     } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      throw new AppError("Tempo limite excedido (3s). Tente com um texto menor.", 408);
+      throw new AppError("Tempo limite excedido. Tente com um texto menor.", 408);
     } else if (error.message?.includes('GEMINI_API_KEY')) {
       throw error;
     } else {
