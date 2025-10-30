@@ -203,7 +203,7 @@ const Login = () => {
 								href="#"
 								variant="body2"
 								component={RouterLink}
-								to="/signup"
+								to="/company-signup"
 							>
 								{i18n.t("login.buttons.register")}
 							</Link>
