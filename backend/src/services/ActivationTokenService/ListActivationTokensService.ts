@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import ActivationToken from "../../models/ActivationToken";
 import Plan from "../../models/Plan";
 import User from "../../models/User";
@@ -26,7 +27,7 @@ const ListActivationTokensService = async ({
 
   if (searchParam) {
     whereCondition.companyName = {
-      $like: `%${searchParam}%`
+      [Op.like]: `%${searchParam}%`
     };
   }
 
