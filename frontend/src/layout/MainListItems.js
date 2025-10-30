@@ -391,6 +391,17 @@ const MainListItems = (props) => {
 
                 <ListItem
                   button
+                  onClick={() => history.push("/queues")}
+                  className={classes.subMenuItem}
+                >
+                  <ListItemIcon className={classes.menuIcon}>
+                    <AccountTreeOutlinedIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Filas" />
+                </ListItem>
+
+                <ListItem
+                  button
                   onClick={() => history.push("/users")}
                   className={classes.subMenuItem}
                 >
