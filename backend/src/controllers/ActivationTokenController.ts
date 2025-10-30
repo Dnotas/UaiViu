@@ -38,7 +38,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     notes
   } = req.body;
 
-  const { id: createdBy } = req.user;
+  const { id } = req.user;
 
   const token = await CreateActivationTokenService({
     companyName,
@@ -46,7 +46,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     maxUsers,
     maxConnections,
     expiresInDays,
-    createdBy,
+    createdBy: +id,
     notes
   });
 
