@@ -6,6 +6,7 @@ import LoggedInLayout from "../layout";
 import Dashboard from "../pages/Dashboard/";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup/";
+import CompanySignUp from "../pages/CompanySignUp/";
 import Login from "../pages/Login/";
 import Connections from "../pages/Connections/";
 import SettingsCustom from "../pages/SettingsCustom/";
@@ -38,6 +39,7 @@ import Prompts from "../pages/Prompts";
 import QueueIntegration from "../pages/QueueIntegration";
 import ForgetPassword from "../pages/ForgetPassWord/"; // Reset PassWd
 import CampaignsPhrase from "../pages/CampaignsPhrase";
+import ActivationTokens from "../pages/ActivationTokens";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 
@@ -58,6 +60,7 @@ const Routes = () => {
           <Switch>
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
+            <Route exact path="/company-signup" component={CompanySignUp} />
             <Route exact path="/forgetpsw" component={ForgetPassword} />
             {/* <Route exact path="/create-company" component={Companies} /> */}
             <WhatsAppsProvider>
@@ -100,7 +103,12 @@ const Routes = () => {
                   component={QueueIntegration}
                   isPrivate
                 />
-
+                <Route
+                  exact
+                  path="/activation-tokens"
+                  component={ActivationTokens}
+                  isPrivate
+                />
                 <Route
                   exact
                   path="/messages-api"

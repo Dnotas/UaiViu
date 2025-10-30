@@ -1,12 +1,14 @@
 import { Router } from "express";
 import * as SessionController from "../controllers/SessionController";
 import * as UserController from "../controllers/UserController";
+import * as CompanySignUpController from "../controllers/CompanySignUpController";
 import isAuth from "../middleware/isAuth";
 import envTokenAuth from "../middleware/envTokenAuth";
 
 const authRoutes = Router();
 
 authRoutes.post("/signup", envTokenAuth, UserController.store);
+authRoutes.post("/signup-company", CompanySignUpController.store);
 authRoutes.post("/login", SessionController.store);
 authRoutes.post("/refresh_token", SessionController.update);
 authRoutes.delete("/logout", isAuth, SessionController.remove);
