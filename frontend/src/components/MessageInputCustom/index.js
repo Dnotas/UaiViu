@@ -272,6 +272,8 @@ const ActionButtons = (props) => {
     handleStartRecording,
     handleImproveText,
     improvingText,
+    handleTranscribeAndImprove,
+    transcribing,
   } = props;
   const classes = useStyles();
   if (inputMessage) {
@@ -308,12 +310,12 @@ const ActionButtons = (props) => {
           aria-label="cancelRecording"
           component="span"
           fontSize="large"
-          disabled={loading}
+          disabled={loading || transcribing}
           onClick={handleCancelAudio}
         >
           <HighlightOffIcon className={classes.cancelAudioIcon} />
         </IconButton>
-        {loading ? (
+        {loading || transcribing ? (
           <div>
             <CircularProgress className={classes.audioLoading} />
           </div>
@@ -321,11 +323,22 @@ const ActionButtons = (props) => {
           <RecordingTimer />
         )}
 
+        <Tooltip title="Transcrever e melhorar com IA" placement="top">
+          <IconButton
+            aria-label="transcribeAndImprove"
+            component="span"
+            onClick={handleTranscribeAndImprove}
+            disabled={loading || transcribing}
+          >
+            <AutoAwesomeIcon className={classes.aiIcon} />
+          </IconButton>
+        </Tooltip>
+
         <IconButton
           aria-label="sendRecordedAudio"
           component="span"
           onClick={handleUploadAudio}
-          disabled={loading}
+          disabled={loading || transcribing}
         >
           <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
         </IconButton>
@@ -503,6 +516,7 @@ const MessageInputCustom = (props) => {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [improvingText, setImprovingText] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const inputRef = useRef();
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -731,6 +745,55 @@ const MessageInputCustom = (props) => {
     }
   };
 
+  const handleTranscribeAndImprove = async () => {
+    console.log("🎤 handleTranscribeAndImprove chamado!");
+
+    setTranscribing(true);
+
+    try {
+      // Para a gravação e obtém o blob de áudio
+      const [, blob] = await Mp3Recorder.stop().getMp3();
+
+      if (blob.size < 10000) {
+        console.log("🎤 Áudio muito pequeno, abortando...");
+        setTranscribing(false);
+        setRecording(false);
+        return;
+      }
+
+      console.log("🎤 Áudio capturado:", blob.size, "bytes");
+
+      // Cria um arquivo a partir do blob
+      const filename = `audio-record-site-${new Date().getTime()}.mp3`;
+      const audioFile = new File([blob], filename, { type: "audio/mp3" });
+
+      console.log("🎤 Enviando para transcrever e melhorar...");
+
+      // Chama o serviço que transcreve e melhora
+      const improvedText = await geminiService.transcribeAndImprove(audioFile);
+
+      console.log("🎤 Texto recebido:", improvedText);
+
+      // Coloca o texto melhorado no input
+      setInputMessage(improvedText);
+
+      // Para a gravação
+      setRecording(false);
+
+      // Foca no input para o usuário revisar e enviar
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    } catch (err) {
+      console.error("🎤 Erro capturado:", err);
+      toastError(err);
+      setRecording(false);
+    } finally {
+      setTranscribing(false);
+      console.log("🎤 transcribing = false");
+    }
+  };
+
   const disableOption = () => {
     return loading || recording || ticketStatus !== "open";
   };
@@ -843,6 +906,8 @@ const MessageInputCustom = (props) => {
             handleStartRecording={handleStartRecording}
             handleImproveText={handleImproveText}
             improvingText={improvingText}
+            handleTranscribeAndImprove={handleTranscribeAndImprove}
+            transcribing={transcribing}
           />
         </div>
       </Paper>

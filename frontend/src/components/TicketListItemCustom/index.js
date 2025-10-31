@@ -257,6 +257,51 @@ const useStyles = makeStyles((theme) => ({
     history.push(`/tickets/`);
   };
 
+  const handleForceCloseTicket = async (id) => {
+    setLoading(true);
+    try {
+      // Primeira tentativa: fechar normalmente
+      await api.put(`/tickets/${id}`, {
+        status: "closed",
+        userId: user?.id || null,
+        queueId: ticket?.queue?.id || null,
+        useIntegration: false,
+        promptId: null,
+        integrationId: null
+      });
+
+      if (isMounted.current) {
+        setLoading(false);
+      }
+
+      // Redireciona para a lista de tickets
+      history.push(`/tickets/`);
+
+      // Recarrega a página para forçar atualização
+      window.location.reload();
+
+    } catch (err) {
+      console.error("Erro ao finalizar ticket normalmente, tentando forçar...", err);
+
+      try {
+        // Segunda tentativa: força fechamento mesmo com erros
+        await api.delete(`/tickets/${id}`);
+
+        if (isMounted.current) {
+          setLoading(false);
+        }
+
+        history.push(`/tickets/`);
+        window.location.reload();
+
+      } catch (deleteErr) {
+        console.error("Erro ao deletar ticket:", deleteErr);
+        setLoading(false);
+        toastError("Não foi possível finalizar este ticket. Entre em contato com o suporte.");
+      }
+    }
+  };
+
   const handleReopenTicket = async (id) => {
     setLoading(true);
     try {
@@ -545,26 +590,45 @@ const useStyles = makeStyles((theme) => ({
         </ListItemSecondaryAction>
         <span className={classes.secondaryContentSecond} >
           {ticket.status === "pending" && (
-            <ButtonWithSpinner
-              style={{
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                padding: '4px 12px',
-                bottom: '0px',
-                borderRadius: '8px',
-                left: '8px',
-                fontSize: '0.7rem',
-                textTransform: 'none',
-                fontWeight: 500,
-              }}
-              variant="contained"
-              className={classes.acceptButton}
-              size="small"
-              loading={loading}
-              onClick={e => handleAcepptTicket(ticket.id)}
-            >
-              {i18n.t("ticketsList.buttons.accept")}
-            </ButtonWithSpinner>
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <ButtonWithSpinner
+                style={{
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  padding: '4px 12px',
+                  bottom: '0px',
+                  borderRadius: '8px',
+                  fontSize: '0.7rem',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+                variant="contained"
+                size="small"
+                loading={loading}
+                onClick={e => handleAcepptTicket(ticket.id)}
+              >
+                {i18n.t("ticketsList.buttons.accept")}
+              </ButtonWithSpinner>
+
+              <ButtonWithSpinner
+                style={{
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  padding: '4px 12px',
+                  bottom: '0px',
+                  borderRadius: '8px',
+                  fontSize: '0.7rem',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+                variant="contained"
+                size="small"
+                loading={loading}
+                onClick={e => handleForceCloseTicket(ticket.id)}
+              >
+                Finalizar
+              </ButtonWithSpinner>
+            </div>
           )}
           {(ticket.status === "open" && ticket.userId === user.id) && (
             <ButtonWithSpinner

@@ -114,6 +114,66 @@ class GeminiService {
   }
 
   /**
+   * Transcreve um áudio e melhora o texto com tom profissional e formal
+   * @param {File|Blob} audioFile - Arquivo de áudio (MP3, OGG, WAV, M4A)
+   * @returns {Promise<string>} - Texto transcrito e melhorado
+   */
+  async transcribeAndImprove(audioFile) {
+    console.log("🎤 Iniciando transcrição e melhoria de áudio:", audioFile.name);
+
+    try {
+      console.log("🎤 Criando FormData...");
+
+      const formData = new FormData();
+      formData.append("audio", audioFile);
+
+      console.log("🎤 Enviando requisição para o backend...");
+
+      const response = await api.post("/ai/transcribe-and-improve", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        },
+        timeout: 90000 // 90 segundos para transcrição + melhoria
+      });
+
+      console.log("🎤 Resposta do backend:", response.data);
+
+      const improvedText = response.data?.improvedText;
+
+      if (!improvedText) {
+        console.error("🎤 Resposta inválida do backend:", response.data);
+        throw new Error("Resposta inválida do servidor");
+      }
+
+      console.log("🎤 Texto transcrito e melhorado:", improvedText);
+
+      return improvedText;
+    } catch (error) {
+      console.error("🎤 Erro ao transcrever e melhorar áudio:", error);
+      console.error("🎤 Detalhes do erro:", error.response?.data);
+
+      // Mensagens de erro mais amigáveis
+      if (error.response?.status === 429) {
+        throw new Error("Limite de requisições atingido. Tente novamente em alguns segundos.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Chave de API inválida ou sem permissão.");
+      } else if (error.response?.status === 503) {
+        throw new Error("Serviço temporariamente indisponível. Tente novamente.");
+      } else if (error.response?.status === 408) {
+        throw new Error("Tempo limite excedido. Áudio muito longo.");
+      } else if (error.response?.status === 400) {
+        throw new Error(error.response?.data?.error || "Arquivo de áudio inválido.");
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error("Tempo limite excedido. Áudio muito longo.");
+      } else if (!navigator.onLine) {
+        throw new Error("Sem conexão com a internet.");
+      } else {
+        throw new Error(error.response?.data?.error || "Não foi possível processar o áudio. Tente novamente.");
+      }
+    }
+  }
+
+  /**
    * Verifica se a API está configurada corretamente
    * @returns {boolean}
    */
