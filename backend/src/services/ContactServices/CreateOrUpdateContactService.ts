@@ -41,10 +41,10 @@ const CreateOrUpdateContactService = async ({
   });
 
   if (contact) {
-    contact.update({ profilePicUrl });
+    await contact.update({ profilePicUrl });
     console.log(contact.whatsappId)
-    if (isNil(contact.whatsappId === null)) {
-      contact.update({
+    if (!contact.whatsappId && whatsappId) {
+      await contact.update({
         whatsappId
       });
     }

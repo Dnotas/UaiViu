@@ -569,7 +569,7 @@ const verifyContact = async (
     whatsappId: wbot.id
   };
 
-  const contact = CreateOrUpdateContactService(contactData);
+  const contact = await CreateOrUpdateContactService(contactData);
 
   return contact;
 };
