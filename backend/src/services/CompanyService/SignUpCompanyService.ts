@@ -137,7 +137,7 @@ const SignUpCompanyService = async (
     { key: "ipmkauth", value: "" },
     { key: "clientsecretmkauth", value: "" },
     { key: "clientidmkauth", value: "" },
-    { key: "CheckMsgIsGroup", value: "enabled" },
+    { key: "CheckMsgIsGroup", value: "disabled" },
     { key: "call", value: "disabled" },
     { key: "scheduleType", value: "disabled" },
     { key: "sendGreetingAccepted", value: "disabled" },
