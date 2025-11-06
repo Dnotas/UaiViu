@@ -9,6 +9,10 @@ interface Request {
   contactId: number | string;
   companyId: number | string;
   userId?: number | string;
+  isRecurring?: boolean;
+  recurringType?: string;
+  recurringTime?: string;
+  isActive?: boolean;
 }
 
 const CreateService = async ({
@@ -16,15 +20,28 @@ const CreateService = async ({
   sendAt,
   contactId,
   companyId,
-  userId
+  userId,
+  isRecurring = false,
+  recurringType,
+  recurringTime,
+  isActive = true
 }: Request): Promise<Schedule> => {
   const schema = Yup.object().shape({
     body: Yup.string().required().min(5),
-    sendAt: Yup.string().required()
+    sendAt: Yup.string().when('isRecurring', {
+      is: false,
+      then: Yup.string().required(),
+      otherwise: Yup.string().notRequired()
+    }),
+    recurringTime: Yup.string().when('isRecurring', {
+      is: true,
+      then: Yup.string().required().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato deve ser HH:mm'),
+      otherwise: Yup.string().notRequired()
+    })
   });
 
   try {
-    await schema.validate({ body, sendAt });
+    await schema.validate({ body, sendAt, isRecurring, recurringTime });
   } catch (err: any) {
     throw new AppError(err.message);
   }
@@ -32,11 +49,15 @@ const CreateService = async ({
   const schedule = await Schedule.create(
     {
       body,
-      sendAt,
+      sendAt: isRecurring ? null : sendAt,
       contactId,
       companyId,
       userId,
-      status: 'PENDENTE'
+      status: isRecurring ? 'ATIVO' : 'PENDENTE',
+      isRecurring,
+      recurringType: isRecurring ? (recurringType || 'daily') : null,
+      recurringTime: isRecurring ? recurringTime : null,
+      isActive
     }
   );
 

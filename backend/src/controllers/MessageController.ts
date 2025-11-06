@@ -66,19 +66,38 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const medias = req.files as Express.Multer.File[];
   const { companyId } = req.user;
 
+  console.log("========================================");
+  console.log("📥 [MESSAGE CONTROLLER] Recebendo mensagem");
+  console.log("Ticket ID:", ticketId);
+  console.log("Company ID:", companyId);
+  console.log("Body:", body);
+  console.log("Has Media:", !!medias);
+  console.log("Has Quoted:", !!quotedMsg);
+
   const ticket = await ShowTicketService(ticketId, companyId);
+  console.log("✅ Ticket carregado:");
+  console.log("  - Status:", ticket.status);
+  console.log("  - WhatsApp ID:", ticket.whatsappId);
+  console.log("  - Contact ID:", ticket.contactId);
+  console.log("  - Contact Number:", ticket.contact?.number);
+  console.log("  - Is Group:", ticket.isGroup);
 
   SetTicketMessagesAsRead(ticket);
 
   if (medias) {
+    console.log("📎 Enviando mídia...");
     await Promise.all(
       medias.map(async (media: Express.Multer.File, index) => {
         await SendWhatsAppMedia({ media, ticket, body: Array.isArray(body) ? body[index] : body });
       })
     );
+    console.log("✅ Mídia enviada");
   } else {
+    console.log("📝 Enviando mensagem de texto...");
     const send = await SendWhatsAppMessage({ body, ticket, quotedMsg });
+    console.log("✅ Mensagem enviada do controller");
   }
+  console.log("========================================\n");
 
   return res.send();
 };

@@ -259,6 +259,64 @@ async function handleVerifySchedules(job) {
   }
 }
 
+async function handleVerifyRecurringSchedules(job) {
+  try {
+    const now = moment();
+    const currentTime = now.format("HH:mm");
+    const currentDate = now.format("YYYY-MM-DD");
+
+    // Busca agendamentos recorrentes ativos
+    const { count, rows: schedules } = await Schedule.findAndCountAll({
+      where: {
+        isRecurring: true,
+        isActive: true,
+        recurringTime: {
+          [Op.not]: null
+        }
+      },
+      include: [{ model: Contact, as: "contact" }]
+    });
+
+    if (count > 0) {
+      logger.info(`[🔄] Verificando ${count} agendamentos recorrentes`);
+
+      schedules.map(async schedule => {
+        try {
+          const scheduledTime = schedule.recurringTime; // Ex: "09:00"
+          const lastRun = schedule.lastRunAt ? moment(schedule.lastRunAt).format("YYYY-MM-DD") : null;
+
+          // Verifica se a hora atual está dentro de 5 minutos da hora agendada
+          const scheduledMoment = moment(scheduledTime, "HH:mm");
+          const diff = now.diff(scheduledMoment, "minutes");
+
+          // Se já rodou hoje, pula
+          if (lastRun === currentDate) {
+            return;
+          }
+
+          // Se está na janela de execução (hora agendada +/- 5 minutos)
+          if (diff >= 0 && diff <= 5) {
+            logger.info(`[🔄] Disparando agendamento recorrente para: ${schedule.contact.name} - Tipo: ${schedule.recurringType}`);
+
+            sendScheduledMessages.add(
+              "SendMessage",
+              { schedule },
+              { delay: 5000 }
+            );
+          }
+        } catch (err: any) {
+          Sentry.captureException(err);
+          logger.error(`[🔄] Erro ao processar agendamento recorrente ${schedule.id}: ${err.message}`);
+        }
+      });
+    }
+  } catch (e: any) {
+    Sentry.captureException(e);
+    logger.error("VerifyRecurringSchedules -> error", e.message);
+    throw e;
+  }
+}
+
 async function handleSendScheduledMessage(job) {
   const {
     data: { schedule }
@@ -299,12 +357,21 @@ async function handleSendScheduledMessage(job) {
       mediaPath: filePath
     }, "\u2064");
 
-    await scheduleRecord?.update({
-      sentAt: moment().format("YYYY-MM-DD HH:mm"),
-      status: "ENVIADA"
-    });
+    // Se for recorrente, apenas atualiza lastRunAt
+    // Se não for recorrente, marca como ENVIADA
+    if (scheduleRecord?.isRecurring) {
+      await scheduleRecord.update({
+        lastRunAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      });
+      logger.info(`[🔄] Mensagem recorrente enviada para: ${schedule.contact.name} - Próximo envio amanhã`);
+    } else {
+      await scheduleRecord?.update({
+        sentAt: moment().format("YYYY-MM-DD HH:mm"),
+        status: "ENVIADA"
+      });
+      logger.info(`[🧵] Mensagem agendada enviada para: ${schedule.contact.name}`);
+    }
 
-    logger.info(`[🧵] Mensagem agendada enviada para: ${schedule.contact.name}`);
     sendScheduledMessages.clean(15000, "completed");
 
     getIO().to(`company-${ticket.companyId}-${ticket.status}`)
@@ -1069,6 +1136,8 @@ export async function startQueueProcess() {
 
   scheduleMonitor.process("Verify", handleVerifySchedules);
 
+  scheduleMonitor.process("VerifyRecurring", handleVerifyRecurringSchedules);
+
   sendScheduledMessages.process("SendMessage", handleSendScheduledMessage);
 
   userMonitor.process("VerifyLoginStatus", handleLoginStatus);
@@ -1124,6 +1193,15 @@ export async function startQueueProcess() {
     {},
     {
       repeat: { cron: "*/5 * * * * *", key: "verify" },
+      removeOnComplete: true
+    }
+  );
+
+  scheduleMonitor.add(
+    "VerifyRecurring",
+    {},
+    {
+      repeat: { cron: "*/1 * * * *", key: "verify-recurring" }, // A cada minuto
       removeOnComplete: true
     }
   );

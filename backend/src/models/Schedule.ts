@@ -73,6 +73,21 @@ class Schedule extends Model<Schedule> {
 
   @Column
   mediaName: string;
+
+  @Column({ defaultValue: false })
+  isRecurring: boolean;
+
+  @Column(DataType.STRING)
+  recurringType: string; // 'daily', 'weekly', 'monthly'
+
+  @Column(DataType.STRING)
+  recurringTime: string; // Formato HH:mm (ex: "09:00")
+
+  @Column
+  lastRunAt: Date;
+
+  @Column({ defaultValue: true })
+  isActive: boolean;
 }
 
 export default Schedule;

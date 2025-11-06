@@ -13,6 +13,10 @@ interface ScheduleData {
   companyId?: number;
   ticketId?: number;
   userId?: number;
+  isRecurring?: boolean;
+  recurringType?: string;
+  recurringTime?: string;
+  isActive?: boolean;
 }
 
 interface Request {
@@ -33,7 +37,12 @@ const UpdateUserService = async ({
   }
 
   const schema = Yup.object().shape({
-    body: Yup.string().min(5)
+    body: Yup.string().min(5),
+    recurringTime: Yup.string().when('isRecurring', {
+      is: true,
+      then: Yup.string().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato deve ser HH:mm'),
+      otherwise: Yup.string().notRequired()
+    })
   });
 
   const {
@@ -43,10 +52,14 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    isRecurring,
+    recurringType,
+    recurringTime,
+    isActive
   } = scheduleData;
 
   try {
-    await schema.validate({ body });
+    await schema.validate({ body, isRecurring, recurringTime });
   } catch (err: any) {
     throw new AppError(err.message);
   }
@@ -58,6 +71,10 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    isRecurring,
+    recurringType,
+    recurringTime,
+    isActive
   });
 
   await schedule.reload();

@@ -40,7 +40,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     body,
     sendAt,
     contactId,
-    userId
+    userId,
+    isRecurring,
+    recurringType,
+    recurringTime,
+    isActive
   } = req.body;
   const { companyId } = req.user;
 
@@ -49,7 +53,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     sendAt,
     contactId,
     companyId,
-    userId
+    userId,
+    isRecurring,
+    recurringType,
+    recurringTime,
+    isActive
   });
 
   const io = getIO();
