@@ -5,6 +5,7 @@ import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import ResetGroupSession from "./ResetGroupSession";
 
 import formatBody from "../../helpers/Mustache";
 
@@ -125,9 +126,49 @@ const SendWhatsAppMessage = async ({
       console.log("✅ Mensagem enviada com sucesso!");
 
     } catch (firstAttemptError: any) {
-      console.error("❌ Falhou ao enviar mensagem");
-      console.error("Error:", firstAttemptError?.message);
-      throw firstAttemptError;
+      // Se for timeout em grupo, resetar sessão e tentar novamente
+      if (ticket.isGroup && (firstAttemptError?.message === 'SEND_MESSAGE_TIMEOUT' || firstAttemptError?.message === 'Timed Out')) {
+        console.log("⚠️  Timeout ao enviar para grupo");
+        console.log("🔄 Resetando sessão do grupo e tentando novamente...");
+
+        try {
+          // Resetar sessão do grupo específico
+          await ResetGroupSession({
+            whatsappId: ticket.whatsappId,
+            groupNumber: ticket.contact.number
+          });
+
+          console.log("✅ Sessão do grupo resetada");
+          console.log("📤 Tentando enviar novamente...");
+
+          // Segunda tentativa após reset
+          const secondSendTimeout = 20000; // 20 segundos para segunda tentativa
+          const secondSendPromise = wbot.sendMessage(number, {
+              text: formatBody(body, ticket.contact)
+            },
+            {
+              ...options
+            }
+          );
+
+          const secondTimeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('SECOND_TIMEOUT')), secondSendTimeout);
+          });
+
+          sentMessage = await Promise.race([secondSendPromise, secondTimeoutPromise]) as WAMessage;
+          console.log("✅ Mensagem enviada com sucesso após reset!");
+
+        } catch (secondAttemptError: any) {
+          console.error("❌ Falhou também após resetar sessão do grupo");
+          console.error("Error:", secondAttemptError?.message);
+          throw new AppError("Não foi possível enviar mensagem para este grupo. O grupo pode estar com problemas de sincronização. Tente fechar e reabrir o chamado ou reconectar o WhatsApp.");
+        }
+      } else {
+        // Se não for timeout de grupo, lança o erro original
+        console.error("❌ Falhou ao enviar mensagem");
+        console.error("Error:", firstAttemptError?.message);
+        throw firstAttemptError;
+      }
     }
 
     console.log("Message ID:", sentMessage.key?.id);
