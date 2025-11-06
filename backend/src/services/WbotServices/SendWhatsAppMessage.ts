@@ -67,15 +67,68 @@ const SendWhatsAppMessage = async ({
     }
 
     console.log("📤 Enviando mensagem via Baileys...");
-    const sentMessage = await wbot.sendMessage(number,{
-        text: formatBody(body, ticket.contact)
-      },
-      {
-        ...options
-      }
-    );
 
-    console.log("✅ Mensagem enviada com sucesso!");
+    let sentMessage: WAMessage;
+
+    // Primeira tentativa: envio normal
+    try {
+      const sendTimeout = ticket.isGroup ? 20000 : 60000;
+      console.log(`⏱️  Timeout configurado: ${sendTimeout}ms`);
+
+      const sendPromise = wbot.sendMessage(number, {
+          text: formatBody(body, ticket.contact)
+        },
+        {
+          ...options
+        }
+      );
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('SEND_MESSAGE_TIMEOUT')), sendTimeout);
+      });
+
+      sentMessage = await Promise.race([sendPromise, timeoutPromise]) as WAMessage;
+      console.log("✅ Mensagem enviada com sucesso na primeira tentativa!");
+
+    } catch (firstAttemptError: any) {
+      // Se for timeout em grupo, tentar envio forçado
+      if (ticket.isGroup && (firstAttemptError?.message === 'SEND_MESSAGE_TIMEOUT' || firstAttemptError?.message === 'Timed Out')) {
+        console.log("⚠️  Timeout na primeira tentativa para grupo");
+        console.log("🔄 Tentando envio direto sem validações...");
+
+        try {
+          // Segunda tentativa: envio mais direto, sem esperar metadados
+          const messageContent = {
+            text: formatBody(body, ticket.contact)
+          };
+
+          // Gerar uma chave de mensagem única
+          const messageKey = {
+            remoteJid: number,
+            fromMe: true,
+            id: `BAE5${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+          };
+
+          // Enviar usando relayMessage (mais direto)
+          sentMessage = await wbot.relayMessage(number, {
+            extendedTextMessage: messageContent
+          }, {
+            messageId: messageKey.id
+          }) as WAMessage;
+
+          console.log("✅ Mensagem enviada com sucesso via envio direto (segunda tentativa)!");
+
+        } catch (secondAttemptError: any) {
+          console.error("❌ Falhou também na segunda tentativa");
+          console.error("Error:", secondAttemptError?.message);
+          throw firstAttemptError; // Lança o erro original
+        }
+      } else {
+        // Se não for timeout de grupo, lança o erro
+        throw firstAttemptError;
+      }
+    }
+
     console.log("Message ID:", sentMessage.key?.id);
     console.log("Message Status:", sentMessage.status);
 
@@ -84,10 +137,11 @@ const SendWhatsAppMessage = async ({
     console.log("========================================\n");
 
     return sentMessage;
-  } catch (err) {
+  } catch (err: any) {
     console.error("❌ [SEND MESSAGE] Erro ao enviar mensagem");
     console.error("Ticket ID:", ticket.id);
     console.error("Contact Number:", ticket.contact.number);
+    console.error("Is Group:", ticket.isGroup);
     console.error("Error Type:", err?.constructor?.name);
     console.error("Error Message:", err?.message);
     console.error("Error Stack:", err?.stack);
@@ -95,7 +149,13 @@ const SendWhatsAppMessage = async ({
     console.error("========================================\n");
 
     Sentry.captureException(err);
-    console.log(err);
+
+    // Mensagem de erro específica para grupos com timeout persistente
+    if (ticket.isGroup && (err?.message === 'SEND_MESSAGE_TIMEOUT' || err?.message === 'Timed Out')) {
+      console.error("⚠️  Erro persistente de timeout em grupo após 2 tentativas");
+      throw new AppError("Não foi possível enviar a mensagem para este grupo. Tente reconectar o WhatsApp ou verifique se o bot está no grupo.");
+    }
+
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };
