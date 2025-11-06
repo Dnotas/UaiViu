@@ -70,9 +70,43 @@ const SendWhatsAppMessage = async ({
 
     let sentMessage: WAMessage;
 
+    // Para grupos, tentar pré-cachear metadados
+    if (ticket.isGroup) {
+      try {
+        console.log("🔍 Pré-carregando metadados do grupo...");
+        const metadataPromise = wbot.groupMetadata(number);
+        const metadataTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('METADATA_TIMEOUT')), 5000)
+        );
+
+        const metadata = await Promise.race([metadataPromise, metadataTimeout]);
+        console.log("✅ Metadados do grupo carregados:", metadata ? 'sucesso' : 'falhou');
+      } catch (metadataError: any) {
+        console.log("⚠️  Não foi possível carregar metadados do grupo:", metadataError?.message);
+        console.log("🔄 Continuando sem metadados...");
+
+        // Tentar mockar os metadados básicos no cache do wbot
+        if (wbot.store) {
+          try {
+            const groupMetadata = {
+              id: number,
+              subject: ticket.contact.name || 'Grupo',
+              participants: []
+            };
+            // Forçar cache dos metadados
+            wbot.store.groupMetadata = wbot.store.groupMetadata || {};
+            wbot.store.groupMetadata[number] = groupMetadata;
+            console.log("✅ Metadados mockados no cache");
+          } catch (cacheError) {
+            console.log("⚠️  Não foi possível mockar metadados:", cacheError);
+          }
+        }
+      }
+    }
+
     // Primeira tentativa: envio normal
     try {
-      const sendTimeout = ticket.isGroup ? 20000 : 60000;
+      const sendTimeout = ticket.isGroup ? 30000 : 60000;
       console.log(`⏱️  Timeout configurado: ${sendTimeout}ms`);
 
       const sendPromise = wbot.sendMessage(number, {
@@ -88,56 +122,12 @@ const SendWhatsAppMessage = async ({
       });
 
       sentMessage = await Promise.race([sendPromise, timeoutPromise]) as WAMessage;
-      console.log("✅ Mensagem enviada com sucesso na primeira tentativa!");
+      console.log("✅ Mensagem enviada com sucesso!");
 
     } catch (firstAttemptError: any) {
-      // Se for timeout em grupo, tentar envio forçado
-      if (ticket.isGroup && (firstAttemptError?.message === 'SEND_MESSAGE_TIMEOUT' || firstAttemptError?.message === 'Timed Out')) {
-        console.log("⚠️  Timeout na primeira tentativa para grupo");
-        console.log("🔄 Tentando envio direto sem validações...");
-
-        try {
-          // Segunda tentativa: envio mais direto, forçando sem esperar resposta
-          const messageContent = formatBody(body, ticket.contact);
-
-          // Tentar com sendMessage mas sem aguardar confirmação completa
-          const quickSendPromise = wbot.sendMessage(number, {
-            text: messageContent
-          }, {
-            // Não esperar por confirmação/metadados
-          });
-
-          // Timeout de 5 segundos para esta tentativa rápida
-          const quickTimeoutPromise = new Promise<WAMessage>((resolve, reject) => {
-            setTimeout(() => {
-              // Se chegou aqui, assume que enviou (não espera confirmação)
-              console.log("⚡ Assumindo envio bem-sucedido (sem confirmação)");
-              resolve({
-                key: {
-                  remoteJid: number,
-                  fromMe: true,
-                  id: `${Date.now()}`
-                },
-                message: {
-                  conversation: messageContent
-                },
-                messageTimestamp: Date.now()
-              } as WAMessage);
-            }, 5000);
-          });
-
-          sentMessage = await Promise.race([quickSendPromise, quickTimeoutPromise]) as WAMessage;
-          console.log("✅ Mensagem enviada com sucesso via envio direto (segunda tentativa)!");
-
-        } catch (secondAttemptError: any) {
-          console.error("❌ Falhou também na segunda tentativa");
-          console.error("Error:", secondAttemptError?.message);
-          throw firstAttemptError; // Lança o erro original
-        }
-      } else {
-        // Se não for timeout de grupo, lança o erro
-        throw firstAttemptError;
-      }
+      console.error("❌ Falhou ao enviar mensagem");
+      console.error("Error:", firstAttemptError?.message);
+      throw firstAttemptError;
     }
 
     console.log("Message ID:", sentMessage.key?.id);
