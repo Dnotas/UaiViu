@@ -14,6 +14,9 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Checkbox from "@material-ui/core/Checkbox";
+import MenuItem from "@material-ui/core/MenuItem";
 
 import { i18n } from "../../translate/i18n";
 
@@ -65,7 +68,16 @@ const ScheduleSchema = Yup.object().shape({
 		.min(5, "Mensagem muito curta")
 		.required("Obrigatório"),
 	contactId: Yup.number().required("Obrigatório"),
-	sendAt: Yup.string().required("Obrigatório")
+	sendAt: Yup.string().when('isRecurring', {
+		is: false,
+		then: Yup.string().required("Obrigatório"),
+		otherwise: Yup.string().notRequired()
+	}),
+	recurringTime: Yup.string().when('isRecurring', {
+		is: true,
+		then: Yup.string().required("Obrigatório").matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato deve ser HH:mm'),
+		otherwise: Yup.string().notRequired()
+	})
 });
 
 const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, reload }) => {
@@ -77,7 +89,11 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		body: "",
 		contactId: "",
 		sendAt: moment().add(1, 'hour').format('YYYY-MM-DDTHH:mm'),
-		sentAt: ""
+		sentAt: "",
+		isRecurring: false,
+		recurringType: "daily",
+		recurringTime: "09:00",
+		isActive: true
 	};
 
 	const initialContact = {
@@ -304,20 +320,76 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 								</Grid>
 								<br />
 								<div className={classes.multFieldLine}>
-									<Field
-										as={TextField}
-										label={i18n.t("scheduleModal.form.sendAt")}
-										type="datetime-local"
-										name="sendAt"
-										InputLabelProps={{
-											shrink: true,
-										}}
-										error={touched.sendAt && Boolean(errors.sendAt)}
-										helperText={touched.sendAt && errors.sendAt}
-										variant="outlined"
-										fullWidth
+									<FormControlLabel
+										control={
+											<Field
+												as={Checkbox}
+												name="isRecurring"
+												color="primary"
+												checked={values.isRecurring}
+												onChange={(e) => {
+													setFieldValue("isRecurring", e.target.checked);
+													if (!e.target.checked) {
+														setFieldValue("sendAt", moment().add(1, 'hour').format('YYYY-MM-DDTHH:mm'));
+													}
+												}}
+											/>
+										}
+										label={i18n.t("scheduleModal.form.isRecurring")}
 									/>
 								</div>
+								{!values.isRecurring && (
+									<div className={classes.multFieldLine}>
+										<Field
+											as={TextField}
+											label={i18n.t("scheduleModal.form.sendAt")}
+											type="datetime-local"
+											name="sendAt"
+											InputLabelProps={{
+												shrink: true,
+											}}
+											error={touched.sendAt && Boolean(errors.sendAt)}
+											helperText={touched.sendAt && errors.sendAt}
+											variant="outlined"
+											fullWidth
+										/>
+									</div>
+								)}
+								{values.isRecurring && (
+									<>
+										<div className={classes.multFieldLine}>
+											<Field
+												as={TextField}
+												select
+												label={i18n.t("scheduleModal.form.recurringType")}
+												name="recurringType"
+												variant="outlined"
+												margin="dense"
+												fullWidth
+											>
+												<MenuItem value="daily">{i18n.t("scheduleModal.recurringTypes.daily")}</MenuItem>
+												<MenuItem value="weekly">{i18n.t("scheduleModal.recurringTypes.weekly")}</MenuItem>
+												<MenuItem value="monthly">{i18n.t("scheduleModal.recurringTypes.monthly")}</MenuItem>
+											</Field>
+										</div>
+										<br />
+										<div className={classes.multFieldLine}>
+											<Field
+												as={TextField}
+												label={i18n.t("scheduleModal.form.recurringTime")}
+												type="time"
+												name="recurringTime"
+												InputLabelProps={{
+													shrink: true,
+												}}
+												error={touched.recurringTime && Boolean(errors.recurringTime)}
+												helperText={touched.recurringTime && errors.recurringTime}
+												variant="outlined"
+												fullWidth
+											/>
+										</div>
+									</>
+								)}
 								{(schedule.mediaPath || attachment) && (
 									<Grid xs={12} item>
 										<Button startIcon={<AttachFile />}>

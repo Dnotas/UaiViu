@@ -694,6 +694,14 @@ const messages = {
           contact: "Contato",
           sendAt: "Data de Agendamento",
           sentAt: "Data de Envio",
+          isRecurring: "Agendamento Recorrente",
+          recurringType: "Tipo de Recorrência",
+          recurringTime: "Horário de Envio",
+        },
+        recurringTypes: {
+          daily: "Diário",
+          weekly: "Semanal",
+          monthly: "Mensal",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -701,6 +709,13 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Agendamento salvo com sucesso.",
+        confirmationModal: {
+          deleteTitle: "Excluir Arquivo",
+          deleteMessage: "Tem certeza? Essa ação não pode ser revertida!",
+        },
+        toasts: {
+          deleted: "Arquivo excluído com sucesso!",
+        },
       },
       tagModal: {
         title: {
