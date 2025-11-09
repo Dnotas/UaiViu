@@ -1,0 +1,470 @@
+[TAILING] Tailing last 200 lines for [uaiviu-backend] process (change the value with --lines option)
+/home/deploy/.pm2/logs/uaiviu-backend-error.log last 200 lines:
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.23 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Closing open session in favor of incoming prekey bundle
+0|uaiviu-b | Closing open session in favor of incoming prekey bundle
+0|uaiviu-b | Closing stale open session for new outgoing prekey bundle
+0|uaiviu-b | Failed to decrypt message with any known session...
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.24 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Failed to decrypt message with any known session...
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.24 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Failed to decrypt message with any known session...
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.24 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Closing open session in favor of incoming prekey bundle
+0|uaiviu-b | Closing open session in favor of incoming prekey bundle
+0|uaiviu-b | Closing stale open session for new outgoing prekey bundle
+0|uaiviu-b | (node:236431) [DEP0097] DeprecationWarning: Using a domain property in MakeCallback is deprecated. Use the async_context variant of MakeCallback or the AsyncResource class instead. (Triggered by calling processImmediate on process.)
+0|uaiviu-b | (Use `node --trace-deprecation ...` to show where the warning was created)
+0|uaiviu-b | Failed to decrypt message with any known session...
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+0|uaiviu-b | Session error:Error: Bad MAC Error: Bad MAC
+0|uaiviu-b |     at Object.verifyMAC (/home/deploy/uaiviu/backend/node_modules/libsignal/src/crypto.js:87:15)
+0|uaiviu-b |     at SessionCipher.doDecryptWhisperMessage (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:250:16)
+0|uaiviu-b |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|uaiviu-b |     at async SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:147:29)
+0|uaiviu-b |     at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)
+0|uaiviu-b |     at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)
+
+/home/deploy/.pm2/logs/uaiviu-backend-out.log last 200 lines:
+0|uaiviu-b | [32mINFO[39m [12:45:20.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:45:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925520000 completada em 20004ms[39m
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | [32mINFO[39m [12:45:40.014] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:45:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:45:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925540000 completada em 20007ms[39m
+0|uaiviu-b | [32mINFO[39m [12:46:00.031] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:00.071] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:00.085] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925560000 completada em 20074ms[39m
+0|uaiviu-b | [32mINFO[39m [12:46:00.610] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | [32mINFO[39m [12:46:20.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:20.013] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:20.014] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925580000 completada em 19986ms[39m
+0|uaiviu-b | [32mINFO[39m [12:46:40.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:46:40.016] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925600000 completada em 20008ms[39m
+0|uaiviu-b | [32mINFO[39m [12:47:00.030] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:00.071] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:00.081] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925620000 completada em 20071ms[39m
+0|uaiviu-b | [32mINFO[39m [12:47:00.636] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:47:20.015] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:20.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:20.018] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925640000 completada em 19994ms[39m
+0|uaiviu-b | [32mINFO[39m [12:47:40.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:47:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925660000 completada em 20003ms[39m
+0|uaiviu-b | [32mINFO[39m [12:48:00.026] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:00.081] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:00.092] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925680000 completada em 20082ms[39m
+0|uaiviu-b | [32mINFO[39m [12:48:00.331] (236431): [36mUsuário passado para offline: 5[39m
+0|uaiviu-b | [32mINFO[39m [12:48:00.660] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:48:20.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:20.018] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:20.020] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925700000 completada em 20000ms[39m
+0|uaiviu-b | [32mINFO[39m [12:48:40.010] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:48:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925720000 completada em 20006ms[39m
+0|uaiviu-b | [32mINFO[39m [12:49:00.018] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:00.034] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:00.039] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925740000 completada em 20032ms[39m
+0|uaiviu-b | [32mINFO[39m [12:49:00.697] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:49:20.013] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:20.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925760000 completada em 20001ms[39m
+0|uaiviu-b | [32mINFO[39m [12:49:28.577] (236431): [36m[📌] - Status da fila de campanhas:[39m
+0|uaiviu-b | ========================================
+0|uaiviu-b | 📨 [API EXTERNA] Requisição recebida
+0|uaiviu-b | Timestamp: 2025-10-31T15:49:32.556Z
+0|uaiviu-b | WhatsApp ID: 1
+0|uaiviu-b | Número destino: 120363402933631825
+0|uaiviu-b | Mensagem: MOCA BONITA - Caixa Contabil esta com saldo de emiss�o de notas fiscal NEGATIVO em -361.539,66
+0|uaiviu-b | Tem mídia?: false
+0|uaiviu-b | ========================================
+0|uaiviu-b | 1
+0|uaiviu-b | ✅ [API EXTERNA] Mensagem enviada com sucesso
+0|uaiviu-b | Número: 120363402933631825
+0|uaiviu-b | Ticket ID: 15
+0|uaiviu-b | ========================================
+0|uaiviu-b | 
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | [32mINFO[39m [12:49:40.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:40.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:49:40.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925780000 completada em 20006ms[39m
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | [32mINFO[39m [12:50:00.021] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:00.062] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:00.073] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925800000 completada em 20064ms[39m
+0|uaiviu-b | [32mINFO[39m [12:50:00.740] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | 7
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | [32mINFO[39m [12:50:20.018] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:20.020] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:20.021] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925820000 completada em 20005ms[39m
+0|uaiviu-b | [32mINFO[39m [12:50:40.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:40.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:50:40.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925840000 completada em 20000ms[39m
+0|uaiviu-b | [32mINFO[39m [12:51:00.024] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:00.068] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:00.080] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925860000 completada em 20073ms[39m
+0|uaiviu-b | [32mINFO[39m [12:51:00.773] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | [32mINFO[39m [12:51:20.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:20.013] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:20.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925880000 completada em 19993ms[39m
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | [32mINFO[39m [12:51:40.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:40.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:51:40.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925900000 completada em 20006ms[39m
+0|uaiviu-b | 7
+0|uaiviu-b | [32mINFO[39m [12:52:00.022] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:00.035] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:00.069] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925920000 completada em 20060ms[39m
+0|uaiviu-b | [32mINFO[39m [12:52:00.802] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:52:20.010] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:20.015] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925940000 completada em 20000ms[39m
+0|uaiviu-b | [32mINFO[39m [12:52:40.014] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:52:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925960000 completada em 20008ms[39m
+0|uaiviu-b | [32mINFO[39m [12:53:00.021] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:00.035] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:00.072] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761925980000 completada em 20063ms[39m
+0|uaiviu-b | [32mINFO[39m [12:53:00.851] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:53:20.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:20.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:20.018] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926000000 completada em 20001ms[39m
+0|uaiviu-b | [32mINFO[39m [12:53:40.014] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:40.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:53:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926020000 completada em 20006ms[39m
+0|uaiviu-b | [33mWARN[39m [12:53:57.167] (236431):
+0|uaiviu-b |     message: "Invalid token. We'll try to assign a new one on next request"
+0|uaiviu-b |     statusCode: 403
+0|uaiviu-b | [32mINFO[39m [12:54:00.040] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:00.102] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:00.137] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926040000 completada em 20128ms[39m
+0|uaiviu-b | [32mINFO[39m [12:54:00.886] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:54:20.010] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:20.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926060000 completada em 19987ms[39m
+0|uaiviu-b | [32mINFO[39m [12:54:28.578] (236431): [36m[📌] - Status da fila de campanhas:[39m
+0|uaiviu-b | [32mINFO[39m [12:54:40.009] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:40.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:54:40.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926080000 completada em 20008ms[39m
+0|uaiviu-b | [32mINFO[39m [12:55:00.026] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:00.033] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:00.068] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926100000 completada em 20061ms[39m
+0|uaiviu-b | [32mINFO[39m [12:55:00.917] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:55:20.016] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:20.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:20.019] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926120000 completada em 19999ms[39m
+0|uaiviu-b | [32mINFO[39m [12:55:40.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:55:40.018] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926140000 completada em 20007ms[39m
+0|uaiviu-b | [32mINFO[39m [12:56:00.028] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:00.070] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:00.080] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926160000 completada em 20071ms[39m
+0|uaiviu-b | [32mINFO[39m [12:56:00.952] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:56:20.014] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:20.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926180000 completada em 19997ms[39m
+0|uaiviu-b | [32mINFO[39m [12:56:40.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:40.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:56:40.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926200000 completada em 20007ms[39m
+0|uaiviu-b | [32mINFO[39m [12:57:00.028] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:00.075] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:00.082] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926220000 completada em 20073ms[39m
+0|uaiviu-b | [32mINFO[39m [12:57:00.988] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:57:20.010] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:20.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:20.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926240000 completada em 19993ms[39m
+0|uaiviu-b | 1
+0|uaiviu-b | 1
+0|uaiviu-b | [32mINFO[39m [12:57:40.013] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:40.014] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:57:40.015] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926260000 completada em 20008ms[39m
+0|uaiviu-b | [32mINFO[39m [12:58:00.017] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:58:00.030] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:00.079] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:00.090] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926280000 completada em 20081ms[39m
+0|uaiviu-b | [32mINFO[39m [12:58:20.015] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:20.016] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:20.017] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926300000 completada em 19993ms[39m
+0|uaiviu-b | [32mINFO[39m [12:58:40.015] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:40.018] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:58:40.019] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926320000 completada em 20006ms[39m
+0|uaiviu-b | [32mINFO[39m [12:59:00.027] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:00.039] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [12:59:00.089] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:00.099] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926340000 completada em 20087ms[39m
+0|uaiviu-b | 7
+0|uaiviu-b | 7
+0|uaiviu-b | [32mINFO[39m [12:59:20.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:20.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:20.018] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926360000 completada em 19998ms[39m
+0|uaiviu-b | [32mINFO[39m [12:59:28.576] (236431): [36m[📌] - Status da fila de campanhas:[39m
+0|uaiviu-b | [32mINFO[39m [12:59:40.012] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:40.017] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [12:59:40.018] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926380000 completada em 20008ms[39m
+0|uaiviu-b | [32mINFO[39m [13:00:00.029] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-b | [32mINFO[39m [13:00:00.070] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-b | [32mINFO[39m [13:00:00.077] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-b | [32mINFO[39m [13:00:00.088] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926400000 completada em 20080ms[39m
+0|uaiviu-b | {"level":50,"time":"2025-10-31T16:00:01.480Z","pid":236431,"hostname":"ip-172-31-29-139","key":{"remoteJid":"120363420785321689@g.us","fromMe":false,"id":"3EB0BE342D2D87002F68ED","participant":"249215527710918:4@lid"},"err":{"type":"SessionError","message":"No matching sessions found for message","stack":"SessionError: No matching sessions found for message\n    at SessionCipher.decryptWithSessions (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:161:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async 249215527710918.4 [as awaitable] (/home/deploy/uaiviu/backend/node_modules/libsignal/src/session_cipher.js:171:28)\n    at async _asyncQueueExecutor (/home/deploy/uaiviu/backend/node_modules/libsignal/src/queue_job.js:20:29)","name":"SessionError"},"msg":"failed to decrypt message"}
+0|uaiviu-b | {"level":50,"time":"2025-10-31T16:00:01.481Z","pid":236431,"hostname":"ip-172-31-29-139","key":{"remoteJid":"120363420785321689@g.us","fromMe":false,"id":"3EB0BE342D2D87002F68ED","participant":"249215527710918:4@lid"},"err":{"type":"Error","message":"No session found to decrypt message","stack":"Error: No session found to decrypt message\n    at Object.awaitable (file:///home/deploy/uaiviu/backend/node_modules/baileys/lib/Signal/Group/group_cipher.js:43:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async _asyncQueueExecutor (file:///home/deploy/uaiviu/backend/node_modules/baileys/lib/Signal/Group/queue-job.js:10:29)"},"msg":"failed to decrypt message"}
+
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | 📨 [API EXTERNA] Requisição recebida
+0|uaiviu-backend  | Timestamp: 2025-10-31T16:00:11.368Z
+0|uaiviu-backend  | WhatsApp ID: 1
+0|uaiviu-backend  | Número destino: 120363420785321689
+0|uaiviu-backend  | Mensagem: undefined
+0|uaiviu-backend  | Tem mídia?: true
+0|uaiviu-backend  | Arquivo 1: {
+0|uaiviu-backend  |   nome: 'RelatorioVendas.jpg',
+0|uaiviu-backend  |   mimetype: 'application/octet-stream',
+0|uaiviu-backend  |   tamanho: 18616
+0|uaiviu-backend  | }
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | null
+0|uaiviu-backend  | ✅ [API EXTERNA] Mensagem enviada com sucesso
+0|uaiviu-backend  | Número: 120363420785321689
+0|uaiviu-backend  | Ticket ID: 206
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | null
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | 📨 [API EXTERNA] Requisição recebida
+0|uaiviu-backend  | Timestamp: 2025-10-31T16:00:13.117Z
+0|uaiviu-backend  | WhatsApp ID: 1
+0|uaiviu-backend  | Número destino: 120363420785321689
+0|uaiviu-backend  | Mensagem: Boa tarde, segue vendas emitidas ate o momento, enviado por Carlos.
+0|uaiviu-backend  | Tem mídia?: false
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | null
+0|uaiviu-backend  | ✅ [API EXTERNA] Mensagem enviada com sucesso
+0|uaiviu-backend  | Número: 120363420785321689
+0|uaiviu-backend  | Ticket ID: 206
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | null
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | [32mINFO[39m [13:00:20.010] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:00:20.013] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:00:20.013] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926420000 completada em 19988ms[39m
+0|uaiviu-backend  | null
+0|uaiviu-backend  | null
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | null
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | [32mINFO[39m [13:00:40.011] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:00:40.015] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:00:40.016] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926440000 completada em 20007ms[39m
+0|uaiviu-backend  | [32mINFO[39m [13:01:00.031] (236431): [36m[🏁] - Verificando campanhas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:01:00.075] (236431): [36m[🏁] - Finalizando verificação de campanhas programadas...[39m
+0|uaiviu-backend  | [32mINFO[39m [13:01:00.086] (236431): [36m[📌] -   Campanha repeat:0b579e70b2b5a70bc8f029c09e6fd7ff:1761926460000 completada em 20077ms[39m
+0|uaiviu-backend  | [32mINFO[39m [13:01:00.110] (236431): [36mServiço de transferencia de tickets iniciado[39m
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | 📨 [API EXTERNA] Requisição recebida
+0|uaiviu-backend  | Timestamp: 2025-10-31T16:01:05.811Z
+0|uaiviu-backend  | WhatsApp ID: 1
+0|uaiviu-backend  | Número destino: 120363402933631825
+0|uaiviu-backend  | Mensagem: SPLENDORE ACESSORIOS - Caixa Contabil esta com saldo de emiss�o de notas fiscal NEGATIVO em -35.134,48
+0|uaiviu-backend  | Tem mídia?: false
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | ✅ [API EXTERNA] Mensagem enviada com sucesso
+0|uaiviu-backend  | Número: 120363402933631825
+0|uaiviu-backend  | Ticket ID: 15
+0|uaiviu-backend  | ========================================
+0|uaiviu-backend  | 1
+0|uaiviu-backend  | 1
