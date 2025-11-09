@@ -51,6 +51,10 @@ class Contact extends Model<Contact> {
   @Column
   disableBot: boolean;
 
+  @Default(false)
+  @Column
+  disableTicket: boolean;
+
   @CreatedAt
   createdAt: Date;
 

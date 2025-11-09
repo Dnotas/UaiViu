@@ -2360,6 +2360,12 @@ const handleMessage = async (
       return;
     }
 
+    // Verificar se o contato está marcado para não criar tickets
+    if (contact.disableTicket && !msg.key.fromMe) {
+      logger.info(`Mensagem de contato ignorado (disableTicket): ${contact.name} (${contact.number})`);
+      return;
+    }
+
     const ticket = await FindOrCreateTicketService(
       contact,
       wbot.id!,

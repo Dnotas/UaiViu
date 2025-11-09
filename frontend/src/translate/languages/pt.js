@@ -585,6 +585,9 @@ const messages = {
           extraName: "Nome do campo",
           extraValue: "Valor",
           whatsapp: "Conexão Origem: ",
+          options: "Opções",
+          disableBot: "Desabilitar Chatbot",
+          disableTicket: "Não criar chamados (mensagens deste contato serão ignoradas)",
         },
         formErrors: {
           name: {
