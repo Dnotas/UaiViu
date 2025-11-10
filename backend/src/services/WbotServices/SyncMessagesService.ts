@@ -78,7 +78,7 @@ class SyncMessagesService {
           contactId: contact.id,
           companyId
         },
-        order: [["timestamp", "DESC"]],
+        order: [["createdAt", "DESC"]],
         limit: 100
       });
 
