@@ -2276,7 +2276,10 @@ const handleMessage = async (
 ): Promise<void> => {
   let mediaSent: Message | undefined;
 
-  if (!isValidMsg(msg)) return;
+  if (!isValidMsg(msg)) {
+    logger.warn(`Mensagem descartada (tipo inválido) - ID: ${msg.key.id} - De: ${msg.key.remoteJid} - Company: ${companyId}`);
+    return;
+  }
 
   try {
     let msgContact: IMe;
@@ -2302,21 +2305,29 @@ const handleMessage = async (
       msg.message?.documentWithCaptionMessage ||
       msg.message.stickerMessage;
     if (msg.key.fromMe) {
-      if (/\u200e/.test(bodyMessage)) return;
+      if (/\u200e/.test(bodyMessage)) {
+        logger.info(`Mensagem descartada (caractere especial \\u200e) - ID: ${msg.key.id} - Company: ${companyId}`);
+        return;
+      }
 
       if (
         !hasMedia &&
         msgType !== "conversation" &&
         msgType !== "extendedTextMessage" &&
         msgType !== "vcard"
-      )
+      ) {
+        logger.info(`Mensagem descartada (fromMe sem mídia, tipo: ${msgType}) - ID: ${msg.key.id} - Company: ${companyId}`);
         return;
+      }
       msgContact = await getContactMessage(msg, wbot);
     } else {
       msgContact = await getContactMessage(msg, wbot);
     }
 
-    if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
+    if (msgIsGroupBlock?.value === "enabled" && isGroup) {
+      logger.info(`Mensagem descartada (grupo bloqueado) - ID: ${msg.key.id} - Grupo: ${msg.key.remoteJid} - Company: ${companyId}`);
+      return;
+    }
 
     if (isGroup) {
       const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);
@@ -2357,12 +2368,13 @@ const handleMessage = async (
       formatBody(whatsapp.complationMessage, contact).trim().toLowerCase() ===
         lastMessage?.body.trim().toLowerCase()
     ) {
+      logger.info(`Mensagem descartada (finalização duplicada) - ID: ${msg.key.id} - Contato: ${contact.name} (${contact.number}) - Company: ${companyId}`);
       return;
     }
 
     // Verificar se o contato está marcado para não criar tickets
     if (contact.disableTicket && !msg.key.fromMe) {
-      logger.info(`Mensagem de contato ignorado (disableTicket): ${contact.name} (${contact.number})`);
+      logger.warn(`Mensagem descartada (disableTicket=true) - ID: ${msg.key.id} - Contato: ${contact.name} (${contact.number}) - Company: ${companyId}`);
       return;
     }
 
@@ -2898,7 +2910,7 @@ const handleMessage = async (
   } catch (err) {
     console.log(err);
     Sentry.captureException(err);
-    logger.error(`Error handling whatsapp message: Err: ${err}`);
+    logger.error(`Error handling whatsapp message - ID: ${msg.key.id} - De: ${msg.key.remoteJid} - Company: ${companyId} - Err: ${err}`);
   }
 };
 
@@ -3012,8 +3024,11 @@ const wbotMessageListener = async (
         });
 
         if (!messageExists) {
+          logger.info(`Processando nova mensagem - ID: ${message.key.id} - De: ${message.key.remoteJid} - Company: ${companyId}`);
           await handleMessage(message, wbot, companyId);
           await verifyCampaignMessageAndCloseTicket(message, companyId);
+        } else {
+          logger.debug(`Mensagem já existe no banco - ID: ${message.key.id} - Company: ${companyId}`);
         }
       }
     });

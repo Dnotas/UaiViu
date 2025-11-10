@@ -19,6 +19,7 @@ import {
   DoneAll,
   ExpandMore,
   GetApp,
+  Refresh,
 } from "@material-ui/icons";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { Tooltip } from "@material-ui/core";
@@ -67,6 +68,17 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     left: "50%",
     marginTop: 12,
+  },
+
+  refreshButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    zIndex: 1,
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 1)",
+    },
   },
 
   messageLeft: {
@@ -364,6 +376,7 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const lastMessageRef = useRef();
 
   const [selectedMessage, setSelectedMessage] = useState({});
@@ -439,6 +452,32 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
 
   const loadMore = () => {
     setPageNumber((prevPageNumber) => prevPageNumber + 1);
+  };
+
+  const handleReloadMessages = async () => {
+    setReloading(true);
+    try {
+      // Resetar o estado de mensagens
+      dispatch({ type: "RESET" });
+      setPageNumber(1);
+
+      // Buscar mensagens novamente
+      const { data } = await api.get("/messages/" + ticketId, {
+        params: { pageNumber: 1 },
+      });
+
+      dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
+      setHasMore(data.hasMore);
+
+      // Scroll para o final após recarregar
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setReloading(false);
+    }
   };
 
   const scrollToBottom = () => {
@@ -1086,6 +1125,16 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
         menuOpen={messageOptionsMenuOpen}
         handleClose={handleCloseMessageOptionsMenu}
       />
+      <Tooltip title="Recarregar mensagens">
+        <IconButton
+          className={classes.refreshButton}
+          onClick={handleReloadMessages}
+          disabled={reloading || loading}
+          size="small"
+        >
+          {reloading ? <CircularProgress size={20} /> : <Refresh />}
+        </IconButton>
+      </Tooltip>
       <div
         id="messagesList"
         className={classes.messagesList}

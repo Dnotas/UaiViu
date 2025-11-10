@@ -36,6 +36,7 @@ import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import aiRoutes from "./aiRoutes";
 import activationTokenRoutes from "./activationTokenRoutes";
+import syncMessagesRoutes from "./syncMessagesRoutes";
 const routes = Router();
 
 routes.use(userRoutes);
@@ -76,5 +77,6 @@ routes.use(flowBuilder)
 routes.use(flowCampaignRoutes)
 routes.use(aiRoutes);
 routes.use(activationTokenRoutes);
+routes.use(syncMessagesRoutes);
 
 export default routes;
