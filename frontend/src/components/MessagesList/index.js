@@ -457,11 +457,22 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const handleReloadMessages = async () => {
     setReloading(true);
     try {
+      // Primeiro, sincronizar mensagens do WhatsApp que podem estar faltando
+      try {
+        await api.post(`/sync/messages/ticket/${ticketId}`, { limit: 100 });
+      } catch (syncErr) {
+        console.error("Erro ao sincronizar mensagens:", syncErr);
+        // Continua mesmo se a sincronização falhar
+      }
+
       // Resetar o estado de mensagens
       dispatch({ type: "RESET" });
       setPageNumber(1);
 
-      // Buscar mensagens novamente
+      // Aguardar um pouco para dar tempo de salvar as mensagens sincronizadas
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Buscar mensagens novamente do banco (agora incluindo as sincronizadas)
       const { data } = await api.get("/messages/" + ticketId, {
         params: { pageNumber: 1 },
       });
