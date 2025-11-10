@@ -129,6 +129,8 @@ class SyncMessagesService {
     let syncedCount = 0;
 
     try {
+      logger.info(`[SYNC] syncMessages chamado - ContactID: ${contactId}, CompanyID: ${companyId}, WhatsAppID: ${whatsappId}`);
+
       // Buscar contato
       const contact = await Contact.findOne({
         where: { id: contactId, companyId }
@@ -174,12 +176,22 @@ class SyncMessagesService {
       }
 
       // Buscar mensagens do banco de dados
-      const dbMessages = await Message.findAll({
-        where: {
-          contactId: contact.id,
-          companyId
-        }
-      });
+      logger.info(`[SYNC] Buscando mensagens do banco - ContactID: ${contact.id}, CompanyID: ${companyId}`);
+
+      let dbMessages = [];
+      try {
+        dbMessages = await Message.findAll({
+          where: {
+            contactId: contact.id,
+            companyId
+          }
+        });
+        logger.info(`[SYNC] Mensagens encontradas no banco: ${dbMessages.length}`);
+      } catch (dbError) {
+        logger.error(`[SYNC] Erro ao buscar mensagens do banco: ${dbError}`);
+        logger.error(`[SYNC] ContactID: ${contact.id}, CompanyID: ${companyId}`);
+        throw dbError;
+      }
 
       // Verificar quais mensagens do WhatsApp não estão no banco
       const dbMessageIds = new Set(dbMessages.map(m => m.id));
@@ -248,6 +260,8 @@ class SyncMessagesService {
     limit: number = 50
   ): Promise<ISyncResult> {
     try {
+      logger.info(`[SYNC] Buscando ticket - ID: ${ticketId}, Company: ${companyId}`);
+
       const ticket = await Ticket.findOne({
         where: { id: ticketId, companyId },
         include: [{ model: Contact, as: "contact" }]
@@ -257,6 +271,8 @@ class SyncMessagesService {
         throw new Error(`Ticket não encontrado: ${ticketId}`);
       }
 
+      logger.info(`[SYNC] Ticket encontrado - ContactID: ${ticket.contactId}, WhatsAppID: ${ticket.whatsappId}`);
+
       return await this.syncMessages(
         ticket.contactId,
         companyId,
@@ -264,7 +280,8 @@ class SyncMessagesService {
         limit
       );
     } catch (error) {
-      logger.error(`Erro ao sincronizar mensagens do ticket: ${error}`);
+      logger.error(`Erro ao sincronizar mensagens do ticket ${ticketId}: ${error}`);
+      logger.error(`Stack: ${error.stack}`);
 
       return {
         success: false,
