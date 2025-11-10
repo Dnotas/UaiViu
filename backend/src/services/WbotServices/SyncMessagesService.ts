@@ -263,15 +263,26 @@ class SyncMessagesService {
       logger.info(`[SYNC] Buscando ticket - ID: ${ticketId}, Company: ${companyId}`);
 
       const ticket = await Ticket.findOne({
-        where: { id: ticketId, companyId },
-        include: [{ model: Contact, as: "contact" }]
+        where: { id: ticketId, companyId }
       });
 
       if (!ticket) {
         throw new Error(`Ticket não encontrado: ${ticketId}`);
       }
 
-      logger.info(`[SYNC] Ticket encontrado - ContactID: ${ticket.contactId}, WhatsAppID: ${ticket.whatsappId}`);
+      logger.info(`[SYNC] Ticket encontrado:`);
+      logger.info(`  - ContactID: ${ticket.contactId}`);
+      logger.info(`  - WhatsAppID: ${ticket.whatsappId}`);
+      logger.info(`  - Status: ${ticket.status}`);
+
+      // Validar IDs antes de chamar syncMessages
+      if (!ticket.contactId || isNaN(ticket.contactId)) {
+        throw new Error(`Ticket ${ticketId} não tem contactId válido: ${ticket.contactId}`);
+      }
+
+      if (!ticket.whatsappId || isNaN(ticket.whatsappId)) {
+        throw new Error(`Ticket ${ticketId} não tem whatsappId válido: ${ticket.whatsappId}`);
+      }
 
       return await this.syncMessages(
         ticket.contactId,
