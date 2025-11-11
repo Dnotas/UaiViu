@@ -2,6 +2,7 @@ import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
 import Ticket from "../../models/Ticket";
+import Message from "../../models/Message";
 import { Op } from "sequelize";
 
 interface ExtraInfo {
@@ -73,21 +74,49 @@ const UpdateContactService = async ({
       console.log("========================================");
       console.log("🔄 [MERGE CONTACTS] Iniciando fusão automática...");
 
-      // Contar tickets de cada contato
-      const ticketsOriginal = await Ticket.count({ where: { contactId: contact.id } });
-      const ticketsDuplicate = await Ticket.count({ where: { contactId: duplicateContact.id } });
+      // Buscar tickets de cada contato
+      const ticketsOriginal = await Ticket.findAll({ where: { contactId: contact.id } });
+      const ticketsDuplicate = await Ticket.findAll({ where: { contactId: duplicateContact.id } });
 
-      console.log(`📊 Contato atual (${contact.name}) tem ${ticketsOriginal} tickets`);
-      console.log(`📊 Contato duplicado (${duplicateContact.name}) tem ${ticketsDuplicate} tickets`);
+      console.log(`📊 Contato atual (${contact.name}) tem ${ticketsOriginal.length} tickets`);
+      console.log(`📊 Contato duplicado (${duplicateContact.name}) tem ${ticketsDuplicate.length} tickets`);
 
-      // Transferir todos os tickets do contato duplicado para o contato atual
-      if (ticketsDuplicate > 0) {
-        console.log(`🔀 Transferindo ${ticketsDuplicate} tickets do contato duplicado...`);
-        await Ticket.update(
-          { contactId: contact.id },
-          { where: { contactId: duplicateContact.id } }
-        );
-        console.log("✅ Tickets transferidos com sucesso");
+      // Processar cada ticket do contato duplicado
+      if (ticketsDuplicate.length > 0) {
+        console.log(`🔀 Processando ${ticketsDuplicate.length} tickets do contato duplicado...`);
+
+        for (const ticketDup of ticketsDuplicate) {
+          // Verificar se já existe um ticket com o mesmo whatsappId e companyId no contato atual
+          const conflictingTicket = ticketsOriginal.find(
+            t => t.whatsappId === ticketDup.whatsappId && t.companyId === ticketDup.companyId
+          );
+
+          if (conflictingTicket) {
+            console.log(`⚠️  Ticket #${ticketDup.id} conflita com ticket #${conflictingTicket.id}`);
+            console.log(`📝 Transferindo mensagens do ticket #${ticketDup.id} para #${conflictingTicket.id}...`);
+
+            // Transferir todas as mensagens do ticket duplicado para o ticket conflitante
+            const messagesTransferred = await Message.update(
+              { ticketId: conflictingTicket.id },
+              { where: { ticketId: ticketDup.id } }
+            );
+
+            console.log(`✅ ${messagesTransferred[0]} mensagens transferidas`);
+
+            // Deletar o ticket duplicado
+            console.log(`🗑️  Deletando ticket duplicado #${ticketDup.id}...`);
+            await ticketDup.destroy();
+            console.log(`✅ Ticket #${ticketDup.id} deletado`);
+
+          } else {
+            console.log(`✅ Ticket #${ticketDup.id} não conflita, transferindo...`);
+            // Não há conflito, pode transferir normalmente
+            await ticketDup.update({ contactId: contact.id });
+            console.log(`✅ Ticket #${ticketDup.id} transferido`);
+          }
+        }
+
+        console.log("✅ Todos os tickets processados com sucesso");
       }
 
       // Deletar o contato duplicado
@@ -95,9 +124,14 @@ const UpdateContactService = async ({
       await duplicateContact.destroy();
       console.log("✅ Contato duplicado deletado");
 
+      // Contar tickets finais
+      const ticketsFinal = await Ticket.count({ where: { contactId: contact.id } });
+
       console.log("========================================");
       console.log("✅ [MERGE CONTACTS] Fusão concluída com sucesso!");
-      console.log(`Total de tickets após fusão: ${ticketsOriginal + ticketsDuplicate}`);
+      console.log(`Tickets antes: ${ticketsOriginal.length}`);
+      console.log(`Tickets do duplicado: ${ticketsDuplicate.length}`);
+      console.log(`Tickets após fusão: ${ticketsFinal}`);
       console.log("========================================");
     } else {
       console.log("✅ [MERGE CONTACTS] Nenhuma duplicata encontrada");

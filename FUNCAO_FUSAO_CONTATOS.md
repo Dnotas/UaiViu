@@ -14,11 +14,16 @@ Sistema de **fusão automática** de contatos duplicados que é ativado quando v
 
 ```
 1. Sistema detecta que já existe outro contato com o número 553791993979
-2. Inicia fusão automática:
-   ✅ Transfere TODOS os tickets do Contato B para Juliana (A)
+2. Inicia fusão automática inteligente:
+   ✅ Para cada ticket do Contato B:
+      - Se CONFLITAR com ticket da Juliana (mesmo whatsappId):
+        → Transfere todas as mensagens para o ticket da Juliana
+        → Deleta o ticket duplicado
+      - Se NÃO CONFLITAR:
+        → Transfere o ticket completo para Juliana
    ✅ Deleta o Contato B (duplicado)
    ✅ Atualiza o número da Juliana para 553791993979
-3. Resultado: Juliana fica com número correto E histórico completo
+3. Resultado: Juliana fica com número correto E histórico completo (todas as mensagens preservadas)
 ```
 
 ## Logs Detalhados
