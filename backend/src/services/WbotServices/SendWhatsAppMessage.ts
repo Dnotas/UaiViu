@@ -6,6 +6,7 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import ResetGroupSession from "./ResetGroupSession";
+import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
 
 import formatBody from "../../helpers/Mustache";
 
@@ -30,6 +31,49 @@ const SendWhatsAppMessage = async ({
   console.log("Body:", body);
   console.log("Has Quoted Msg:", !!quotedMsg);
 
+  // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
+  // Validar o número ANTES de enviar a mensagem
+  console.log("🔒 [SEGURANÇA] Validando número do contato...");
+  const validation = ValidateBrazilianNumber(ticket.contact.number);
+
+  console.log("Resultado da validação:", {
+    isValid: validation.isValid,
+    isGroup: validation.isGroup,
+    cleanNumber: validation.cleanNumber,
+    errorMessage: validation.errorMessage
+  });
+
+  if (!validation.isValid) {
+    console.error("❌ [SEGURANÇA] NÚMERO INVÁLIDO DETECTADO!");
+    console.error("Ticket ID:", ticket.id);
+    console.error("Contact ID:", ticket.contact.id);
+    console.error("Número tentado:", ticket.contact.number);
+    console.error("Motivo:", validation.errorMessage);
+    console.error("========================================\n");
+
+    // BLOQUEAR O ENVIO!
+    throw new AppError(
+      `⚠️ BLOQUEADO POR SEGURANÇA: ${validation.errorMessage}\n\n` +
+      `Apenas números brasileiros (55 + DDD + número) ou grupos são permitidos.\n` +
+      `Ticket #${ticket.id} - Contato: ${ticket.contact.name}`
+    );
+  }
+
+  // Verificar se o isGroup do ticket está consistente com a validação
+  if (ticket.isGroup !== validation.isGroup) {
+    console.warn("⚠️ [AVISO] Inconsistência detectada:");
+    console.warn(`  - ticket.isGroup: ${ticket.isGroup}`);
+    console.warn(`  - Número indica grupo: ${validation.isGroup}`);
+    console.warn(`  - Corrigindo automaticamente...`);
+
+    // Corrigir o flag isGroup do ticket se necessário
+    await ticket.update({ isGroup: validation.isGroup });
+    console.log("✅ Flag isGroup corrigido no ticket");
+  }
+
+  console.log("✅ [SEGURANÇA] Número validado com sucesso");
+  console.log("========================================");
+
   let options = {};
 
   try {
@@ -42,6 +86,13 @@ const SendWhatsAppMessage = async ({
       ticket.isGroup ? "g.us" : "s.whatsapp.net"
     }`;
     console.log("📞 Número formatado:", number);
+
+    // VALIDAÇÃO ADICIONAL: Verificar se o número formatado está correto
+    console.log("🔒 [SEGURANÇA] Verificação final antes do envio:");
+    console.log("  - Número limpo:", validation.cleanNumber);
+    console.log("  - É grupo:", validation.isGroup);
+    console.log("  - Sufixo correto:", validation.isGroup ? "g.us" : "s.whatsapp.net");
+    console.log("  - Número final:", number);
 
     if (quotedMsg) {
         console.log("💬 Processando mensagem quotada...");

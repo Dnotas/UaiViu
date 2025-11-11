@@ -9,6 +9,7 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
 import { lookup } from "mime-types";
 import formatBody from "../../helpers/Mustache";
+import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
 
 interface Request {
   media: Express.Multer.File;
@@ -119,6 +120,58 @@ const SendWhatsAppMedia = async ({
   ticket,
   body
 }: Request): Promise<WAMessage> => {
+  console.log("========================================");
+  console.log("📎 [SEND MEDIA] Iniciando envio de mídia");
+  console.log("Ticket ID:", ticket.id);
+  console.log("Contact Number:", ticket.contact.number);
+  console.log("Contact Name:", ticket.contact.name);
+  console.log("Is Group:", ticket.isGroup);
+  console.log("Media Type:", media.mimetype);
+  console.log("Media Name:", media.originalname);
+
+  // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
+  // Validar o número ANTES de enviar a mídia
+  console.log("🔒 [SEGURANÇA] Validando número do contato...");
+  const validation = ValidateBrazilianNumber(ticket.contact.number);
+
+  console.log("Resultado da validação:", {
+    isValid: validation.isValid,
+    isGroup: validation.isGroup,
+    cleanNumber: validation.cleanNumber,
+    errorMessage: validation.errorMessage
+  });
+
+  if (!validation.isValid) {
+    console.error("❌ [SEGURANÇA] NÚMERO INVÁLIDO DETECTADO!");
+    console.error("Ticket ID:", ticket.id);
+    console.error("Contact ID:", ticket.contact.id);
+    console.error("Número tentado:", ticket.contact.number);
+    console.error("Motivo:", validation.errorMessage);
+    console.error("========================================\n");
+
+    // BLOQUEAR O ENVIO!
+    throw new AppError(
+      `⚠️ BLOQUEADO POR SEGURANÇA: ${validation.errorMessage}\n\n` +
+      `Apenas números brasileiros (55 + DDD + número) ou grupos são permitidos.\n` +
+      `Ticket #${ticket.id} - Contato: ${ticket.contact.name}`
+    );
+  }
+
+  // Verificar se o isGroup do ticket está consistente com a validação
+  if (ticket.isGroup !== validation.isGroup) {
+    console.warn("⚠️ [AVISO] Inconsistência detectada:");
+    console.warn(`  - ticket.isGroup: ${ticket.isGroup}`);
+    console.warn(`  - Número indica grupo: ${validation.isGroup}`);
+    console.warn(`  - Corrigindo automaticamente...`);
+
+    // Corrigir o flag isGroup do ticket se necessário
+    await ticket.update({ isGroup: validation.isGroup });
+    console.log("✅ Flag isGroup corrigido no ticket");
+  }
+
+  console.log("✅ [SEGURANÇA] Número validado com sucesso");
+  console.log("========================================");
+
   try {
     const wbot = await GetTicketWbot(ticket);
 
@@ -190,12 +243,18 @@ const SendWhatsAppMedia = async ({
       };
     }
 
-    const sentMessage = await wbot.sendMessage(
-      `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-      {
-        ...options
-      }
-    );
+    const number = `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
+    console.log("📞 Número formatado para envio:", number);
+    console.log("🔒 [SEGURANÇA] Verificação final:");
+    console.log("  - Número limpo:", validation.cleanNumber);
+    console.log("  - É grupo:", validation.isGroup);
+    console.log("  - Número final:", number);
+
+    const sentMessage = await wbot.sendMessage(number, { ...options });
+
+    console.log("✅ Mídia enviada com sucesso!");
+    console.log("Message ID:", sentMessage.key?.id);
+    console.log("========================================\n");
 
     await ticket.update({ lastMessage: bodyMessage });
 

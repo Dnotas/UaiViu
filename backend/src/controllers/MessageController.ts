@@ -8,6 +8,7 @@ import Queue from "../models/Queue";
 import User from "../models/User";
 import Whatsapp from "../models/Whatsapp";
 import formatBody from "../helpers/Mustache";
+import ValidateBrazilianNumber from "../helpers/ValidateBrazilianNumber";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
@@ -160,11 +161,37 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
 
     const companyId = whatsapp.companyId;
 
+    // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
+    // Validar o número ANTES de criar contato/ticket
+    console.log("🔒 [API EXTERNA - SEGURANÇA] Validando número...");
+    const validation = ValidateBrazilianNumber(numberToTest);
+
+    console.log("Resultado da validação:", {
+      isValid: validation.isValid,
+      isGroup: validation.isGroup,
+      cleanNumber: validation.cleanNumber,
+      errorMessage: validation.errorMessage
+    });
+
+    if (!validation.isValid) {
+      console.error("❌ [API EXTERNA - SEGURANÇA] NÚMERO INVÁLIDO!");
+      console.error("Número tentado:", numberToTest);
+      console.error("Motivo:", validation.errorMessage);
+      console.error("========================================\n");
+
+      throw new AppError(
+        `⚠️ BLOQUEADO POR SEGURANÇA: ${validation.errorMessage}\n\n` +
+        `Apenas números brasileiros (55 + DDD + número) ou grupos são permitidos.`
+      );
+    }
+
+    console.log("✅ [API EXTERNA - SEGURANÇA] Número validado com sucesso");
+
     // Detectar se é grupo ou contato pessoal
     // Grupos têm IDs longos (ex: 120363142926103927 - ~18 dígitos)
     // Contatos pessoais têm números normais (ex: 5537991470016 - 13 dígitos)
-    const cleanNumber = numberToTest.replace(/\D/g, "");
-    const isGroup = cleanNumber.length > 13;
+    const cleanNumber = validation.cleanNumber;
+    const isGroup = validation.isGroup;
 
     let number;
     let profilePicUrl;

@@ -19,7 +19,10 @@
       "Bash(cat:*)",
       "Bash(npm run build:*)",
       "Bash(npx tsc)",
-      "Bash(npx typescript)"
+      "Bash(npx typescript)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

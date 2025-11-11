@@ -13,6 +13,7 @@ import CheckContactNumber from "../services/WbotServices/CheckNumber";
 import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
 import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
 import AppError from "../errors/AppError";
+import ValidateBrazilianNumber from "../helpers/ValidateBrazilianNumber";
 import SimpleListService, {
   SearchContactParams
 } from "../services/ContactServices/SimpleListService";
@@ -154,15 +155,47 @@ export const update = async (
 
   contactData.number = contactData.number.replace(/\D/g, "");
 
-  // Detectar se é grupo (números com mais de 13 dígitos) e pular validações
-  const isGroup = contactData.number.length > 13;
+  // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
+  // Validar se o novo número é brasileiro válido
+  console.log("🔒 [UPDATE CONTACT] Validando novo número...");
+  console.log("Número recebido:", contactData.number);
+
+  const validation = ValidateBrazilianNumber(contactData.number);
+  console.log("Resultado validação:", validation);
+
+  if (!validation.isValid) {
+    console.error("❌ [UPDATE CONTACT] Número inválido fornecido!");
+    console.error("Número:", contactData.number);
+    console.error("Motivo:", validation.errorMessage);
+
+    throw new AppError(
+      `❌ NÚMERO INVÁLIDO: ${validation.errorMessage}\n\n` +
+      `Por favor, forneça um número brasileiro válido (55 + DDD + número) ou um ID de grupo válido.`
+    );
+  }
+
+  // Detectar se é grupo (números com mais de 13 dígitos) e pular validações do WhatsApp
+  const isGroup = validation.isGroup;
+  console.log("É grupo:", isGroup);
 
   if (!isGroup) {
-    // Apenas valida números de contatos pessoais
-    await CheckIsValidContact(contactData.number, companyId);
-    const validNumber = await CheckContactNumber(contactData.number, companyId);
-    const number = validNumber.jid.replace(/\D/g, "");
-    contactData.number = number;
+    // Apenas valida números de contatos pessoais no WhatsApp
+    console.log("📞 Validando número no WhatsApp...");
+    try {
+      await CheckIsValidContact(contactData.number, companyId);
+      const validNumber = await CheckContactNumber(contactData.number, companyId);
+      const number = validNumber.jid.replace(/\D/g, "");
+      contactData.number = number;
+      console.log("✅ Número validado no WhatsApp:", number);
+    } catch (err: any) {
+      console.error("❌ Erro ao validar no WhatsApp:", err.message);
+      throw new AppError(
+        `Não foi possível validar o número no WhatsApp: ${err.message}\n\n` +
+        `Verifique se o número está correto e possui WhatsApp ativo.`
+      );
+    }
+  } else {
+    console.log("✅ Número de grupo validado, pulando validação do WhatsApp");
   }
 
   const { contactId } = req.params;
