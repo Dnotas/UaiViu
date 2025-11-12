@@ -495,13 +495,32 @@ const getSenderMessage = (
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const isGroup = msg.key.remoteJid.includes("g.us");
   const rawNumber = msg.key.remoteJid.replace(/\D/g, "");
+
+  // Fix para dispositivos vinculados (@lid) - evita criação de contatos duplicados
+  // Quando mensagem vem do WhatsApp Web/Desktop, remoteJid é o ID do dispositivo
+  // mas o número real está em key.participant ou precisa ser extraído do remoteJid original
+  let contactId = msg.key.remoteJid;
+
+  // Se for @lid (dispositivo vinculado), tenta extrair o número real
+  if (contactId.includes("@lid")) {
+    // Tenta usar o participant se existir (geralmente em mensagens de grupos)
+    if (msg.key.participant) {
+      contactId = msg.key.participant;
+      logger.info(`🔧 [getContactMessage] Mensagem de @lid detectada - Usando participant: ${contactId} (era: ${msg.key.remoteJid})`);
+    } else {
+      // Se não tem participant, a mensagem @lid não deve criar um contato separado
+      // Loga o problema e mantém o @lid (será filtrado depois)
+      logger.warn(`⚠️  [getContactMessage] Mensagem de @lid SEM participant - remoteJid: ${msg.key.remoteJid} - ID: ${msg.key.id}`);
+    }
+  }
+
   return isGroup
     ? {
         id: getSenderMessage(msg, wbot),
         name: msg.pushName
       }
     : {
-        id: msg.key.remoteJid,
+        id: contactId,
         name: msg.key.fromMe ? rawNumber : msg.pushName
       };
 };
@@ -2279,6 +2298,25 @@ const handleMessage = async (
   if (!isValidMsg(msg)) {
     logger.warn(`Mensagem descartada (tipo inválido) - ID: ${msg.key.id} - De: ${msg.key.remoteJid} - Company: ${companyId}`);
     return;
+  }
+
+  // Fix para mensagens duplicadas de dispositivos vinculados (@lid)
+  // Quando usuário usa WhatsApp Web/Desktop, o Baileys emite a mesma mensagem 2x:
+  // 1. Com remoteJid normal: 553791260083@s.whatsapp.net
+  // 2. Com remoteJid do dispositivo: 148137817669860@lid
+  // Descartamos a versão @lid para evitar criação de contatos/tickets duplicados
+  if (msg.key.remoteJid?.includes("@lid")) {
+    // Verifica se a mensagem já foi processada (versão @s.whatsapp.net)
+    const messageExists = await Message.count({
+      where: { id: msg.key.id, companyId }
+    });
+
+    if (messageExists) {
+      logger.info(`🔧 [handleMessage] Mensagem @lid duplicada descartada - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+      return;
+    }
+
+    logger.warn(`⚠️  [handleMessage] Mensagem @lid SEM duplicata encontrada (processando mesmo assim) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
   }
 
   try {
