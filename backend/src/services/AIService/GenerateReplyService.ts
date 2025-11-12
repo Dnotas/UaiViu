@@ -2,6 +2,7 @@ import axios from "axios";
 import AppError from "../../errors/AppError";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY_FALLBACK = process.env.GEMINI_API_KEY_FALLBACK || "";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
 interface Message {
@@ -16,6 +17,42 @@ interface Request {
   contextMessages: Message[];
   contactName: string;
 }
+
+/**
+ * Função auxiliar para gerar resposta com fallback automático
+ */
+const makeGenerateReplyRequest = async (prompt: string, apiKey: string, isFallback = false): Promise<any> => {
+  const keyLabel = isFallback ? "FALLBACK" : "PRIMARY";
+  console.log(`🤖 [GenerateReply] Usando chave ${keyLabel}...`);
+
+  return axios.post(
+    `${GEMINI_API_URL}?key=${apiKey}`,
+    {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,          // Mais criativo para respostas variadas
+        topK: 20,
+        topP: 0.8,
+        maxOutputTokens: 512,
+        candidateCount: 1,
+      }
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 10000,  // 10 segundos para geração de resposta
+    }
+  );
+};
 
 /**
  * Serviço para gerar respostas automáticas baseadas no contexto da conversa usando Google Gemini AI
@@ -54,33 +91,19 @@ Responda APENAS com o texto da resposta, sem explicações adicionais:`;
     console.log("🤖 [GenerateReply] Enviando requisição para Gemini API...");
     console.log("🤖 [GenerateReply] Mensagem alvo:", targetMessage.body);
 
-    const response = await axios.post(
-      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-      {
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,          // Mais criativo para respostas variadas
-          topK: 20,
-          topP: 0.8,
-          maxOutputTokens: 512,
-          candidateCount: 1,
-        }
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 10000,  // 10 segundos para geração de resposta
+    // Envia para o Gemini com fallback automático
+    let response;
+    try {
+      response = await makeGenerateReplyRequest(prompt, GEMINI_API_KEY, false);
+    } catch (primaryError: any) {
+      // Se der erro 429 e existir chave fallback, tenta com ela
+      if (primaryError.response?.status === 429 && GEMINI_API_KEY_FALLBACK) {
+        console.log("⚠️ [GenerateReply] Limite atingido na chave principal. Tentando com chave fallback...");
+        response = await makeGenerateReplyRequest(prompt, GEMINI_API_KEY_FALLBACK, true);
+      } else {
+        throw primaryError;
       }
-    );
+    }
 
     console.log("🤖 [GenerateReply] Resposta recebida:");
     console.log(JSON.stringify(response.data, null, 2));

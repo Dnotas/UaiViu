@@ -5,11 +5,54 @@ import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY_FALLBACK = process.env.GEMINI_API_KEY_FALLBACK || "";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
 
 interface Request {
   messageId: string;
 }
+
+/**
+ * Função auxiliar para fazer requisição com fallback automático
+ */
+const makeGeminiRequest = async (audioBase64: string, mimeType: string, apiKey: string, isFallback = false): Promise<any> => {
+  const keyLabel = isFallback ? "FALLBACK" : "PRIMARY";
+  console.log(`🎤 [TranscribeAudio] Usando chave ${keyLabel}...`);
+
+  return axios.post(
+    `${GEMINI_API_URL}?key=${apiKey}`,
+    {
+      contents: [
+        {
+          parts: [
+            {
+              text: "Transcreva este áudio em português. Retorne APENAS o texto transcrito, sem explicações adicionais."
+            },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: audioBase64
+              }
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        topK: 10,
+        topP: 0.7,
+        maxOutputTokens: 2048,
+        candidateCount: 1,
+      }
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 60000,  // 60 segundos para áudios longos
+    }
+  );
+};
 
 /**
  * Serviço para transcrever áudios usando Google Gemini AI
@@ -66,40 +109,19 @@ const TranscribeAudioService = async ({ messageId }: Request): Promise<string> =
     console.log("🎤 [TranscribeAudio] Audio path:", audioFilePath);
     console.log("🎤 [TranscribeAudio] MIME type:", mimeType);
 
-    // Envia para o Gemini para transcrição
-    const response = await axios.post(
-      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-      {
-        contents: [
-          {
-            parts: [
-              {
-                text: "Transcreva este áudio em português. Retorne APENAS o texto transcrito, sem explicações adicionais."
-              },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: audioBase64
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topK: 10,
-          topP: 0.7,
-          maxOutputTokens: 2048,
-          candidateCount: 1,
-        }
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 60000,  // 60 segundos para áudios longos
+    // Envia para o Gemini para transcrição com fallback automático
+    let response;
+    try {
+      response = await makeGeminiRequest(audioBase64, mimeType, GEMINI_API_KEY, false);
+    } catch (primaryError: any) {
+      // Se der erro 429 e existir chave fallback, tenta com ela
+      if (primaryError.response?.status === 429 && GEMINI_API_KEY_FALLBACK) {
+        console.log("⚠️ [TranscribeAudio] Limite atingido na chave principal. Tentando com chave fallback...");
+        response = await makeGeminiRequest(audioBase64, mimeType, GEMINI_API_KEY_FALLBACK, true);
+      } else {
+        throw primaryError;
       }
-    );
+    }
 
     console.log("🎤 [TranscribeAudio] Resposta recebida");
 
