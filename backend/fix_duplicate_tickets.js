@@ -223,7 +223,7 @@ async function fixDuplicateTickets() {
 
         // Deletar TicketTraking associados
         await sequelize.query(`
-          DELETE FROM "TicketTrakings" WHERE "ticketId" = :ticketId;
+          DELETE FROM "TicketTraking" WHERE "ticketId" = :ticketId;
         `, {
           replacements: { ticketId: lidTicket.id }
         });
