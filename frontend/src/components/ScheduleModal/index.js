@@ -388,6 +388,20 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 												fullWidth
 											/>
 										</div>
+										<br />
+										<div className={classes.multFieldLine}>
+											<FormControlLabel
+												control={
+													<Field
+														as={Checkbox}
+														name="isActive"
+														color="primary"
+														checked={values.isActive}
+													/>
+												}
+												label="Agendamento Ativo"
+											/>
+										</div>
 									</>
 								)}
 								{(schedule.mediaPath || attachment) && (

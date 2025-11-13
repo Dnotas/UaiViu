@@ -246,7 +246,7 @@ async function handleVerifySchedules(job) {
         });
         sendScheduledMessages.add(
           "SendMessage",
-          { schedule },
+          { scheduleId: schedule.id },
           { delay: 40000 }
         );
         logger.info(`[🧵] Disparo agendado para: ${schedule.contact.name}`);
@@ -300,7 +300,7 @@ async function handleVerifyRecurringSchedules(job) {
 
             sendScheduledMessages.add(
               "SendMessage",
-              { schedule },
+              { scheduleId: schedule.id },
               { delay: 5000 }
             );
           }
@@ -319,41 +319,49 @@ async function handleVerifyRecurringSchedules(job) {
 
 async function handleSendScheduledMessage(job) {
   const {
-    data: { schedule }
+    data: { scheduleId }
   } = job;
   let scheduleRecord: Schedule | null = null;
 
   try {
-    scheduleRecord = await Schedule.findByPk(schedule.id);
+    // Recarrega o schedule COM o contact do banco para evitar corrupção do número
+    scheduleRecord = await Schedule.findByPk(scheduleId, {
+      include: [{ model: Contact, as: "contact" }]
+    });
   } catch (e) {
     Sentry.captureException(e);
-    logger.info(`Erro ao tentar consultar agendamento: ${schedule.id}`);
+    logger.info(`Erro ao tentar consultar agendamento: ${scheduleId}`);
+  }
+
+  if (!scheduleRecord) {
+    logger.error(`Agendamento não encontrado: ${scheduleId}`);
+    return;
   }
 
   try {
-    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
+    const whatsapp = await GetDefaultWhatsApp(scheduleRecord.companyId);
 
     let filePath = null;
-    if (schedule.mediaPath) {
-      filePath = path.resolve("public", schedule.mediaPath);
+    if (scheduleRecord.mediaPath) {
+      filePath = path.resolve("public", scheduleRecord.mediaPath);
     }
 
-    let ticket = await FindOrCreateTicketService(schedule.contact, whatsapp.id!, 0, schedule.companyId);
+    let ticket = await FindOrCreateTicketService(scheduleRecord.contact, whatsapp.id!, 0, scheduleRecord.companyId);
 
     ticket = await ticket.update(
-      { companyId: schedule.companyId, queueId: null, userId: null, whatsappId: whatsapp.id!, status: "pending" },
+      { companyId: scheduleRecord.companyId, queueId: null, userId: null, whatsappId: whatsapp.id!, status: "pending" },
       { where: { id: ticket.id } }
     );
 
     await FindOrCreateATicketTrakingService({
       ticketId: ticket.id,
-      companyId: schedule.companyId,
+      companyId: scheduleRecord.companyId,
       whatsappId: whatsapp?.id
     });
 
     await SendMessage(whatsapp, {
-      number: schedule.contact.number,
-      body: formatBody(schedule.body, schedule.contact),
+      number: scheduleRecord.contact.number,
+      body: formatBody(scheduleRecord.body, scheduleRecord.contact),
       mediaPath: filePath
     }, "\u2064");
 
@@ -363,13 +371,13 @@ async function handleSendScheduledMessage(job) {
       await scheduleRecord.update({
         lastRunAt: moment().format("YYYY-MM-DD HH:mm:ss")
       });
-      logger.info(`[🔄] Mensagem recorrente enviada para: ${schedule.contact.name} - Próximo envio amanhã`);
+      logger.info(`[🔄] Mensagem recorrente enviada para: ${scheduleRecord.contact.name} - Próximo envio amanhã`);
     } else {
       await scheduleRecord?.update({
         sentAt: moment().format("YYYY-MM-DD HH:mm"),
         status: "ENVIADA"
       });
-      logger.info(`[🧵] Mensagem agendada enviada para: ${schedule.contact.name}`);
+      logger.info(`[🧵] Mensagem agendada enviada para: ${scheduleRecord.contact.name}`);
     }
 
     sendScheduledMessages.clean(15000, "completed");

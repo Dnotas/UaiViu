@@ -25,6 +25,10 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import RepeatIcon from "@material-ui/icons/Repeat";
+import Chip from "@material-ui/core/Chip";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Switch from "@material-ui/core/Switch";
 
 import "./Schedules.css"; // Importe o arquivo CSS
 import { createMomentLocalizer } from "../../translate/calendar-locale";
@@ -118,6 +122,7 @@ const Schedules = () => {
   const [schedules, dispatch] = useReducer(reducer, []);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [contactId, setContactId] = useState(+getUrlParam("contactId"));
+  const [showOnlyRecurring, setShowOnlyRecurring] = useState(false);
 
 
   const fetchSchedules = useCallback(async () => {
@@ -238,6 +243,21 @@ const Schedules = () => {
     return str;
   };
 
+  // Filtrar agendamentos
+  const filteredSchedules = showOnlyRecurring
+    ? schedules.filter(s => s.isRecurring)
+    : schedules;
+
+  // Função para formatar tipo de recorrência
+  const getRecurringTypeLabel = (type) => {
+    const labels = {
+      daily: "Diário",
+      weekly: "Semanal",
+      monthly: "Mensal"
+    };
+    return labels[type] || type;
+  };
+
   return (
     <MainContainer>
       <ConfirmationModal
@@ -261,7 +281,7 @@ const Schedules = () => {
         cleanContact={cleanContact}
       />
       <MainHeader>
-        <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
+        <Title>{i18n.t("schedules.title")} ({filteredSchedules.length})</Title>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
@@ -275,6 +295,16 @@ const Schedules = () => {
                 </InputAdornment>
               ),
             }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showOnlyRecurring}
+                onChange={(e) => setShowOnlyRecurring(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Apenas Periódicos"
           />
           <Button
             variant="contained"
@@ -293,10 +323,36 @@ const Schedules = () => {
           weekdayFormat: "dddd"
       }}
           localizer={localizer}
-          events={schedules.map((schedule) => ({
+          events={filteredSchedules.map((schedule) => ({
             title: (
               <div className="event-container">
-                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+                <div style={eventTitleStyle}>
+                  {schedule.isRecurring && (
+                    <RepeatIcon style={{ fontSize: 16, marginRight: 4, verticalAlign: 'middle' }} />
+                  )}
+                  {schedule.contact.name}
+                  {schedule.isRecurring && !schedule.isActive && (
+                    <Chip
+                      label="INATIVO"
+                      size="small"
+                      style={{
+                        marginLeft: 4,
+                        height: 18,
+                        fontSize: 10,
+                        backgroundColor: '#f44336',
+                        color: 'white'
+                      }}
+                    />
+                  )}
+                  {schedule.isRecurring && (
+                    <div style={{ fontSize: 10, color: '#666' }}>
+                      {getRecurringTypeLabel(schedule.recurringType)} - {schedule.recurringTime}
+                      {schedule.lastRunAt && (
+                        <> | Último: {moment(schedule.lastRunAt).format('DD/MM HH:mm')}</>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <DeleteOutlineIcon
                   onClick={() => handleDeleteSchedule(schedule.id)}
                   className="delete-icon"
@@ -312,10 +368,40 @@ const Schedules = () => {
             ),
             start: new Date(schedule.sendAt),
             end: new Date(schedule.sendAt),
+            resource: schedule.isRecurring ? 'recurring' : 'normal'
           }))}
           startAccessor="start"
           endAccessor="end"
           style={{ height: 500 }}
+          eventPropGetter={(event) => {
+            // Encontra o schedule correspondente
+            const schedule = filteredSchedules.find(s =>
+              new Date(s.sendAt).getTime() === event.start.getTime()
+            );
+
+            let backgroundColor = '#3174ad'; // Cor padrão (agendamento único)
+            let opacity = 0.8;
+
+            if (schedule?.isRecurring) {
+              if (schedule.isActive) {
+                backgroundColor = '#4CAF50'; // Verde para periódicos ativos
+              } else {
+                backgroundColor = '#9E9E9E'; // Cinza para periódicos inativos
+                opacity = 0.5;
+              }
+            }
+
+            return {
+              style: {
+                backgroundColor,
+                borderRadius: '5px',
+                opacity,
+                color: 'white',
+                border: '0px',
+                display: 'block'
+              }
+            };
+          }}
         />
       </Paper>
     </MainContainer>
