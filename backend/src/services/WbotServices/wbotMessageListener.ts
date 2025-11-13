@@ -571,6 +571,12 @@ const verifyContact = async (
   wbot: Session,
   companyId: number
 ): Promise<Contact> => {
+  // PROTEÇÃO ADICIONAL: Bloqueia criação de contatos com IDs @lid
+  if (msgContact.id.includes("@lid")) {
+    logger.error(`❌ [verifyContact] BLOQUEIO: Tentativa de criar contato com ID @lid - ID: ${msgContact.id} - Company: ${companyId}`);
+    throw new AppError("ERR_INVALID_CONTACT_LID", 400);
+  }
+
   let profilePicUrl: string;
   try {
     profilePicUrl = await wbot.profilePictureUrl(msgContact.id);
@@ -2304,19 +2310,17 @@ const handleMessage = async (
   // Quando usuário usa WhatsApp Web/Desktop, o Baileys emite a mesma mensagem 2x:
   // 1. Com remoteJid normal: 553791260083@s.whatsapp.net
   // 2. Com remoteJid do dispositivo: 148137817669860@lid
-  // Descartamos a versão @lid para evitar criação de contatos/tickets duplicados
+  // Descartamos SEMPRE a versão @lid para evitar criação de contatos/tickets duplicados
   if (msg.key.remoteJid?.includes("@lid")) {
-    // Verifica se a mensagem já foi processada (versão @s.whatsapp.net)
-    const messageExists = await Message.count({
-      where: { id: msg.key.id, companyId }
-    });
-
-    if (messageExists) {
-      logger.info(`🔧 [handleMessage] Mensagem @lid duplicada descartada - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+    // CORREÇÃO DEFINITIVA: Descartamos TODAS as mensagens @lid sem participant
+    // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
+    if (!msg.key.participant) {
+      logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant descartada (evita ticket duplicado) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
       return;
     }
 
-    logger.warn(`⚠️  [handleMessage] Mensagem @lid SEM duplicata encontrada (processando mesmo assim) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+    // Se tem participant, é uma mensagem válida (geralmente de grupo)
+    logger.info(`🔧 [handleMessage] Mensagem @lid COM participant será processada - ID: ${msg.key.id} - participant: ${msg.key.participant} - Company: ${companyId}`);
   }
 
   try {
