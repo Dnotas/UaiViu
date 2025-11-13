@@ -20,6 +20,7 @@ import {
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
+import AppError from "../../errors/AppError";
 
 import { getIO } from "../../libs/socket";
 import CreateMessageService from "../MessageServices/CreateMessageService";
@@ -492,37 +493,96 @@ const getSenderMessage = (
   return senderId && jidNormalizedUser(senderId);
 };
 
+/**
+ * Valida e corrige números de WhatsApp
+ * Detecta números inválidos/estranhos e tenta encontrar o número real
+ */
+const getValidWhatsAppNumber = (
+  contactId: string,
+  msg: proto.IWebMessageInfo,
+  wbot: Session
+): string => {
+  // Remove caracteres especiais para análise
+  const numericOnly = contactId.replace(/\D/g, "");
+
+  // Números válidos do WhatsApp brasileiro têm 12-13 dígitos
+  // Exemplo: 5537991470016 (55 + 37 + 991470016)
+  // Números de outros países podem variar, mas geralmente entre 10-15 dígitos
+  const isValidLength = numericOnly.length >= 10 && numericOnly.length <= 15;
+
+  // Se contém @lid, é sempre inválido para contato direto
+  const hasLid = contactId.includes("@lid");
+
+  // Se é número muito longo (>15 dígitos), provavelmente é um ID técnico
+  const isTooLong = numericOnly.length > 15;
+
+  // Se o número parece válido, retorna normalizado
+  if (isValidLength && !hasLid && !isTooLong) {
+    logger.info(`✅ [getValidWhatsAppNumber] Número válido: ${numericOnly} (de: ${contactId})`);
+    return jidNormalizedUser(contactId);
+  }
+
+  // Número inválido detectado - tenta encontrar o real
+  logger.warn(`⚠️  [getValidWhatsAppNumber] Número inválido detectado: ${contactId} (${numericOnly.length} dígitos)`);
+
+  // Tenta extrair de participant (comum em mensagens de grupos ou @lid)
+  if (msg.key.participant) {
+    const participantNumber = msg.key.participant.replace(/\D/g, "");
+    if (participantNumber.length >= 10 && participantNumber.length <= 15) {
+      logger.info(`🔧 [getValidWhatsAppNumber] CORREÇÃO: Usando participant: ${msg.key.participant} (era: ${contactId})`);
+      return jidNormalizedUser(msg.key.participant);
+    }
+  }
+
+  // Se msg.key.fromMe, tenta usar o destinatário real
+  if (msg.key.fromMe && msg.key.remoteJid && !msg.key.remoteJid.includes("@lid")) {
+    const remoteNumber = msg.key.remoteJid.replace(/\D/g, "");
+    if (remoteNumber.length >= 10 && remoteNumber.length <= 15) {
+      logger.info(`🔧 [getValidWhatsAppNumber] CORREÇÃO: Usando remoteJid: ${msg.key.remoteJid} (era: ${contactId})`);
+      return jidNormalizedUser(msg.key.remoteJid);
+    }
+  }
+
+  // Última tentativa: busca no verifiedName ou notify
+  const me = getMeSocket(wbot);
+  if (msg.key.fromMe) {
+    logger.warn(`⚠️  [getValidWhatsAppNumber] FALLBACK: Usando ID do próprio bot (mensagem fromMe sem número válido)`);
+    return me.id;
+  }
+
+  // Se chegou aqui, não conseguiu encontrar número válido
+  logger.error(`❌ [getValidWhatsAppNumber] FALHA: Não foi possível encontrar número válido para contactId: ${contactId}`);
+  throw new AppError("ERR_INVALID_CONTACT_NUMBER", 400);
+};
+
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const isGroup = msg.key.remoteJid.includes("g.us");
   const rawNumber = msg.key.remoteJid.replace(/\D/g, "");
 
-  // Fix para dispositivos vinculados (@lid) - evita criação de contatos duplicados
-  // Quando mensagem vem do WhatsApp Web/Desktop, remoteJid é o ID do dispositivo
-  // mas o número real está em key.participant ou precisa ser extraído do remoteJid original
-  let contactId = msg.key.remoteJid;
-
-  // Se for @lid (dispositivo vinculado), tenta extrair o número real
-  if (contactId.includes("@lid")) {
-    // Tenta usar o participant se existir (geralmente em mensagens de grupos)
-    if (msg.key.participant) {
-      contactId = msg.key.participant;
-      logger.info(`🔧 [getContactMessage] Mensagem de @lid detectada - Usando participant: ${contactId} (era: ${msg.key.remoteJid})`);
-    } else {
-      // Se não tem participant, a mensagem @lid não deve criar um contato separado
-      // Loga o problema e mantém o @lid (será filtrado depois)
-      logger.warn(`⚠️  [getContactMessage] Mensagem de @lid SEM participant - remoteJid: ${msg.key.remoteJid} - ID: ${msg.key.id}`);
-    }
+  // Para grupos, usa a lógica antiga (getSenderMessage)
+  if (isGroup) {
+    return {
+      id: getSenderMessage(msg, wbot),
+      name: msg.pushName
+    };
   }
 
-  return isGroup
-    ? {
-        id: getSenderMessage(msg, wbot),
-        name: msg.pushName
-      }
-    : {
-        id: contactId,
-        name: msg.key.fromMe ? rawNumber : msg.pushName
-      };
+  // Para mensagens diretas (não grupo), valida e corrige o número
+  let contactId = msg.key.remoteJid;
+
+  // VALIDAÇÃO E CORREÇÃO AUTOMÁTICA DE NÚMEROS
+  // Detecta números inválidos (@lid, muito longos, etc) e busca o número real
+  try {
+    contactId = getValidWhatsAppNumber(contactId, msg, wbot);
+  } catch (error) {
+    logger.error(`❌ [getContactMessage] Erro ao validar número - remoteJid: ${msg.key.remoteJid} - Erro: ${error.message}`);
+    throw error;
+  }
+
+  return {
+    id: contactId,
+    name: msg.key.fromMe ? rawNumber : msg.pushName
+  };
 };
 
 const downloadMedia = async (msg: proto.IWebMessageInfo) => {
