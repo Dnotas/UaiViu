@@ -631,11 +631,9 @@ const verifyContact = async (
   wbot: Session,
   companyId: number
 ): Promise<Contact> => {
-  // PROTEÇÃO ADICIONAL: Bloqueia criação de contatos com IDs @lid
-  if (msgContact.id.includes("@lid")) {
-    logger.error(`❌ [verifyContact] BLOQUEIO: Tentativa de criar contato com ID @lid - ID: ${msgContact.id} - Company: ${companyId}`);
-    throw new AppError("ERR_INVALID_CONTACT_LID", 400);
-  }
+  // NOTA: Permitimos @lid aqui porque em GRUPOS o participant pode vir como @lid
+  // quando alguém usa WhatsApp Web/Desktop. A proteção contra tickets duplicados
+  // já está em handleMessage que descarta mensagens DIRETAS @lid sem participant.
 
   let profilePicUrl: string;
   try {
