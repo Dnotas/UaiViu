@@ -359,6 +359,20 @@ async function handleSendScheduledMessage(job) {
       whatsappId: whatsapp?.id
     });
 
+    // LOG DETALHADO para debug de agendamentos
+    logger.info(`========================================`);
+    logger.info(`📅 [AGENDAMENTO] Enviando mensagem agendada`);
+    logger.info(`   Schedule ID: ${scheduleRecord.id}`);
+    logger.info(`   Tipo: ${scheduleRecord.isRecurring ? 'PERIÓDICO' : 'ÚNICO'}`);
+    if (scheduleRecord.isRecurring) {
+      logger.info(`   Recorrência: ${scheduleRecord.recurringType} às ${scheduleRecord.recurringTime}`);
+    }
+    logger.info(`   Contato: ${scheduleRecord.contact.name}`);
+    logger.info(`   Número: ${scheduleRecord.contact.number}`);
+    logger.info(`   É Grupo: ${scheduleRecord.contact.isGroup ? 'SIM' : 'NÃO'}`);
+    logger.info(`   Mensagem: ${scheduleRecord.body.substring(0, 50)}${scheduleRecord.body.length > 50 ? '...' : ''}`);
+    logger.info(`========================================`);
+
     await SendMessage(whatsapp, {
       number: scheduleRecord.contact.number,
       body: formatBody(scheduleRecord.body, scheduleRecord.contact),
@@ -371,7 +385,7 @@ async function handleSendScheduledMessage(job) {
       await scheduleRecord.update({
         lastRunAt: moment().format("YYYY-MM-DD HH:mm:ss")
       });
-      logger.info(`[🔄] Mensagem recorrente enviada para: ${scheduleRecord.contact.name} - Próximo envio amanhã`);
+      logger.info(`✅ [🔄] Mensagem recorrente enviada para: ${scheduleRecord.contact.name} (${scheduleRecord.contact.number})`);
     } else {
       await scheduleRecord?.update({
         sentAt: moment().format("YYYY-MM-DD HH:mm"),

@@ -98,7 +98,9 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 	const initialContact = {
 		id: "",
-		name: ""
+		name: "",
+		number: "",
+		isGroup: false
 	}
 
 	const [schedule, setSchedule] = useState(initialState);
@@ -124,9 +126,14 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 			try {
 				(async () => {
 					const { data: contactList } = await api.get('/contacts/list', { params: { companyId: companyId } });
-					let customList = contactList.map((c) => ({ id: c.id, name: c.name }));
+					let customList = contactList.map((c) => ({
+						id: c.id,
+						name: c.name,
+						number: c.number,
+						isGroup: c.isGroup
+					}));
 					if (isArray(customList)) {
-						setContacts([{ id: "", name: "" }, ...customList]);
+						setContacts([{ id: "", name: "", number: "", isGroup: false }, ...customList]);
 					}
 					if (contactId) {
 						setSchedule(prevState => {
@@ -297,6 +304,25 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 									</FormControl>
 								</div>
 								<br />
+								{currentContact && currentContact.id && (
+									<div className={classes.multFieldLine} style={{marginBottom: '16px'}}>
+										<TextField
+											fullWidth
+											label="Número de destino"
+											value={`${currentContact.number || ''} ${currentContact.isGroup ? '(GRUPO)' : '(PARTICULAR)'}`}
+											disabled
+											variant="outlined"
+											helperText="⚠️ Confira se este é o número/grupo correto antes de salvar"
+											InputProps={{
+												style: {
+													backgroundColor: currentContact.isGroup ? '#e8f5e9' : '#f5f5f5',
+													fontWeight: 'bold'
+												}
+											}}
+										/>
+									</div>
+								)}
+
 								<div className={classes.multFieldLine}>
 									<Field
 										as={TextField}
