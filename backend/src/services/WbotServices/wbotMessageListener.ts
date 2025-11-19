@@ -2370,15 +2370,23 @@ const handleMessage = async (
   // 2. Com remoteJid do dispositivo: 148137817669860@lid
   // Descartamos SEMPRE a versão @lid para evitar criação de contatos/tickets duplicados
   if (msg.key.remoteJid?.includes("@lid")) {
-    // CORREÇÃO DEFINITIVA: Descartamos TODAS as mensagens @lid sem participant
-    // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
-    if (!msg.key.participant) {
-      logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant descartada (evita ticket duplicado) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+    // EXCEÇÃO: Se a mensagem tem senderPn (número real do remetente), processa usando ele
+    // Isso evita perder mensagens que vêm com @lid mas têm o número válido
+    const senderPn = (msg as any).key?.senderPn;
+    if (senderPn && !msg.key.participant) {
+      logger.info(`🔧 [handleMessage] Mensagem @lid COM senderPn detectada - ID: ${msg.key.id} - senderPn: ${senderPn} - Company: ${companyId}`);
+      // Substitui o remoteJid pelo senderPn para processar corretamente
+      msg.key.remoteJid = senderPn;
+      // Continua o processamento normalmente
+    } else if (!msg.key.participant) {
+      // CORREÇÃO DEFINITIVA: Descartamos mensagens @lid sem participant E sem senderPn
+      // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
+      logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant e SEM senderPn descartada (evita ticket duplicado) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
       return;
+    } else {
+      // Se tem participant, é uma mensagem válida (geralmente de grupo)
+      logger.info(`🔧 [handleMessage] Mensagem @lid COM participant será processada - ID: ${msg.key.id} - participant: ${msg.key.participant} - Company: ${companyId}`);
     }
-
-    // Se tem participant, é uma mensagem válida (geralmente de grupo)
-    logger.info(`🔧 [handleMessage] Mensagem @lid COM participant será processada - ID: ${msg.key.id} - participant: ${msg.key.participant} - Company: ${companyId}`);
   }
 
   try {
