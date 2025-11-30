@@ -1634,6 +1634,8 @@ const messages = {
         ERR_DELETE_WAPP_MSG: "Não foi possível excluir a mensagem do WhatsApp.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
+        ERR_COMPANY_EXPIRED: "Opss! Sua assinatura venceu. Entre em contato com o Suporte para mais informações!",
+        ERR_COMPANY_SUSPENDED: "Empresa suspensa. Entre em contato com o Suporte para mais informações!",
         ERR_USER_CREATION_DISABLED:
             "A criação do usuário foi desabilitada pelo administrador.",
         ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",

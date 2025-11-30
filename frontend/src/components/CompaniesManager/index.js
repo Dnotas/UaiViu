@@ -256,7 +256,7 @@ export function CompanyForm(props) {
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
                   <InputLabel htmlFor="status-selection">
-                    {i18n.t("settings.company.form.status")}
+                    {i18n.t("settings.company.form.status")} (Ativo/Bloqueado)
                   </InputLabel>
                   <Field
                     as={Select}
@@ -266,8 +266,8 @@ export function CompanyForm(props) {
                     name="status"
                     margin="dense"
                   >
-                    <MenuItem value={true}>{i18n.t("settings.company.form.yes")}</MenuItem>
-                    <MenuItem value={false}>{i18n.t("settings.company.form.no")}</MenuItem>
+                    <MenuItem value={true}>✅ {i18n.t("settings.company.form.yes")} (Liberado)</MenuItem>
+                    <MenuItem value={false}>🚫 {i18n.t("settings.company.form.no")} (Bloqueado)</MenuItem>
                   </Field>
                 </FormControl>
               </Grid>
@@ -291,7 +291,7 @@ export function CompanyForm(props) {
                 <FormControl variant="outlined" fullWidth>
                   <Field
                     as={TextField}
-                    label={i18n.t("settings.company.form.dueDate")}
+                    label={i18n.t("settings.company.form.dueDate") + " (Controle de vencimento)"}
                     type="date"
                     name="dueDate"
                     InputLabelProps={{
@@ -300,6 +300,7 @@ export function CompanyForm(props) {
                     variant="outlined"
                     fullWidth
                     margin="dense"
+                    helperText="Se Status=Sim, empresa fica ativa mesmo vencida"
                   />
                 </FormControl>
               </Grid>
@@ -405,7 +406,22 @@ export function CompaniesManagerGrid(props) {
   const { dateToClient } = useDate();
 
   const renderStatus = (row) => {
-    return row.status === false ? "Não" : "Sim";
+    if (row.status === false) {
+      return "🚫 Não (Bloqueado)";
+    }
+
+    // Verificar se está vencido mas liberado
+    if (moment(row.dueDate).isValid()) {
+      const now = moment();
+      const dueDate = moment(row.dueDate);
+      const diff = dueDate.diff(now, "days");
+
+      if (diff < 0) {
+        return "✅ Sim (Liberado Manualmente - Vencido em " + moment(row.dueDate).format("DD/MM/YYYY") + ")";
+      }
+    }
+
+    return "✅ Sim (Ativo)";
   };
 
   const renderPlan = (row) => {
