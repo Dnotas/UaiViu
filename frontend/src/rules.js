@@ -3,6 +3,13 @@ const rules = {
 		static: [],
 	},
 
+	supervisor: {
+		static: [
+			"dashboard:view",
+			"tickets-manager:showall",
+		],
+	},
+
 	admin: {
 		static: [
 			"dashboard:view",
