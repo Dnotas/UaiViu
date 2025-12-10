@@ -1,22 +1,26 @@
 import rules from "../../rules";
 
 const check = (role, action, data) => {
+	console.log("🔍 Can check:", { role, action, hasData: !!data });
+
 	// Proteção contra role null/undefined
 	if (!role) {
+		console.warn("⚠️ Can: role is null/undefined");
 		return false;
 	}
 
 	const permissions = rules[role];
 	if (!permissions) {
-		// role is not present in the rules
+		console.warn("⚠️ Can: No permissions found for role:", role);
 		return false;
 	}
 
 	const staticPermissions = permissions.static;
+	console.log("🔍 staticPermissions:", staticPermissions, "type:", typeof staticPermissions, "isArray:", Array.isArray(staticPermissions));
 
 	// Proteção robusta contra staticPermissions null/undefined
 	if (staticPermissions && Array.isArray(staticPermissions) && staticPermissions.includes(action)) {
-		// static rule not provided for action
+		console.log("✅ Can: Permission granted for", action);
 		return true;
 	}
 
