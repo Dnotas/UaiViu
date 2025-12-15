@@ -3300,7 +3300,15 @@ const wbotMessageListener = async (
         if (!filterMessages(message)) continue;
 
         // 4. QUARTO: Detecta e processa mensagens editadas
-        const isEditedMessage = getTypeMessage(message) === "editedMessage";
+        const messageType = getTypeMessage(message);
+
+        // DEBUG: Log do tipo de mensagem e estrutura
+        logger.info(`[DEBUG] Tipo da mensagem: ${messageType} - ID: ${message.key.id}`);
+        if (message.message?.editedMessage) {
+          logger.info(`[DEBUG] Mensagem TEM editedMessage! Estrutura: ${JSON.stringify(Object.keys(message.message))}`);
+        }
+
+        const isEditedMessage = messageType === "editedMessage";
 
         if (isEditedMessage) {
           const originalMessageId = message?.message?.editedMessage?.message?.protocolMessage?.key?.id;
