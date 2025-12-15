@@ -3098,7 +3098,164 @@ const verifyCampaignMessageAndCloseTicket = async (
   }
 };
 
+const handleDeletedMessage = async (msg: WAMessage, companyId: number) => {
+  await new Promise(r => setTimeout(r, 500));  // Delay igual ao handleMsgAck
+
+  try {
+    // Extrai ID da mensagem apagada do protocolMessage
+    const messageId = msg.message?.protocolMessage?.key?.id || msg.key?.id;
+
+    if (!messageId) {
+      logger.warn("No message ID found in deleted message event");
+      return;
+    }
+
+    // Busca mensagem no banco com relacionamentos
+    const message = await Message.findByPk(messageId, {
+      include: [
+        "contact",
+        {
+          model: Ticket,
+          as: "ticket",
+          include: ["contact", "queue"]
+        },
+        {
+          model: Message,
+          as: "quotedMsg",
+          include: ["contact"]
+        }
+      ]
+    });
+
+    if (!message) {
+      logger.warn(`Message ${messageId} not found in database for deletion`);
+      return;
+    }
+
+    if (message.companyId !== companyId) {
+      logger.warn(`Company mismatch for message ${messageId}`);
+      return;
+    }
+
+    // Atualiza como deletada
+    await message.update({ isDeleted: true });
+
+    logger.info(`✓ Message ${messageId} marked as deleted - Ticket: ${message.ticketId}`);
+
+    // Emite Socket.IO para atualizar frontend em tempo real
+    const io = getIO();
+    io.to(message.ticketId.toString())
+      .to(`company-${companyId}-${message.ticket.status}`)
+      .to(`company-${companyId}-notification`)
+      .emit(`company-${companyId}-appMessage`, {
+        action: "update",
+        message,
+        ticket: message.ticket,
+        contact: message.ticket.contact
+      });
+
+  } catch (err) {
+    Sentry.captureException(err);
+    logger.error(`✗ Error handling deleted message: ${err}`);
+  }
+};
+
+const handleEditedMessage = async (
+  msg: proto.IWebMessageInfo,
+  companyId: number
+): Promise<void> => {
+  try {
+    // 1. Extrai o ID da mensagem ORIGINAL (que foi editada)
+    const originalMessageId = msg?.message?.editedMessage?.message?.protocolMessage?.key?.id;
+
+    if (!originalMessageId) {
+      logger.warn("[EDIT] Mensagem editada sem ID original");
+      return;
+    }
+
+    // 2. Busca a mensagem original no banco
+    const messageToUpdate = await Message.findByPk(originalMessageId, {
+      include: [
+        "contact",
+        {
+          model: Message,
+          as: "quotedMsg",
+          include: ["contact"]
+        },
+        {
+          model: Ticket,
+          as: "ticket",
+          include: ["contact", "queue"]
+        }
+      ]
+    });
+
+    if (!messageToUpdate) {
+      logger.warn(`[EDIT] Mensagem original não encontrada no banco - ID: ${originalMessageId}`);
+      return;
+    }
+
+    // 3. Extrai o novo conteúdo da mensagem editada
+    const newBody = getBodyMessage(msg);
+
+    if (!newBody) {
+      logger.warn(`[EDIT] Não foi possível extrair corpo da mensagem editada`);
+      return;
+    }
+
+    // Guarda o body antigo para comparação
+    const oldBody = messageToUpdate.body;
+
+    // 4. Atualiza a mensagem no banco
+    await messageToUpdate.update({
+      body: newBody,
+      isEdited: true,
+      dataJson: JSON.stringify(msg)
+    });
+
+    // 5. Atualiza lastMessage do ticket se necessário
+    const ticket = messageToUpdate.ticket;
+    if (ticket && ticket.lastMessage === oldBody) {
+      await ticket.update({ lastMessage: newBody });
+    }
+
+    logger.info(`[EDIT] Mensagem atualizada - ID: ${originalMessageId} - Novo: ${newBody.substring(0, 50)}...`);
+
+    // 6. Recarrega a mensagem para garantir relacionamentos atualizados
+    await messageToUpdate.reload({
+      include: [
+        "contact",
+        {
+          model: Message,
+          as: "quotedMsg",
+          include: ["contact"]
+        }
+      ]
+    });
+
+    // 7. Emite evento Socket.IO para atualizar o frontend em tempo real
+    const io = getIO();
+    io.to(messageToUpdate.ticketId.toString())
+      .to(`company-${companyId}-${ticket.status}`)
+      .emit(`company-${companyId}-appMessage`, {
+        action: "update",
+        message: messageToUpdate
+      });
+
+    logger.info(`[EDIT] Socket.IO emitido para ticketId: ${messageToUpdate.ticketId} - action: update`);
+
+  } catch (error) {
+    Sentry.captureException(error);
+    logger.error(`[EDIT] Erro ao processar mensagem editada: ${error}`);
+  }
+};
+
 const filterMessages = (msg: WAMessage): boolean => {
+  // Permite mensagens editadas passarem pelo filtro
+  const isEditedMessage = getTypeMessage(msg) === "editedMessage";
+  if (isEditedMessage) return true;
+
+  // Bloqueia outras protocolMessages
   if (msg.message?.protocolMessage) return false;
 
   if (
@@ -3120,23 +3277,50 @@ const wbotMessageListener = async (
 ): Promise<void> => {
   try {
     wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
-      const messages = messageUpsert.messages
-        .filter(filterMessages)
-        .map(msg => msg);
+      const messages = messageUpsert.messages;
 
-      if (!messages) return;
+      if (!messages || messages.length === 0) return;
 
       for (const message of messages) {
-        const messageExists = await Message.count({
-          where: { id: message.key.id!, companyId }
-        });
+        // 1. PRIMEIRO: Detecta mensagens de deleção via protocolMessage
+        if (message.message?.protocolMessage?.type === 0) {  // type 0 = REVOKE
+          logger.info(`Mensagem deletada detectada via protocolMessage - ID: ${message.message.protocolMessage.key?.id}`);
+          await handleDeletedMessage(message, companyId);
+          continue;  // Não processa como mensagem normal
+        }
 
-        if (!messageExists) {
-          logger.info(`Processando nova mensagem - ID: ${message.key.id} - De: ${message.key.remoteJid} - Company: ${companyId}`);
-          await handleMessage(message, wbot, companyId);
-          await verifyCampaignMessageAndCloseTicket(message, companyId);
+        // 2. SEGUNDO: Detecta deleção via messageStubType
+        if (message.messageStubType === WAMessageStubType.REVOKE) {
+          logger.info(`Mensagem deletada detectada via REVOKE - ID: ${message.key.id}`);
+          await handleDeletedMessage(message, companyId);
+          continue;  // Não processa como mensagem normal
+        }
+
+        // 3. TERCEIRO: Filtra mensagens normais (protocolMessages de edição, etc)
+        if (!filterMessages(message)) continue;
+
+        // 4. QUARTO: Detecta e processa mensagens editadas
+        const isEditedMessage = getTypeMessage(message) === "editedMessage";
+
+        if (isEditedMessage) {
+          const originalMessageId = message?.message?.editedMessage?.message?.protocolMessage?.key?.id;
+          if (originalMessageId) {
+            logger.info(`[EDIT] Mensagem editada detectada - ID original: ${originalMessageId} - Company: ${companyId}`);
+            await handleEditedMessage(message, companyId);
+          }
         } else {
-          logger.debug(`Mensagem já existe no banco - ID: ${message.key.id} - Company: ${companyId}`);
+          // 5. QUINTO: Processa mensagem normal
+          const messageExists = await Message.count({
+            where: { id: message.key.id!, companyId }
+          });
+
+          if (!messageExists) {
+            logger.info(`Processando nova mensagem - ID: ${message.key.id} - De: ${message.key.remoteJid} - Company: ${companyId}`);
+            await handleMessage(message, wbot, companyId);
+            await verifyCampaignMessageAndCloseTicket(message, companyId);
+          } else {
+            logger.debug(`Mensagem já existe no banco - ID: ${message.key.id} - Company: ${companyId}`);
+          }
         }
       }
     });
