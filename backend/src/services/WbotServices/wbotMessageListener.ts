@@ -3338,12 +3338,90 @@ const wbotMessageListener = async (
       messageUpdate.forEach(async (message: WAMessageUpdate) => {
         (wbot as WASocket)!.readMessages([message.key]);
 
-        // DEBUG: Log completo do message.update
-        logger.info(`[DEBUG UPDATE] messages.update recebido - ID: ${message.key.id}`);
-        logger.info(`[DEBUG UPDATE] Conteúdo do update: ${JSON.stringify(message.update)}`);
-        logger.info(`[DEBUG UPDATE] Tem editedMessage?: ${!!(message.update as any)?.editedMessage}`);
+        // Verifica se é uma mensagem editada
+        const updateData = message.update as any;
+        if (updateData?.message?.editedMessage) {
+          logger.info(`[EDIT] Mensagem editada detectada via messages.update - ID: ${message.key.id}`);
 
-        handleMsgAck(message, message.update.status);
+          try {
+            // Busca a mensagem original no banco
+            const messageToUpdate = await Message.findByPk(message.key.id, {
+              include: [
+                "contact",
+                {
+                  model: Message,
+                  as: "quotedMsg",
+                  include: ["contact"]
+                },
+                {
+                  model: Ticket,
+                  as: "ticket",
+                  include: ["contact", "queue"]
+                }
+              ]
+            });
+
+            if (!messageToUpdate) {
+              logger.warn(`[EDIT] Mensagem original não encontrada - ID: ${message.key.id}`);
+              return;
+            }
+
+            // Extrai o novo conteúdo
+            const newBody = updateData.message.editedMessage.message.conversation ||
+                           updateData.message.editedMessage.message.extendedTextMessage?.text;
+
+            if (!newBody) {
+              logger.warn(`[EDIT] Não foi possível extrair o novo conteúdo`);
+              return;
+            }
+
+            const oldBody = messageToUpdate.body;
+
+            // Atualiza a mensagem no banco
+            await messageToUpdate.update({
+              body: newBody,
+              isEdited: true
+            });
+
+            // Atualiza lastMessage do ticket se necessário
+            const ticket = messageToUpdate.ticket;
+            if (ticket && ticket.lastMessage === oldBody) {
+              await ticket.update({ lastMessage: newBody });
+            }
+
+            logger.info(`[EDIT] Mensagem atualizada - ID: ${message.key.id} - Novo: ${newBody.substring(0, 50)}...`);
+
+            // Recarrega a mensagem
+            await messageToUpdate.reload({
+              include: [
+                "contact",
+                {
+                  model: Message,
+                  as: "quotedMsg",
+                  include: ["contact"]
+                }
+              ]
+            });
+
+            // Emite Socket.IO para atualizar frontend
+            const io = getIO();
+            io.to(messageToUpdate.ticketId.toString())
+              .to(`company-${messageToUpdate.companyId}-${ticket.status}`)
+              .emit(`company-${messageToUpdate.companyId}-appMessage`, {
+                action: "update",
+                message: messageToUpdate
+              });
+
+            logger.info(`[EDIT] Socket.IO emitido - ticketId: ${messageToUpdate.ticketId}`);
+
+          } catch (error) {
+            Sentry.captureException(error);
+            logger.error(`[EDIT] Erro ao processar edição: ${error}`);
+          }
+        } else {
+          // Processa atualização de ACK normalmente
+          handleMsgAck(message, message.update.status);
+        }
       });
     });
 
