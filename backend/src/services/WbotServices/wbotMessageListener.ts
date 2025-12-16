@@ -3341,7 +3341,7 @@ const wbotMessageListener = async (
         // DEBUG: Log completo do message.update
         logger.info(`[DEBUG UPDATE] messages.update recebido - ID: ${message.key.id}`);
         logger.info(`[DEBUG UPDATE] Conteúdo do update: ${JSON.stringify(message.update)}`);
-        logger.info(`[DEBUG UPDATE] Tem editedMessage?: ${!!message.update?.editedMessage}`);
+        logger.info(`[DEBUG UPDATE] Tem editedMessage?: ${!!(message.update as any)?.editedMessage}`);
 
         handleMsgAck(message, message.update.status);
       });
