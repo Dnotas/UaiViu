@@ -228,15 +228,45 @@ const TicketsListCustom = (props) => {
         });
       }
 
-      if (data.action === "update" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
-        dispatch({
-          type: "UPDATE_TICKET",
-          payload: data.ticket,
-        });
+      if (data.action === "update" && shouldUpdateTicket(data.ticket)) {
+        // Para aba urgent: aceitar tickets com urgentAt preenchido e status open/pending
+        // Para outras abas: aceitar tickets com status correspondente
+        const isUrgentTab = status === "urgent";
+        const ticketIsUrgent = data.ticket.urgentAt !== null && data.ticket.urgentAt !== undefined;
+        const ticketStatusMatch = data.ticket.status === status;
+
+        if (isUrgentTab && ticketIsUrgent && (data.ticket.status === "open" || data.ticket.status === "pending")) {
+          dispatch({
+            type: "UPDATE_TICKET",
+            payload: data.ticket,
+          });
+        } else if (!isUrgentTab && ticketStatusMatch) {
+          dispatch({
+            type: "UPDATE_TICKET",
+            payload: data.ticket,
+          });
+        }
       }
 
       if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
         dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+      }
+
+      // Remover ticket da aba urgent se deixou de ser urgente
+      if (data.action === "update" && status === "urgent") {
+        const ticketNotUrgentAnymore = data.ticket.urgentAt === null || data.ticket.urgentAt === undefined;
+        if (ticketNotUrgentAnymore) {
+          dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+        }
+      }
+
+      // Remover ticket das abas open/pending se ficou urgente (para evitar duplicatas)
+      if (data.action === "update" && (status === "open" || status === "pending")) {
+        const ticketBecameUrgent = data.ticket.urgentAt !== null && data.ticket.urgentAt !== undefined;
+        if (ticketBecameUrgent && data.ticket.status === status) {
+          // Ticket ainda fica na aba, pois tickets urgentes ainda são open ou pending
+          // Não fazemos nada aqui, apenas mantemos na lista
+        }
       }
 
       if (data.action === "delete") {
