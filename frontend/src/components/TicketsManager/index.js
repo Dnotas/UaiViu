@@ -267,7 +267,7 @@ const TicketsManager = () => {
                 overlap="rectangular"
                 color="secondary"
               >
-                {i18n.t("tickets.tabs.open.title")}
+                {"TESTE - " + i18n.t("tickets.tabs.open.title")}
               </Badge>
             }
             classes={{ root: classes.tab }}
