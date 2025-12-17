@@ -236,9 +236,27 @@ const useStyles = makeStyles((theme) => ({
 
   textContentItemDeleted: {
     fontStyle: "italic",
-    color: "rgba(0, 0, 0, 0.36)",
+    color: "#d32f2f",
+    backgroundColor: "#ffebee",
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
+    border: "1px solid #ffcdd2",
+  },
+
+  messageDeletedReceived: {
+    backgroundColor: "#ffebee",
+    color: "#d32f2f",
+    padding: "8px 12px",
+    borderRadius: "8px",
+    fontStyle: "italic",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    border: "1px solid #ffcdd2",
+  },
+
+  messageDeletedIcon: {
+    color: "#d32f2f",
   },
 
   messageMedia: {
@@ -1050,14 +1068,12 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
 
                 {/* aviso de mensagem apagado pelo contato */}
                 {message.isDeleted && (
-                  <div>
-                    <span className={"message-deleted"}
-                    >{i18n.t("messagesList.deletedMessage")} &nbsp;
-                      <Block
-                        color="error"
-                        fontSize="small"
-                        className={classes.deletedIcon}
-                      />
+                  <div className={classes.messageDeletedReceived}>
+                    <Block className={classes.messageDeletedIcon} fontSize="small" />
+                    <span>
+                      {i18n.t("messagesList.deletedMessage")}
+                      {" às "}
+                      {format(parseISO(message.updatedAt), "HH:mm")}
                     </span>
                   </div>
                 )}
@@ -1103,11 +1119,12 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                   })}
                 >
                   {message.isDeleted && (
-                    <Block
-                      color="disabled"
-                      fontSize="small"
-                      className={classes.deletedIcon}
-                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Block className={classes.messageDeletedIcon} fontSize="small" />
+                      <span style={{ fontSize: "0.85em" }}>
+                        às {format(parseISO(message.updatedAt), "HH:mm")}
+                      </span>
+                    </div>
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
                   <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>

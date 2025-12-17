@@ -243,6 +243,42 @@ const Schedules = () => {
     return str;
   };
 
+  // Função para calcular próxima execução de agendamento periódico
+  const getNextRecurringDate = (schedule) => {
+    if (!schedule.isRecurring || !schedule.recurringTime) {
+      return schedule.sendAt ? new Date(schedule.sendAt) : new Date();
+    }
+
+    const [hours, minutes] = schedule.recurringTime.split(':').map(Number);
+    const now = moment();
+    const lastRun = schedule.lastRunAt ? moment(schedule.lastRunAt) : null;
+
+    // Cria a data base para hoje com a hora configurada
+    let nextRun = moment().hours(hours).minutes(minutes).seconds(0).milliseconds(0);
+
+    // Se já rodou hoje, calcula a próxima execução
+    if (lastRun && lastRun.format('YYYY-MM-DD') === now.format('YYYY-MM-DD')) {
+      switch(schedule.recurringType) {
+        case 'daily':
+          nextRun.add(1, 'day');
+          break;
+        case 'weekly':
+          nextRun.add(1, 'week');
+          break;
+        case 'monthly':
+          nextRun.add(1, 'month');
+          break;
+        default:
+          nextRun.add(1, 'day');
+      }
+    } else if (nextRun.isBefore(now)) {
+      // Se a hora de hoje já passou e não rodou hoje, agenda para amanhã
+      nextRun.add(1, 'day');
+    }
+
+    return nextRun.toDate();
+  };
+
   // Filtrar agendamentos
   const filteredSchedules = showOnlyRecurring
     ? schedules.filter(s => s.isRecurring)

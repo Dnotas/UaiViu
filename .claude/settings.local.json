@@ -23,7 +23,16 @@
       "Bash(npx tsc:*)",
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(dir:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(psql:*)",
+      "Bash(findstr:*)",
+      "Bash(if [ -f \"backend/.env\" ])",
+      "Bash(then echo \"Arquivo existe\")",
+      "Bash(else echo \"Arquivo não existe\")",
+      "Bash(fi)",
+      "WebSearch",
+      "Bash(git log:*)",
+      "Bash(npx sequelize:*)"
     ],
     "deny": [],
     "ask": []
