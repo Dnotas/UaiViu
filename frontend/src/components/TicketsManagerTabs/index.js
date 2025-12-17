@@ -345,21 +345,6 @@ const TicketsManagerTabs = () => {
             classes={{ root: classes.tab }}
           />
           <Tab
-            value={"urgent"}
-            icon={<Warning className={classes.tabIcon} />}
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={urgentCount}
-                overlap="rectangular"
-                color="error"
-              >
-                {i18n.t("tickets.tabs.urgent.title")}
-              </Badge>
-            }
-            classes={{ root: classes.tab }}
-          />
-          <Tab
             value={"search"}
             icon={<SearchIcon className={classes.tabIcon} />}
             label={i18n.t("tickets.tabs.search.title")}
@@ -448,6 +433,19 @@ const TicketsManagerTabs = () => {
               label={
                 <Badge
                   className={classes.badge}
+                  badgeContent={urgentCount}
+                  color="error"
+                >
+                  {i18n.t("tickets.tabs.urgent.title")}
+                </Badge>
+              }
+              value={"urgent"}
+              classes={{ root: classes.internalTab }}
+            />
+            <Tab
+              label={
+                <Badge
+                  className={classes.badge}
                   badgeContent={pendingCount}
                   color="secondary"
                 >
@@ -468,6 +466,13 @@ const TicketsManagerTabs = () => {
             style={applyPanelStyle("open")}
           />
           <TicketsList
+            status="urgent"
+            showAll={true}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setUrgentCount(val)}
+            style={applyPanelStyle("urgent")}
+          />
+          <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setPendingCount(val)}
@@ -480,14 +485,6 @@ const TicketsManagerTabs = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
-        />
-      </TabPanel>
-      <TabPanel value={tab} name="urgent" className={classes.ticketsWrapper}>
-        <TicketsList
-          status="urgent"
-          showAll={true}
-          selectedQueueIds={selectedQueueIds}
-          updateCount={(val) => setUrgentCount(val)}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
