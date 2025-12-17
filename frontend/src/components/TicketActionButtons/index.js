@@ -63,7 +63,7 @@ const TicketActionButtons = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
-			{ticket.status === "closed" && ticket.userId === user?.id && (
+			{ticket.status === "closed" && (
 				<ButtonWithSpinner
 					loading={loading}
 					startIcon={<Replay />}
