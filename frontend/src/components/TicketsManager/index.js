@@ -222,6 +222,13 @@ const TicketsManager = () => {
     }
   };
 
+  // DEBUG LOGS
+  console.log("🔍 [URGENCY DEBUG] TicketsManager rendered");
+  console.log("🔍 [URGENCY DEBUG] Tab state:", tab);
+  console.log("🔍 [URGENCY DEBUG] Urgent count:", urgentCount);
+  console.log("🔍 [URGENCY DEBUG] Open count:", openCount);
+  console.log("🔍 [URGENCY DEBUG] Pending count:", pendingCount);
+
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <UrgentTicketsAlert />
@@ -240,6 +247,8 @@ const TicketsManager = () => {
         />
       </Paper>
       <Paper elevation={0} square className={classes.tabsHeader}>
+        {console.log("🔍 [URGENCY DEBUG] Rendering Tabs section")}
+        {console.log("🔍 [URGENCY DEBUG] Urgent tab translation:", i18n.t("tickets.tabs.urgent.title"))}
         <Tabs
           value={tab}
           onChange={handleChangeTab}
