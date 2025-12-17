@@ -757,6 +757,7 @@ const messages = {
 					open: { title: "Open" },
 					closed: { title: "Resolved" },
 					search: { title: "Search" },
+					urgent: { title: "Urgent" },
 				},
 				search: {
 					placeholder: "Search tickets and messages",

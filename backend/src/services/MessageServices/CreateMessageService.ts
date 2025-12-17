@@ -54,6 +54,14 @@ const CreateMessageService = async ({
     await message.update({ queueId: message.ticket.queueId });
   }
 
+  // Limpar urgência se atendente respondeu
+  if (messageData.fromMe && message.ticket.urgentAt) {
+    await message.ticket.update({
+      urgentAt: null,
+      lastResponseAt: new Date()
+    });
+  }
+
   if (!message) {
     throw new Error("ERR_CREATING_MESSAGE");
   }

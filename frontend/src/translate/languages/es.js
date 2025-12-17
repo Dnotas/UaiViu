@@ -762,6 +762,7 @@ const messages = {
           open: { title: "Abiertos" },
           closed: { title: "Resueltos" },
           search: { title: "Búsqueda" },
+          urgent: { title: "Urgencia" },
         },
         search: {
           placeholder: "Buscar atención y mensajes",

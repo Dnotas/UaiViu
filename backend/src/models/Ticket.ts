@@ -164,6 +164,12 @@ class Ticket extends Model<Ticket> {
 
   @Column(DataType.JSON)
   dataWebhook: {} | null;
+
+  @Column
+  urgentAt: Date;
+
+  @Column
+  lastResponseAt: Date;
 }
 
 export default Ticket;

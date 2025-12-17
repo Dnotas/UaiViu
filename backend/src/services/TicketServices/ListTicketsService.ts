@@ -86,10 +86,20 @@ const ListTicketsService = async ({
   }
 
   if (status) {
-    whereCondition = {
-      ...whereCondition,
-      status
-    };
+    // Se status for "urgent", buscar tickets urgentes (urgentAt != null)
+    if (status === "urgent") {
+      whereCondition = {
+        ...whereCondition,
+        urgentAt: {
+          [Op.ne]: null
+        }
+      };
+    } else {
+      whereCondition = {
+        ...whereCondition,
+        status
+      };
+    }
   }
 
   if (searchParam) {

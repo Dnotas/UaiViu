@@ -6,6 +6,7 @@ import { StartAllWhatsAppsSessions } from "./services/WbotServices/StartAllWhats
 import Company from "./models/Company";
 import { startQueueProcess } from "./queues";
 import { TransferTicketQueue } from "./wbotTransferTicketQueue";
+import { CheckUrgentTickets } from "./checkUrgentTickets";
 import cron from "node-cron";
 
 const server = app.listen(process.env.PORT, async () => {
@@ -29,6 +30,7 @@ cron.schedule("* * * * *", async () => {
     logger.info(`Serviço de transferencia de tickets iniciado`);
 
     await TransferTicketQueue();
+    await CheckUrgentTickets();
   }
   catch (error) {
     logger.error(error);

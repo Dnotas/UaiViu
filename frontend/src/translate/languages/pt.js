@@ -790,6 +790,7 @@ const messages = {
           open: { title: "Abertas" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
+          urgent: { title: "Urgência" },
         },
         search: {
           placeholder: "Buscar atendimento e mensagens",
@@ -1531,7 +1532,7 @@ const messages = {
           },
         },
         lostCall: "Chamada de voz/vídeo perdida às",
-        deletedMessage: "Essa mensagem foi apagada pelo contato",
+        deletedMessage: "Mensagem apagada",
         edited: "Editada",
         saudation: "Diga olá para seu novo contato!",
       },

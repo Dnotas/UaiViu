@@ -15,7 +15,8 @@ import {
   AllInboxRounded,
   HourglassEmptyRounded,
   MoveToInbox,
-  Search
+  Search,
+  Warning
 } from "@material-ui/icons";
 
 import NewTicketModal from "../NewTicketModal";
@@ -24,6 +25,7 @@ import TabPanel from "../TabPanel";
 import { TagsFilter } from "../TagsFilter";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
+import UrgentTicketsAlert from "../UrgentTicketsAlert";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -179,6 +181,7 @@ const TicketsManager = () => {
 
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [urgentCount, setUrgentCount] = useState(0);
   const [selectedTags, setSelectedTags] = useState([]);
 
   const userQueueIds = user.queues.map((q) => q.id);
@@ -221,6 +224,7 @@ const TicketsManager = () => {
 
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
+      <UrgentTicketsAlert />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(e) => setNewTicketModalOpen(false)}
@@ -270,6 +274,21 @@ const TicketsManager = () => {
                 color="secondary"
               >
                 {i18n.t("ticketsList.pendingHeader")}
+              </Badge>
+            }
+            classes={{ root: classes.tab }}
+          />
+          <Tab
+            value={"urgent"}
+            icon={<Warning className={classes.tabIcon} />}
+            label={
+              <Badge
+                className={classes.badge}
+                badgeContent={urgentCount}
+                overlap="rectangular"
+                color="error"
+              >
+                {i18n.t("tickets.tabs.urgent.title")}
               </Badge>
             }
             classes={{ root: classes.tab }}
@@ -349,7 +368,15 @@ const TicketsManager = () => {
         />
       </TabPanel>
 
-
+      <TabPanel value={tab} name="urgent" className={classes.ticketsWrapper}>
+      <TagsFilter onFiltered={handleSelectedTags} />
+        <TicketsList
+          status="urgent"
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+          updateCount={(val) => setUrgentCount(val)}
+        />
+      </TabPanel>
 
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
       <TagsFilter onFiltered={handleSelectedTags} />
