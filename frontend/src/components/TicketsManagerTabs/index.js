@@ -10,6 +10,7 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import Warning from "@material-ui/icons/Warning";
 
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
@@ -17,6 +18,7 @@ import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
 import TabPanel from "../TabPanel";
+import UrgentTicketsAlert from "../UrgentTicketsAlert";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -242,6 +244,7 @@ const TicketsManagerTabs = () => {
 
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [urgentCount, setUrgentCount] = useState(0);
 
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -312,10 +315,11 @@ const TicketsManagerTabs = () => {
 
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
+      <UrgentTicketsAlert />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(ticket) => {
-          
+
           handleCloseOrOpenTicket(ticket);
         }}
       />
@@ -338,6 +342,21 @@ const TicketsManagerTabs = () => {
             value={"closed"}
             icon={<CheckBoxIcon className={classes.tabIcon} />}
             label={i18n.t("tickets.tabs.closed.title")}
+            classes={{ root: classes.tab }}
+          />
+          <Tab
+            value={"urgent"}
+            icon={<Warning className={classes.tabIcon} />}
+            label={
+              <Badge
+                className={classes.badge}
+                badgeContent={urgentCount}
+                overlap="rectangular"
+                color="error"
+              >
+                {i18n.t("tickets.tabs.urgent.title")}
+              </Badge>
+            }
             classes={{ root: classes.tab }}
           />
           <Tab
@@ -461,6 +480,14 @@ const TicketsManagerTabs = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+        />
+      </TabPanel>
+      <TabPanel value={tab} name="urgent" className={classes.ticketsWrapper}>
+        <TicketsList
+          status="urgent"
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+          updateCount={(val) => setUrgentCount(val)}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
