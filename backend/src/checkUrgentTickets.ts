@@ -21,10 +21,12 @@ export const CheckUrgentTickets = async (): Promise<void> => {
     const now = new Date();
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-    // Buscar tickets abertos que podem estar urgentes
+    // Buscar tickets abertos e pendentes que podem estar urgentes
     const tickets = await Ticket.findAll({
       where: {
-        status: "open",
+        status: {
+          [Op.in]: ["open", "pending"]
+        },
         urgentAt: null // Ainda não marcado como urgente
       },
       include: [
@@ -115,8 +117,8 @@ export const CheckUrgentTickets = async (): Promise<void> => {
         order: [["createdAt", "DESC"]]
       });
 
-      // Se respondemos, limpar urgência
-      if (lastOurResponse || ticket.status !== "open") {
+      // Se respondemos ou ticket foi fechado, limpar urgência
+      if (lastOurResponse || (ticket.status !== "open" && ticket.status !== "pending")) {
         await ticket.update({
           urgentAt: null,
           lastResponseAt: lastOurResponse?.createdAt || now
