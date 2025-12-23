@@ -205,34 +205,57 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 									<InputLabel>Participantes do Grupo ({groupParticipants.length})</InputLabel>
 									<div style={{ paddingTop: 8, maxHeight: 300, overflowY: 'auto' }}>
 										{groupParticipants.map((participant, index) => (
-											<Typography
+											<div
 												key={participant.id || index}
-												component="div"
 												style={{
-													paddingTop: 4,
-													paddingBottom: 4,
-													fontSize: 13,
+													paddingTop: 6,
+													paddingBottom: 6,
+													borderBottom: index < groupParticipants.length - 1 ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
 													display: 'flex',
 													alignItems: 'center',
 													justifyContent: 'space-between'
 												}}
 											>
-												<span>
-													<Link href={`tel:${participant.number}`}>
-														{participant.number}
-													</Link>
-												</span>
+												<div style={{ flex: 1, minWidth: 0 }}>
+													<Typography
+														component="div"
+														style={{
+															fontSize: 14,
+															fontWeight: 500,
+															marginBottom: 2,
+															overflow: 'hidden',
+															textOverflow: 'ellipsis',
+															whiteSpace: 'nowrap'
+														}}
+													>
+														{participant.name}
+													</Typography>
+													<Typography
+														component="div"
+														style={{
+															fontSize: 12,
+															color: '#666'
+														}}
+													>
+														<Link href={`tel:+${participant.number}`}>
+															+{participant.number}
+														</Link>
+													</Typography>
+												</div>
 												{participant.isAdmin && (
 													<span style={{
 														fontSize: 11,
 														color: '#4caf50',
 														fontWeight: 'bold',
-														marginLeft: 8
+														marginLeft: 8,
+														padding: '2px 8px',
+														backgroundColor: '#e8f5e9',
+														borderRadius: 4
 													}}>
 														Admin
 													</span>
 												)}
-											</Typography>
+											</div>
 										))}
 									</div>
 								</Paper>
