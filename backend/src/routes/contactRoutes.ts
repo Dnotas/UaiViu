@@ -18,6 +18,8 @@ contactRoutes.get("/contacts/list", isAuth, ContactController.list);
 
 contactRoutes.get("/contacts/:contactId", isAuth, ContactController.show);
 
+contactRoutes.get("/contacts/:contactId/participants", isAuth, ContactController.getGroupParticipants);
+
 contactRoutes.post("/contacts", isAuth, ContactController.store);
 
 contactRoutes.post("/contacts/upload", isAuth, ContactController.storeUpload);

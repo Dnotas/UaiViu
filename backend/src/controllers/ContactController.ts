@@ -20,6 +20,7 @@ import SimpleListService, {
 import ContactCustomField from "../models/ContactCustomField";
 import { logger } from "../utils/logger";
 import ToggleDisableBotContactService from "../services/ContactServices/ToggleDisableBotContactService";
+import GetGroupParticipantsService from "../services/ContactServices/GetGroupParticipantsService";
 
 type IndexQuery = {
   searchParam: string;
@@ -319,4 +320,13 @@ export const toggleDisableBot = async (req: Request, res: Response): Promise<Res
     });
 
   return res.status(200).json(contact);
+};
+
+export const getGroupParticipants = async (req: Request, res: Response): Promise<Response> => {
+  const { contactId } = req.params;
+  const { companyId } = req.user;
+
+  const groupData = await GetGroupParticipantsService(contactId, companyId);
+
+  return res.status(200).json(groupData);
 };

@@ -20,6 +20,7 @@ import { CardHeader } from "@material-ui/core";
 import { ContactForm } from "../ContactForm";
 import ContactModal from "../ContactModal";
 import { ContactNotes } from "../ContactNotes";
+import api from "../../services/api";
 
 const drawerWidth = 320;
 
@@ -90,9 +91,27 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [openForm, setOpenForm] = useState(false);
+	const [groupParticipants, setGroupParticipants] = useState([]);
+	const [loadingParticipants, setLoadingParticipants] = useState(false);
 
 	useEffect(() => {
 		setOpenForm(false);
+		setGroupParticipants([]);
+
+		// Buscar participantes se for um grupo
+		if (open && contact?.isGroup && contact?.id) {
+			setLoadingParticipants(true);
+			api.get(`/contacts/${contact.id}/participants`)
+				.then(response => {
+					setGroupParticipants(response.data.participants || []);
+				})
+				.catch(error => {
+					console.error("Erro ao buscar participantes do grupo:", error);
+				})
+				.finally(() => {
+					setLoadingParticipants(false);
+				});
+		}
 	}, [open, contact]);
 
 	return (
@@ -175,6 +194,62 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 							<Typography variant="subtitle1">
 								{i18n.t("contactDrawer.extraInfo")}
 							</Typography>
+
+							{/* Exibir participantes do grupo */}
+							{contact?.isGroup && groupParticipants.length > 0 && (
+								<Paper
+									square
+									variant="outlined"
+									className={classes.contactExtraInfo}
+								>
+									<InputLabel>Participantes do Grupo ({groupParticipants.length})</InputLabel>
+									<div style={{ paddingTop: 8, maxHeight: 300, overflowY: 'auto' }}>
+										{groupParticipants.map((participant, index) => (
+											<Typography
+												key={participant.id || index}
+												component="div"
+												style={{
+													paddingTop: 4,
+													paddingBottom: 4,
+													fontSize: 13,
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'space-between'
+												}}
+											>
+												<span>
+													<Link href={`tel:${participant.number}`}>
+														{participant.number}
+													</Link>
+												</span>
+												{participant.isAdmin && (
+													<span style={{
+														fontSize: 11,
+														color: '#4caf50',
+														fontWeight: 'bold',
+														marginLeft: 8
+													}}>
+														Admin
+													</span>
+												)}
+											</Typography>
+										))}
+									</div>
+								</Paper>
+							)}
+
+							{loadingParticipants && contact?.isGroup && (
+								<Paper
+									square
+									variant="outlined"
+									className={classes.contactExtraInfo}
+								>
+									<Typography component="div" style={{ paddingTop: 8 }}>
+										Carregando participantes...
+									</Typography>
+								</Paper>
+							)}
+
 							{contact?.extraInfo?.map(info => (
 								<Paper
 									key={info.id}
