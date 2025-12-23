@@ -56,10 +56,17 @@ const GetGroupParticipantsService = async (
     // Buscar metadados do grupo
     const metadata = await wbot.groupMetadata(groupJid);
 
+    console.log("📋 [GetGroupParticipants] Metadados do grupo recebidos:");
+    console.log("   - Grupo:", metadata.subject);
+    console.log("   - Total de participantes:", metadata.participants.length);
+    console.log("   - Participantes RAW:", JSON.stringify(metadata.participants, null, 2));
+
     // Extrair números dos participantes
     const participantNumbers = metadata.participants.map((participant: any) => {
+      console.log("🔍 Processando participante:", participant.id);
       // Extrair apenas os dígitos do JID
       const number = participant.id.replace(/\D/g, "");
+      console.log("   - Número extraído:", number);
       return number;
     });
 
