@@ -11,6 +11,8 @@ const ShowTicketService = async (
   id: string | number,
   companyId: number
 ): Promise<Ticket> => {
+  console.log("🔍 [ShowTicketService] Buscando ticket:", id);
+
   const ticket = await Ticket.findByPk(id, {
     include: [
       {
@@ -50,6 +52,18 @@ const ShowTicketService = async (
   if (!ticket) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
   }
+
+  console.log("✅ [ShowTicketService] Ticket encontrado:");
+  console.log("   - Ticket ID:", ticket.id);
+  console.log("   - Contact ID:", ticket.contact?.id);
+  console.log("   - Contact Name:", ticket.contact?.name);
+  console.log("   - Contact isGroup:", ticket.contact?.isGroup);
+  console.log("   - Contact completo:", JSON.stringify({
+    id: ticket.contact?.id,
+    name: ticket.contact?.name,
+    number: ticket.contact?.number,
+    isGroup: ticket.contact?.isGroup
+  }));
 
   return ticket;
 };

@@ -77,7 +77,12 @@ const Ticket = () => {
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
         try {
+          console.log("📡 [Ticket] Buscando ticket da API:", ticketId);
           const { data } = await api.get("/tickets/u/" + ticketId);
+          console.log("📦 [Ticket] Dados recebidos da API:", data);
+          console.log("   - Contact:", data.contact);
+          console.log("   - Contact.isGroup:", data.contact?.isGroup);
+
           const { queueId } = data;
           const { queues, profile } = user;
 
@@ -88,10 +93,12 @@ const Ticket = () => {
             return;
           }
 
+          console.log("✅ [Ticket] Definindo contact no estado:", data.contact);
           setContact(data.contact);
           setTicket(data);
           setLoading(false);
         } catch (err) {
+          console.error("❌ [Ticket] Erro ao buscar ticket:", err);
           setLoading(false);
           toastError(err);
         }
@@ -120,9 +127,14 @@ const Ticket = () => {
 
     socket.on(`company-${companyId}-contact`, (data) => {
       if (data.action === "update") {
+        console.log("🔄 [Socket] Contact update received:", data.contact);
+        console.log("   - isGroup no socket:", data.contact?.isGroup);
         setContact((prevState) => {
+          console.log("   - isGroup antes da atualização:", prevState.isGroup);
+          const updated = { ...prevState, ...data.contact };
+          console.log("   - isGroup depois da atualização:", updated.isGroup);
           if (prevState.id === data.contact?.id) {
-            return { ...prevState, ...data.contact };
+            return updated;
           }
           return prevState;
         });
