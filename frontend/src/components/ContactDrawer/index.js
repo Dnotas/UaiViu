@@ -93,20 +93,32 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	const [openForm, setOpenForm] = useState(false);
 	const [groupParticipants, setGroupParticipants] = useState([]);
 	const [loadingParticipants, setLoadingParticipants] = useState(false);
+	const [participantsError, setParticipantsError] = useState(null);
 
 	useEffect(() => {
 		setOpenForm(false);
 		setGroupParticipants([]);
+		setParticipantsError(null);
+
+		// Debug
+		console.log("ContactDrawer - contact:", contact);
+		console.log("ContactDrawer - isGroup:", contact?.isGroup);
+		console.log("ContactDrawer - open:", open);
 
 		// Buscar participantes se for um grupo
 		if (open && contact?.isGroup && contact?.id) {
+			console.log("🔍 Buscando participantes do grupo:", contact.id);
 			setLoadingParticipants(true);
 			api.get(`/contacts/${contact.id}/participants`)
 				.then(response => {
+					console.log("✅ Participantes recebidos:", response.data);
 					setGroupParticipants(response.data.participants || []);
+					setParticipantsError(null);
 				})
 				.catch(error => {
-					console.error("Erro ao buscar participantes do grupo:", error);
+					console.error("❌ Erro ao buscar participantes do grupo:", error);
+					console.error("Detalhes do erro:", error.response?.data);
+					setParticipantsError(error.response?.data?.message || error.message || "Erro ao buscar participantes");
 				})
 				.finally(() => {
 					setLoadingParticipants(false);
@@ -269,6 +281,22 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								>
 									<Typography component="div" style={{ paddingTop: 8 }}>
 										Carregando participantes...
+									</Typography>
+								</Paper>
+							)}
+
+							{participantsError && contact?.isGroup && (
+								<Paper
+									square
+									variant="outlined"
+									className={classes.contactExtraInfo}
+									style={{ backgroundColor: '#ffebee' }}
+								>
+									<Typography component="div" style={{ paddingTop: 8, color: '#c62828' }}>
+										❌ {participantsError}
+									</Typography>
+									<Typography component="div" style={{ paddingTop: 4, fontSize: 12, color: '#666' }}>
+										Verifique o console do navegador para mais detalhes
 									</Typography>
 								</Paper>
 							)}
