@@ -63,9 +63,12 @@ const GetGroupParticipantsService = async (
 
     // Extrair números dos participantes
     const participantNumbers = metadata.participants.map((participant: any) => {
-      console.log("🔍 Processando participante:", participant.id);
-      // Extrair apenas os dígitos do JID
-      const number = participant.id.replace(/\D/g, "");
+      console.log("🔍 Processando participante:");
+      console.log("   - ID:", participant.id);
+      console.log("   - JID:", participant.jid);
+      // Usar o JID (não o ID/LID) e extrair apenas os dígitos
+      const jidToUse = participant.jid || participant.id;
+      const number = jidToUse.replace(/\D/g, "");
       console.log("   - Número extraído:", number);
       return number;
     });
@@ -88,11 +91,12 @@ const GetGroupParticipantsService = async (
 
     // Formatar participantes
     const participants: Participant[] = metadata.participants.map((participant: any) => {
-      const number = participant.id.replace(/\D/g, "");
+      const jidToUse = participant.jid || participant.id;
+      const number = jidToUse.replace(/\D/g, "");
       const contactInfo = contactMap.get(number);
 
       return {
-        id: participant.id,
+        id: participant.jid || participant.id,
         number: number,
         name: contactInfo ? contactInfo.name : number, // Usar nome do contato ou número
         isAdmin: participant.admin === 'admin' || participant.admin === 'superadmin'
