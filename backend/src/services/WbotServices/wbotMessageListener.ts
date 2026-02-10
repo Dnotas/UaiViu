@@ -344,6 +344,45 @@ export function makeid(length) {
   return result;
 }
 
+const getBodyTemplate = (msg: proto.IWebMessageInfo): string | null => {
+  const template =
+    msg.message?.templateMessage?.hydratedTemplate ||
+    msg.message?.templateMessage?.hydratedFourRowTemplate;
+  if (template) {
+    let bodyMessage = template.hydratedContentText || "";
+    if (template.hydratedButtons && template.hydratedButtons.length > 0) {
+      for (const btn of template.hydratedButtons) {
+        const text =
+          btn.quickReplyButton?.displayText ||
+          btn.urlButton?.displayText ||
+          btn.callButton?.displayText ||
+          "";
+        if (text) {
+          bodyMessage += `\n\n${text}`;
+        }
+      }
+    }
+    return bodyMessage;
+  }
+  return null;
+};
+
+const getBodyInteractive = (msg: proto.IWebMessageInfo): string | null => {
+  const interactive = msg.message?.interactiveMessage;
+  if (interactive) {
+    let bodyMessage = interactive.body?.text || interactive.header?.title || "";
+    if (interactive.nativeFlowMessage?.buttons) {
+      for (const btn of interactive.nativeFlowMessage.buttons) {
+        if (btn.name) {
+          bodyMessage += `\n\n${btn.name}`;
+        }
+      }
+    }
+    return bodyMessage;
+  }
+  return null;
+};
+
 const getBodyButton = (msg: proto.IWebMessageInfo): string => {
   if (
     msg.key.fromMe &&
@@ -424,7 +463,9 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         getBodyButton(msg) || msg.message?.listResponseMessage?.title,
       listResponseMessage:
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
-      reactionMessage: msg.message?.reactionMessage?.text || "reaction"
+      reactionMessage: msg.message?.reactionMessage?.text || "reaction",
+      templateMessage: getBodyTemplate(msg),
+      interactiveMessage: getBodyInteractive(msg)
     };
 
     const objKey = Object.keys(types).find(key => key === type);
@@ -1167,7 +1208,9 @@ const isValidMsg = (msg: proto.IWebMessageInfo): boolean => {
       msgType === "protocolMessage" ||
       msgType === "listResponseMessage" ||
       msgType === "listMessage" ||
-      msgType === "viewOnceMessage";
+      msgType === "viewOnceMessage" ||
+      msgType === "templateMessage" ||
+      msgType === "interactiveMessage";
 
     if (!ifType) {
       logger.warn(`#### Nao achou o type em isValidMsg: ${msgType}
