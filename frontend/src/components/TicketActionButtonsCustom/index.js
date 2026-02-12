@@ -91,19 +91,21 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 			)}
 			{ticket.status === "open" && (
 				<>
-					<Tooltip title={i18n.t("messagesList.header.buttons.return")}>
-						<IconButton onClick={e => handleUpdateTicketStatus(e, "pending", null)}>
-							<UndoRoundedIcon />
-						</IconButton>
-					</Tooltip>
 					{ticket.userId === user?.id && (
-						<ThemeProvider theme={customTheme}>
-							<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
-								<IconButton onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)} color="primary">
-									<CheckCircleIcon />
+						<>
+							<Tooltip title={i18n.t("messagesList.header.buttons.return")}>
+								<IconButton onClick={e => handleUpdateTicketStatus(e, "pending", null)}>
+									<UndoRoundedIcon />
 								</IconButton>
 							</Tooltip>
-						</ThemeProvider>
+							<ThemeProvider theme={customTheme}>
+								<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
+									<IconButton onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)} color="primary">
+										<CheckCircleIcon />
+									</IconButton>
+								</Tooltip>
+							</ThemeProvider>
+						</>
 					)}
 					{/* <ButtonWithSpinner
 						loading={loading}

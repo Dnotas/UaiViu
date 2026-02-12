@@ -72,6 +72,27 @@ const UpdateTicketService = async ({
     });
 
     const ticket = await ShowTicketService(ticketId, companyId);
+
+    // VALIDAÇÕES: Apenas o dono do ticket pode fazer certas ações
+    if (actionUserId && ticket.status === "open") {
+      const actionUserIdNum = parseInt(actionUserId.toString());
+
+      // Validar mudança de status para pending ou closed
+      if (status && (status === "pending" || status === "closed")) {
+        if (ticket.userId !== actionUserIdNum) {
+          throw new AppError("Apenas o responsável pelo ticket pode alterar seu status.", 403);
+        }
+      }
+
+      // Validar transferência (mudança de userId ou queueId)
+      if ((userId !== undefined && userId !== ticket.userId) ||
+          (queueId !== undefined && queueId !== ticket.queueId)) {
+        if (ticket.userId !== actionUserIdNum) {
+          throw new AppError("Apenas o responsável pelo ticket pode transferi-lo.", 403);
+        }
+      }
+    }
+
     const ticketTraking = await FindOrCreateATicketTrakingService({
       ticketId,
       companyId,

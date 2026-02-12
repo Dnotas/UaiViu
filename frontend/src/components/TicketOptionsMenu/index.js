@@ -84,9 +84,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				<MenuItem onClick={handleOpenScheduleModal}>
 					{i18n.t("ticketOptionsMenu.schedule")}
 				</MenuItem>
-				<MenuItem onClick={handleOpenTransferModal}>
-					{i18n.t("ticketOptionsMenu.transfer")}
-				</MenuItem>
+				{ticket.userId === user?.id && (
+					<MenuItem onClick={handleOpenTransferModal}>
+						{i18n.t("ticketOptionsMenu.transfer")}
+					</MenuItem>
+				)}
 				<Can
 					role={user.profile}
 					perform="ticket-options:deleteTicket"
