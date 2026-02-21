@@ -313,6 +313,18 @@ const MainListItems = (props) => {
     <div onClick={drawerClose}>
       {/* MENU PRINCIPAL - Limpo e Moderno */}
 
+      <Can
+        role={user.profile}
+        perform="dashboard:view"
+        yes={() => (
+          <ListItemLink
+            to="/"
+            primary={i18n.t("mainDrawer.listItems.dashboard")}
+            icon={<DashboardOutlinedIcon />}
+          />
+        )}
+      />
+
       <ListItemLink
         to="/tickets"
         primary={i18n.t("mainDrawer.listItems.tickets")}
