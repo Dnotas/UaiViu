@@ -108,9 +108,7 @@ const SendWhatsAppMessage = async ({
           options = {
             quoted: {
               key: msgFound.key,
-              message: {
-                extendedTextMessage: msgFound.message.extendedTextMessage
-              }
+              message: msgFound.message
             }
           };
           console.log("✅ Mensagem quotada processada");

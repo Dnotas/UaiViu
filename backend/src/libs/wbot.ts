@@ -13,6 +13,7 @@ import makeWALegacySocket from "baileys";
 import P from "pino";
 
 import Whatsapp from "../models/Whatsapp";
+import Message from "../models/Message";
 import { logger } from "../utils/logger";
 import MAIN_LOGGER from "baileys/lib/Utils/logger";
 import authState from "../helpers/authState";
@@ -109,7 +110,23 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           // retryRequestDelayMs: 250,
           // keepAliveIntervalMs: 1000 * 60 * 10 * 3,
           msgRetryCounterCache,
+          userDevicesCache,
           shouldIgnoreJid: jid => isJidBroadcast(jid),
+          getMessage: async (key) => {
+            try {
+              const messageInDB = await Message.findOne({
+                where: { id: key.id },
+                attributes: ["dataJson"]
+              });
+              if (messageInDB?.dataJson) {
+                const msgData = JSON.parse(messageInDB.dataJson);
+                return msgData.message || undefined;
+              }
+            } catch (err) {
+              logger.error(`[getMessage] Erro ao buscar mensagem para retry - ID: ${key.id} - Err: ${err}`);
+            }
+            return undefined;
+          }
         });
 
         // wsocket = makeWASocket({
