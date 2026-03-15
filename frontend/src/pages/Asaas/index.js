@@ -155,7 +155,7 @@ const AsaasPage = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip size="small" label={c.active ? "Ativo" : "Inativo"} style={{ backgroundColor: c.active ? "#e8f5e9", color: "#2e7d32" }} />
+                    <Chip size="small" label={c.active ? "Ativo" : "Inativo"} style={{ backgroundColor: c.active ? "#e8f5e9" : "#ffebee", color: c.active ? "#2e7d32" : "#c62828" }} />
                   </TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => handleDeleteConfig(c.id)}>
