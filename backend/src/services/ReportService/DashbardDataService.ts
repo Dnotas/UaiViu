@@ -43,7 +43,8 @@ export default async function DashboardDataService(
         ), 0) "waitTime",
         t.status,
         tt.*,
-        ct."id" "contactId"
+        ct."id" "contactId",
+        t."difficultyLevel"
       from "TicketTraking" tt
       left join "Companies" c on c.id = tt."companyId"
       left join "Users" u on u.id = tt."userId"
@@ -87,7 +88,10 @@ export default async function DashboardDataService(
         coalesce(att."avgSupportTime", 0) "avgSupportTime",
         att.tickets,
         att.rating,
-        att.online
+        att.online,
+        coalesce(att."avgDifficulty", 0) "avgDifficulty",
+        coalesce(att."ratedTickets", 0) "ratedTickets",
+        coalesce(att."closedTickets", 0) "closedTickets"
       from "Users" u
       left join (
         select
@@ -96,7 +100,10 @@ export default async function DashboardDataService(
           u1."online",
           avg(t."supportTime") "avgSupportTime",
           count(t."id") tickets,
-          coalesce(avg(ur.rate), 0) rating
+          coalesce(avg(ur.rate), 0) rating,
+          coalesce(avg(case when t."difficultyLevel" is not null then t."difficultyLevel"::numeric end), 0) "avgDifficulty",
+          count(case when t."difficultyLevel" is not null then 1 end) "ratedTickets",
+          count(case when t."finished" = true then 1 end) "closedTickets"
         from "Users" u1
         left join traking t on t."userId" = u1.id
         left join "UserRatings" ur on ur."userId" = t."userId" and ur."createdAt"::date = t."finishedAt"::date

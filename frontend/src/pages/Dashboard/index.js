@@ -34,6 +34,7 @@ import { ChatsUser } from "./ChartsUser"
 import { isEmpty } from "lodash";
 import moment from "moment";
 import { ChartsDate } from "./ChartsDate";
+import { ChartsDifficulty } from "./ChartsDifficulty";
 import { i18n } from "../../translate/i18n";
 import ContactMetricsTable from "./ContactMetricsTable";
 
@@ -685,6 +686,13 @@ const Dashboard = () => {
           <Grid item xs={12}>
             <Paper className={classes.fixedHeightPaper2}>
               <ChartsDate />
+            </Paper>
+          </Grid>
+
+          {/* TENDENCIA DE DIFICULDADE */}
+          <Grid item xs={12}>
+            <Paper className={classes.fixedHeightPaper2}>
+              <ChartsDifficulty />
             </Paper>
           </Grid>
 

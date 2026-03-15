@@ -3,6 +3,7 @@ import DashboardDataService, { DashboardData, Params } from "../services/ReportS
 import { TicketsAttendance } from "../services/ReportService/TicketsAttendance";
 import { TicketsDayService } from "../services/ReportService/TicketsDayService";
 import DashboardContactMetricsService, { ContactMetricsParams } from "../services/ReportService/DashboardContactMetricsService";
+import DashboardDifficultyTrendService, { DifficultyTrendParams } from "../services/ReportService/DashboardDifficultyTrendService";
 
 type IndexQuery = {
   initialDate: string;
@@ -37,5 +38,12 @@ export const contactMetrics = async (req: Request, res: Response): Promise<Respo
   const { companyId } = req.user;
   const params: ContactMetricsParams = req.query as any;
   const data = await DashboardContactMetricsService(companyId, params);
+  return res.status(200).json({ data });
+};
+
+export const difficultyTrend = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const params: DifficultyTrendParams = req.query as any;
+  const data = await DashboardDifficultyTrendService(companyId, params);
   return res.status(200).json({ data });
 };
