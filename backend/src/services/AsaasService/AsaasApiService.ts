@@ -2,7 +2,7 @@ import axios from "axios";
 
 const getBaseUrl = (environment: string): string => {
   return environment === "sandbox"
-    ? "https://sandbox.asaas.com/api/v3"
+    ? "https://api-sandbox.asaas.com/v3"
     : "https://api.asaas.com/v3";
 };
 
