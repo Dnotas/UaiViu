@@ -438,6 +438,17 @@ const MainListItems = (props) => {
 
                 <ListItem
                   button
+                  onClick={() => history.push("/asaas")}
+                  className={classes.subMenuItem}
+                >
+                  <ListItemIcon className={classes.menuIcon}>
+                    <LocalAtmIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Asaas" />
+                </ListItem>
+
+                <ListItem
+                  button
                   onClick={() => history.push("/financeiro")}
                   className={classes.subMenuItem}
                 >
