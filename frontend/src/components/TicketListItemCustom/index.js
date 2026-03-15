@@ -36,6 +36,7 @@ import DoneIcon from '@material-ui/icons/Done';
 import ClearOutlinedIcon from '@material-ui/icons/ClearOutlined';
 import contrastColor from "../../helpers/contrastColor";
 import ContactTag from "../ContactTag";
+import DifficultyRatingModal from "../DifficultyRatingModal";
 
 const useStyles = makeStyles((theme) => ({
   ticket: {
@@ -209,6 +210,8 @@ const useStyles = makeStyles((theme) => ({
   const [whatsAppName, setWhatsAppName] = useState(null);
 
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
+  const [difficultyModalOpen, setDifficultyModalOpen] = useState(false);
+  const [closeMode, setCloseMode] = useState("normal");
   const { ticketId } = useParams();
   const isMounted = useRef(true);
   const { setCurrentTicket } = useContext(TicketsContext);
@@ -235,7 +238,7 @@ const useStyles = makeStyles((theme) => ({
   }, []);
 
   {/*CÓDIGO NOVO SAUDAÇÃO*/}
-  const handleCloseTicket = async (id) => {
+  const handleCloseTicket = async (id, difficultyLevel) => {
     setTag(ticket?.tags);
     setLoading(true);
     try {
@@ -245,7 +248,8 @@ const useStyles = makeStyles((theme) => ({
         queueId: ticket?.queue?.id,
         useIntegration: false,
         promptId: null,
-        integrationId: null
+        integrationId: null,
+        difficultyLevel: difficultyLevel || null,
       });
     } catch (err) {
       setLoading(false);
@@ -257,48 +261,54 @@ const useStyles = makeStyles((theme) => ({
     history.push(`/tickets/`);
   };
 
-  const handleForceCloseTicket = async (id) => {
+  const handleForceCloseTicket = async (id, difficultyLevel) => {
     setLoading(true);
     try {
-      // Primeira tentativa: fechar normalmente
       await api.put(`/tickets/${id}`, {
         status: "closed",
         userId: user?.id || null,
         queueId: ticket?.queue?.id || null,
         useIntegration: false,
         promptId: null,
-        integrationId: null
+        integrationId: null,
+        difficultyLevel: difficultyLevel || null,
       });
 
       if (isMounted.current) {
         setLoading(false);
       }
 
-      // Redireciona para a lista de tickets
       history.push(`/tickets/`);
-
-      // Recarrega a página para forçar atualização
       window.location.reload();
 
     } catch (err) {
       console.error("Erro ao finalizar ticket normalmente, tentando forçar...", err);
-
       try {
-        // Segunda tentativa: força fechamento mesmo com erros
         await api.delete(`/tickets/${id}`);
-
         if (isMounted.current) {
           setLoading(false);
         }
-
         history.push(`/tickets/`);
         window.location.reload();
-
       } catch (deleteErr) {
         console.error("Erro ao deletar ticket:", deleteErr);
         setLoading(false);
         toastError("Não foi possível finalizar este ticket. Entre em contato com o suporte.");
       }
+    }
+  };
+
+  const handleOpenDifficultyModal = (mode) => {
+    setCloseMode(mode);
+    setDifficultyModalOpen(true);
+  };
+
+  const handleDifficultyConfirm = (difficultyLevel) => {
+    setDifficultyModalOpen(false);
+    if (closeMode === "force") {
+      handleForceCloseTicket(ticket.id, difficultyLevel);
+    } else {
+      handleCloseTicket(ticket.id, difficultyLevel);
     }
   };
 
@@ -421,10 +431,14 @@ const useStyles = makeStyles((theme) => ({
     <React.Fragment key={ticket.id}>
       <TicketMessagesDialog
         open={openTicketMessageDialog}
-
         handleClose={() => setOpenTicketMessageDialog(false)}
         ticketId={ticket.id}
       ></TicketMessagesDialog>
+      <DifficultyRatingModal
+        open={difficultyModalOpen}
+        onClose={() => setDifficultyModalOpen(false)}
+        onConfirm={handleDifficultyConfirm}
+      />
       <ListItem dense button
         onClick={(e) => {
           if (ticket.status === "pending") return;
@@ -624,7 +638,7 @@ const useStyles = makeStyles((theme) => ({
                 variant="contained"
                 size="small"
                 loading={loading}
-                onClick={e => handleForceCloseTicket(ticket.id)}
+                onClick={e => handleOpenDifficultyModal("force")}
               >
                 Finalizar
               </ButtonWithSpinner>
@@ -647,7 +661,7 @@ const useStyles = makeStyles((theme) => ({
               className={classes.acceptButton}
               size="small"
               loading={loading}
-              onClick={e => handleCloseTicket(ticket.id)}
+              onClick={e => handleOpenDifficultyModal("normal")}
             >
               {i18n.t("ticketsList.buttons.closed")}
             </ButtonWithSpinner>
