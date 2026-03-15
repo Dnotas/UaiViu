@@ -11,8 +11,8 @@ import {
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
-import CheckContactNumber from "../helpers/CheckContactNumber";
-import GetProfilePicUrl from "../helpers/GetProfilePicUrl";
+import CheckContactNumber from "../services/WbotServices/CheckNumber";
+import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
 import formatBody from "../helpers/Mustache";
 
 // ─── CRUD: Configs ───────────────────────────────────────────────────────────
