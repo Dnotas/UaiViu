@@ -32,6 +32,7 @@ interface TicketData {
   useIntegration: boolean;
   promptId: number;
   integrationId: number;
+  difficultyLevel?: number | null;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {

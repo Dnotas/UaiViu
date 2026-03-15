@@ -16,6 +16,7 @@ import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import UndoRoundedIcon from '@material-ui/icons/UndoRounded';
 import Tooltip from '@material-ui/core/Tooltip';
 import { green } from '@material-ui/core/colors';
+import DifficultyRatingModal from "../DifficultyRatingModal";
 
 
 const useStyles = makeStyles(theme => ({
@@ -35,6 +36,7 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [difficultyModalOpen, setDifficultyModalOpen] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
 	const { setCurrentTicket } = useContext(TicketsContext);
@@ -77,8 +79,34 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 		}
 	};
 
+	const handleDifficultyConfirm = async (difficultyLevel) => {
+		setDifficultyModalOpen(false);
+		setLoading(true);
+		try {
+			await api.put(`/tickets/${ticket.id}`, {
+				status: "closed",
+				userId: user?.id,
+				difficultyLevel: difficultyLevel,
+				useIntegration: false,
+				promptId: false,
+				integrationId: false,
+			});
+			setLoading(false);
+			setCurrentTicket({ id: null, code: null });
+			history.push("/tickets");
+		} catch (err) {
+			setLoading(false);
+			toastError(err);
+		}
+	};
+
 	return (
 		<div className={classes.actionButtons}>
+			<DifficultyRatingModal
+				open={difficultyModalOpen}
+				onClose={() => setDifficultyModalOpen(false)}
+				onConfirm={handleDifficultyConfirm}
+			/>
 			{ticket.status === "closed" && (
 				<ButtonWithSpinner
 					loading={loading}
@@ -100,30 +128,13 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 							</Tooltip>
 							<ThemeProvider theme={customTheme}>
 								<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
-									<IconButton onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)} color="primary">
+									<IconButton onClick={() => setDifficultyModalOpen(true)} color="primary">
 										<CheckCircleIcon />
 									</IconButton>
 								</Tooltip>
 							</ThemeProvider>
 						</>
 					)}
-					{/* <ButtonWithSpinner
-						loading={loading}
-						startIcon={<Replay />}
-						size="small"
-						onClick={e => handleUpdateTicketStatus(e, "pending", null)}
-					>
-						{i18n.t("messagesList.header.buttons.return")}
-					</ButtonWithSpinner>
-					<ButtonWithSpinner
-						loading={loading}
-						size="small"
-						variant="contained"
-						color="primary"
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-					>
-						{i18n.t("messagesList.header.buttons.resolve")}
-					</ButtonWithSpinner> */}
 					<IconButton onClick={handleOpenTicketOptionsMenu}>
 						<MoreVert />
 					</IconButton>

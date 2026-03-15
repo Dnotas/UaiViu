@@ -11,8 +11,18 @@ const useDashboard = () => {
         return data;
     }
 
+    const findContactMetrics = async (params) => {
+        const { data } = await api.request({
+            url: `/dashboard/contactMetrics`,
+            method: 'GET',
+            params
+        });
+        return data;
+    }
+
     return {
-        find
+        find,
+        findContactMetrics,
     }
 }
 

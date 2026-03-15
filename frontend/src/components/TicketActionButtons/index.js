@@ -11,6 +11,7 @@ import TicketOptionsMenu from "../TicketOptionsMenu";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import DifficultyRatingModal from "../DifficultyRatingModal";
 
 const useStyles = makeStyles(theme => ({
 	actionButtons: {
@@ -30,6 +31,7 @@ const TicketActionButtons = ({ ticket }) => {
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [difficultyModalOpen, setDifficultyModalOpen] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
 
@@ -61,8 +63,30 @@ const TicketActionButtons = ({ ticket }) => {
 		}
 	};
 
+	const handleDifficultyConfirm = async (difficultyLevel) => {
+		setDifficultyModalOpen(false);
+		setLoading(true);
+		try {
+			await api.put(`/tickets/${ticket.id}`, {
+				status: "closed",
+				userId: user?.id,
+				difficultyLevel: difficultyLevel,
+			});
+			setLoading(false);
+			history.push("/tickets");
+		} catch (err) {
+			setLoading(false);
+			toastError(err);
+		}
+	};
+
 	return (
 		<div className={classes.actionButtons}>
+			<DifficultyRatingModal
+				open={difficultyModalOpen}
+				onClose={() => setDifficultyModalOpen(false)}
+				onConfirm={handleDifficultyConfirm}
+			/>
 			{ticket.status === "closed" && (
 				<ButtonWithSpinner
 					loading={loading}
@@ -89,7 +113,7 @@ const TicketActionButtons = ({ ticket }) => {
 							size="small"
 							variant="contained"
 							color="primary"
-							onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+							onClick={() => setDifficultyModalOpen(true)}
 						>
 							{i18n.t("messagesList.header.buttons.resolve")}
 						</ButtonWithSpinner>

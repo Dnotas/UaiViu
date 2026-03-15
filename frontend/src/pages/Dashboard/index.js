@@ -35,6 +35,7 @@ import { isEmpty } from "lodash";
 import moment from "moment";
 import { ChartsDate } from "./ChartsDate";
 import { i18n } from "../../translate/i18n";
+import ContactMetricsTable from "./ContactMetricsTable";
 
 const useStyles = makeStyles((theme) => ({
   container: {
@@ -215,6 +216,7 @@ const Dashboard = () => {
   const [dateFrom, setDateFrom] = useState(moment("1", "D").format("YYYY-MM-DD"));
   const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
   const [loading, setLoading] = useState(false);
+  const [currentParams, setCurrentParams] = useState({});
   const { find } = useDashboard();
 
   useEffect(() => {
@@ -275,6 +277,7 @@ const Dashboard = () => {
     const data = await find(params);
 
     setCounters(data.counters);
+    setCurrentParams(params);
     if (isArray(data.attendants)) {
       setAttendants(data.attendants);
     } else {
@@ -683,6 +686,11 @@ const Dashboard = () => {
             <Paper className={classes.fixedHeightPaper2}>
               <ChartsDate />
             </Paper>
+          </Grid>
+
+          {/* METRICAS POR CLIENTE */}
+          <Grid item xs={12}>
+            <ContactMetricsTable dashboardParams={currentParams} />
           </Grid>
 
         </Grid>

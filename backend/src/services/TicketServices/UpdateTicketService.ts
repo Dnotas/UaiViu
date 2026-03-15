@@ -30,6 +30,7 @@ interface TicketData {
   useIntegration?: boolean;
   integrationId?: number | null;
   promptId?: number | null;
+  difficultyLevel?: number | null;
 }
 
 interface Request {
@@ -60,6 +61,7 @@ const UpdateTicketService = async ({
     let promptId: number | null = ticketData.promptId || null;
     let useIntegration: boolean | null = ticketData.useIntegration || false;
     let integrationId: number | null = ticketData.integrationId || null;
+    let difficultyLevel: number | null = ticketData.difficultyLevel || null;
 
     const io = getIO();
 
@@ -290,7 +292,8 @@ const UpdateTicketService = async ({
       userId,
       whatsappId,
       chatbot,
-      queueOptionId
+      queueOptionId,
+      difficultyLevel
     });
 
     await ticket.reload();

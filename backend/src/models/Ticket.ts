@@ -170,6 +170,10 @@ class Ticket extends Model<Ticket> {
 
   @Column
   lastResponseAt: Date;
+
+  @AllowNull(true)
+  @Column(DataType.INTEGER)
+  difficultyLevel: number;
 }
 
 export default Ticket;
