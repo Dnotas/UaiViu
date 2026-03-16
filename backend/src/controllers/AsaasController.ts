@@ -7,7 +7,9 @@ import {
   findCustomerByCpfCnpj,
   getPaymentsByCustomer,
   buildBoletoMessage,
+  downloadBoletoPdf,
 } from "../services/AsaasService/AsaasApiService";
+import GetTicketWbot from "../helpers/GetTicketWbot";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
@@ -113,10 +115,26 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
     const ticket = await FindOrCreateTicketService(contact, whatsapp.id!, 0, companyId);
 
     // Send each payment
+    const wbot = await GetTicketWbot(ticket);
+    const numberJid = `${contact.number}@s.whatsapp.net`;
     const results = [];
     for (const payment of payments) {
+      // 1. Text message: cordial, vencimento + link
       const msg = buildBoletoMessage(payment);
       await SendWhatsAppMessage({ body: formatBody(msg, contact), ticket });
+
+      // 2. PDF attachment (BOLETO only, best-effort)
+      if (payment.billingType === "BOLETO" && payment.bankSlipUrl) {
+        const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl);
+        if (pdfBuffer) {
+          await wbot.sendMessage(numberJid, {
+            document: pdfBuffer,
+            fileName: `boleto_${payment.id}.pdf`,
+            mimetype: "application/pdf",
+          });
+        }
+      }
+
       results.push({ id: payment.id, description: payment.description, value: payment.value, status: payment.status });
     }
 

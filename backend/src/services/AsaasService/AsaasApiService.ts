@@ -82,20 +82,34 @@ export const formatDate = (dateStr: string): string => {
 };
 
 export const buildBoletoMessage = (payment: any): string => {
-  const status = formatStatus(payment.status);
   const value = formatCurrency(payment.value);
   const dueDate = formatDate(payment.dueDate);
-  const description = payment.description || payment.billingType || "Cobrança";
   const link = payment.invoiceUrl || payment.bankSlipUrl || "";
 
-  let msg = `🔔 *Aviso de Cobrança*\n\n`;
-  msg += `📋 *Descrição:* ${description}\n`;
-  msg += `💰 *Valor:* ${value}\n`;
-  msg += `📅 *Vencimento:* ${dueDate}\n`;
-  msg += `📌 *Status:* ${status}\n`;
+  let msg = `Olá! 👋\n\n`;
+  msg += `Segue sua cobrança com vencimento em *${dueDate}* no valor de *${value}*.`;
   if (link) {
-    msg += `\n💳 *Link para pagamento:*\n${link}`;
+    msg += `\n\n🔗 ${link}`;
   }
-  msg += `\n\nEm caso de dúvidas, entre em contato conosco.`;
+  msg += `\n\nQualquer dúvida, estamos à disposição. 😊`;
   return msg;
+};
+
+export const downloadBoletoPdf = async (bankSlipUrl: string): Promise<Buffer | null> => {
+  if (!bankSlipUrl) return null;
+  try {
+    const response = await axios.get(bankSlipUrl, {
+      responseType: "arraybuffer",
+      headers: { Accept: "application/pdf,*/*" },
+      maxRedirects: 5,
+      timeout: 15000,
+    });
+    const contentType: string = response.headers["content-type"] || "";
+    if (contentType.includes("pdf")) {
+      return Buffer.from(response.data);
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };
