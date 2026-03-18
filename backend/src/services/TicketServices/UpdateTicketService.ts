@@ -31,6 +31,7 @@ interface TicketData {
   integrationId?: number | null;
   promptId?: number | null;
   difficultyLevel?: number | null;
+  forceTransfer?: boolean;
 }
 
 interface Request {
@@ -76,7 +77,7 @@ const UpdateTicketService = async ({
     const ticket = await ShowTicketService(ticketId, companyId);
 
     // VALIDAÇÕES: Apenas o dono do ticket pode fazer certas ações
-    if (actionUserId && ticket.status === "open") {
+    if (actionUserId && ticket.status === "open" && !ticketData.forceTransfer) {
       const actionUserIdNum = parseInt(actionUserId.toString());
 
       // Validar mudança de status para pending ou closed

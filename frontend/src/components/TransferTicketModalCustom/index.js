@@ -35,7 +35,7 @@ const filterOptions = createFilterOptions({
   trim: true,
 });
 
-const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
+const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, forceTransfer }) => {
   const history = useHistory();
   const [options, setOptions] = useState([]);
   const [queues, setQueues] = useState([]);
@@ -147,6 +147,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
       if (selectedWhatsapp) {
         data.whatsappId = selectedWhatsapp
       }
+      if (forceTransfer) data.forceTransfer = true;
       await api.put(`/tickets/${ticketid}`, data);
 
       history.push(`/tickets`);

@@ -27,6 +27,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 	const [passwordInput, setPasswordInput] = useState("");
 	const [passwordError, setPasswordError] = useState(false);
+	const [forceTransfer, setForceTransfer] = useState(false);
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 
@@ -84,6 +85,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const handlePasswordConfirm = () => {
 		if (passwordInput === TRANSFER_PASSWORD) {
 			setPasswordDialogOpen(false);
+			setForceTransfer(true);
 			setTransferTicketModalOpen(true);
 		} else {
 			setPasswordError(true);
@@ -151,6 +153,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				modalOpen={transferTicketModalOpen}
 				onClose={handleCloseTransferTicketModal}
 				ticketid={ticket.id}
+				forceTransfer={forceTransfer}
 			/>
 			<ScheduleModal
 				open={scheduleModalOpen}
