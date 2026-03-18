@@ -122,7 +122,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				)}
 				{ticket.userId !== user?.id && (
 					<MenuItem onClick={handleOpenPasswordDialog}>
-						Transferir
+						Transferir com senha
 					</MenuItem>
 				)}
 				<Can
