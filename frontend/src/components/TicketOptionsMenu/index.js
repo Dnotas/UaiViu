@@ -2,6 +2,12 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import Button from "@material-ui/core/Button";
+import TextField from "@material-ui/core/TextField";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -13,9 +19,14 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 
 import ScheduleModal from "../ScheduleModal";
 
+const TRANSFER_PASSWORD = "*";
+
 const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
+	const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+	const [passwordInput, setPasswordInput] = useState("");
+	const [passwordError, setPasswordError] = useState(false);
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
 
@@ -63,6 +74,26 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		setContactId(null);
 	}
 
+	const handleOpenPasswordDialog = () => {
+		setPasswordInput("");
+		setPasswordError(false);
+		setPasswordDialogOpen(true);
+		handleClose();
+	};
+
+	const handlePasswordConfirm = () => {
+		if (passwordInput === TRANSFER_PASSWORD) {
+			setPasswordDialogOpen(false);
+			setTransferTicketModalOpen(true);
+		} else {
+			setPasswordError(true);
+		}
+	};
+
+	const handlePasswordKeyDown = (e) => {
+		if (e.key === "Enter") handlePasswordConfirm();
+	};
+
 	return (
 		<>
 			<Menu
@@ -87,6 +118,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				{ticket.userId === user?.id && (
 					<MenuItem onClick={handleOpenTransferModal}>
 						{i18n.t("ticketOptionsMenu.transfer")}
+					</MenuItem>
+				)}
+				{ticket.userId !== user?.id && (
+					<MenuItem onClick={handleOpenPasswordDialog}>
+						Transferir
 					</MenuItem>
 				)}
 				<Can
@@ -122,6 +158,30 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				aria-labelledby="form-dialog-title"
 				contactId={contactId}
 			/>
+		<Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)}>
+			<DialogTitle>Transferir Chamado</DialogTitle>
+			<DialogContent>
+				<TextField
+					autoFocus
+					label="Senha"
+					type="password"
+					fullWidth
+					value={passwordInput}
+					onChange={e => { setPasswordInput(e.target.value); setPasswordError(false); }}
+					onKeyDown={handlePasswordKeyDown}
+					error={passwordError}
+					helperText={passwordError ? "Senha incorreta" : ""}
+				/>
+			</DialogContent>
+			<DialogActions>
+				<Button onClick={() => setPasswordDialogOpen(false)} color="default">
+					Cancelar
+				</Button>
+				<Button onClick={handlePasswordConfirm} color="primary" variant="contained">
+					Confirmar
+				</Button>
+			</DialogActions>
+		</Dialog>
 		</>
 	);
 };
