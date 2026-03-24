@@ -41,7 +41,7 @@ import BorderColorIcon from '@material-ui/icons/BorderColor';
 import ToDoList from "../pages/ToDoList/";
 import toastError from "../errors/toastError";
 import { makeStyles } from "@material-ui/core/styles";
-import { AccountTree, AllInclusive, AttachFile, BlurCircular, Chat, DeviceHubOutlined, Schedule } from '@material-ui/icons';
+import { AccountTree, AllInclusive, AttachFile, BlurCircular, Chat, DeviceHubOutlined, Schedule, Business } from '@material-ui/icons';
 import usePlans from "../hooks/usePlans";
 import Typography from "@material-ui/core/Typography";
 import { ShapeLine } from "@mui/icons-material";
@@ -433,6 +433,19 @@ const MainListItems = (props) => {
                       <CodeRoundedIcon />
                     </ListItemIcon>
                     <ListItemText primary="API" />
+                  </ListItem>
+                )}
+
+                {user.super && (
+                  <ListItem
+                    button
+                    onClick={() => history.push("/companies")}
+                    className={classes.subMenuItem}
+                  >
+                    <ListItemIcon className={classes.menuIcon}>
+                      <Business />
+                    </ListItemIcon>
+                    <ListItemText primary="Empresas" />
                   </ListItem>
                 )}
 

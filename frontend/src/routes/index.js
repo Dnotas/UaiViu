@@ -20,7 +20,7 @@ import AsaasPage from "../pages/Asaas/";
 import Helps from "../pages/Helps/";
 import ContactLists from "../pages/ContactLists/";
 import ContactListItems from "../pages/ContactListItems/";
-// import Companies from "../pages/Companies/";
+import Companies from "../pages/Companies/";
 import QuickMessages from "../pages/QuickMessages/";
 import Kanban from "../pages/Kanban";
 import { AuthProvider } from "../context/Auth/AuthContext";
@@ -63,7 +63,7 @@ const Routes = () => {
             <Route exact path="/signup" component={Signup} />
             <Route exact path="/company-signup" component={CompanySignUp} />
             <Route exact path="/forgetpsw" component={ForgetPassword} />
-            {/* <Route exact path="/create-company" component={Companies} /> */}
+            <Route exact path="/companies" component={Companies} isPrivate />
             <WhatsAppsProvider>
               <LoggedInLayout>
                 <Route exact path="/" component={Dashboard} isPrivate />

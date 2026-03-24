@@ -1,182 +1,210 @@
-import React, { useState, useEffect } from "react";
-
-import Avatar from "@material-ui/core/Avatar";
-import Button from "@material-ui/core/Button";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import FormControl from "@material-ui/core/FormControl";
-import InputLabel from '@material-ui/core/InputLabel';
-import TextField from "@material-ui/core/TextField";
-import Select from "@material-ui/core/Select"
-import MenuItem from "@material-ui/core/MenuItem"
-import StoreIcon from "@material-ui/icons/Store";
-import Grid from '@material-ui/core/Grid';
-import Typography from "@material-ui/core/Typography";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-
-import { i18n } from "../../translate/i18n";
-import useCompanies from '../../hooks/useCompanies';
-import usePlans from '../../hooks/usePlans';
+import React, { useState, useEffect, useContext } from "react";
+import {
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Chip,
+  IconButton,
+  Tooltip,
+  makeStyles,
+  Typography,
+  CircularProgress,
+} from "@material-ui/core";
+import EditIcon from "@material-ui/icons/Edit";
+import moment from "moment";
 import { toast } from "react-toastify";
-import toastError from "../../errors/toastError";
-import { isEqual } from 'lodash'
 
-const useStyles = makeStyles(theme => ({
-	paper: {
-		marginTop: theme.spacing(8),
-		display: "flex",
-		flexDirection: "column",
-		alignItems: "center",
-	},
-	avatar: {
-		margin: theme.spacing(1),
-		backgroundColor: theme.palette.secondary.main,
-	},
-	form: {
-		width: "100%", // Fix IE 11 issue.
-		marginTop: theme.spacing(2),
-	},
-	submit: {
-		margin: theme.spacing(3, 0, 2),
-	}
+import MainContainer from "../../components/MainContainer";
+import MainHeader from "../../components/MainHeader";
+import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
+import Title from "../../components/Title";
+import toastError from "../../errors/toastError";
+import useCompanies from "../../hooks/useCompanies";
+import { AuthContext } from "../../context/Auth/AuthContext";
+
+const useStyles = makeStyles((theme) => ({
+  root: { padding: theme.spacing(2) },
+  paper: { overflowX: "auto" },
+  table: { minWidth: 700 },
+  expired: { backgroundColor: "#ffbcbc9c" },
+  active: {},
+  chipPago: { backgroundColor: "#b9f6ca", color: "#1b5e20", fontWeight: "bold" },
+  chipVencido: { backgroundColor: "#ffcdd2", color: "#b71c1c", fontWeight: "bold" },
+  chipAtivo: { backgroundColor: "#bbdefb", color: "#0d47a1", fontWeight: "bold" },
 }));
 
-const FormCompany = () => {
-	const classes = useStyles();
-	const { getPlanList } = usePlans()
-    const { save: saveCompany } = useCompanies()
-	const [company, setCompany] = useState({ name: "", planId: "", token: "" });
-	const [plans, setPlans] = useState([])
+const CompaniesPage = () => {
+  const classes = useStyles();
+  const { user } = useContext(AuthContext);
+  const { list, update } = useCompanies();
 
-	useEffect(() => {
-		const fetchData = async () => {
-			const list = await getPlanList()
-			setPlans(list);
-		}
-		fetchData();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [dueDate, setDueDate] = useState("");
 
-	const handleChangeInput = e => {
-		setCompany({ ...company, [e.target.name]: e.target.value });
-	};
+  useEffect(() => {
+    if (!user.super) return;
+    fetchCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-	const handlSubmit = async e => {
-		e.preventDefault();
-		try {
-			await saveCompany(company)
-			setCompany({ name: "", planId: "", token: "" })
-			toast.success(i18n.t("companies.form.success"));
-		} catch (e) {
-			toastError(e)
-		}
-	};
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const data = await list();
+      setCompanies(data);
+    } catch (e) {
+      toastError(e);
+    }
+    setLoading(false);
+  };
 
-	const renderPlanField = () => {
-		if (plans.length) {
-			return <>
-				<Grid item>
-					<FormControl fullWidth variant="outlined">
-						<InputLabel>Plano</InputLabel>
-						<Select 
-							required
-							id="planId"
-							label={i18n.t("companies.form.plan")}
-							name="planId"
-							value={company.planId}
-							onChange={handleChangeInput}
-							autoComplete="plan"
-						>
-							<MenuItem value={""}>&nbsp;</MenuItem>
-							{ plans.map((plan, index) => {
-								return <MenuItem value={plan.id} key={index}>{ plan.name }</MenuItem>
-							})}
-						</Select>
-					</FormControl>
-				</Grid>
-			</>
-		}
-	}
+  const getStatus = (company) => {
+    const hoje = moment().startOf("day");
+    const venc = moment(company.dueDate).startOf("day");
+    const diff = venc.diff(hoje, "days");
+    if (!company.status) return "inativo";
+    if (diff < 0) return "vencido";
+    return "ativo";
+  };
 
-	const renderNameField = () => {
-		if (plans.length && !isEqual(company.planId, "")) {
-			return <>
-				<Grid item>
-					<TextField
-						variant="outlined"
-						required
-						fullWidth
-						id="name"
-						label={i18n.t("companies.form.name")}
-						name="name"
-						value={company.name}
-						onChange={handleChangeInput}
-						autoComplete="name"
-						autoFocus
-					/>
-				</Grid>
-			</>
-		}
-	}
+  const renderChip = (company) => {
+    const status = getStatus(company);
+    if (status === "vencido") return <Chip label="Vencido" className={classes.chipVencido} size="small" />;
+    if (status === "ativo") return <Chip label="Ativo" className={classes.chipAtivo} size="small" />;
+    return <Chip label="Inativo" size="small" />;
+  };
 
-	const renderTokenField = () => {
-		if (plans.length && !isEqual(company.planId, "")) {
-			return <>
-				<Grid item>
-					<TextField
-						variant="outlined"
-						required
-						fullWidth
-						id="token"
-						label={i18n.t("companies.form.token")}
-						name="token"
-						value={company.token}
-						onChange={handleChangeInput}
-						autoComplete="token"
-						autoFocus
-					/>
-				</Grid>
-			</>
-		}
-	}
+  const handleEditOpen = (company) => {
+    setSelected(company);
+    setDueDate(company.dueDate ? moment(company.dueDate).format("YYYY-MM-DD") : "");
+    setEditOpen(true);
+  };
 
-	const renderSubmitButton = () => {
-		if (plans.length && !isEqual(company.planId, "")) {
-			return <>
-				<Button
-					type="submit"
-					fullWidth
-					variant="contained"
-					color="primary"
-					className={classes.submit}
-				>
-					{i18n.t("companies.form.submit")}
-				</Button>
-			</>
-		}
-	}
+  const handleEditClose = () => {
+    setEditOpen(false);
+    setSelected(null);
+  };
 
-	return (
-		<Container component="main" maxWidth="xs">
-			<CssBaseline />
-			<div className={classes.paper}>
-				<Avatar className={classes.avatar}>
-					<StoreIcon />
-				</Avatar>
-				<Typography component="h1" variant="h5">
-					{i18n.t("companies.title")}
-				</Typography>
-				<form className={classes.form} noValidate onSubmit={handlSubmit}>
-					<Grid container direction="column" spacing={2}>
-						{ renderPlanField() }
-						{ renderNameField() }
-						{ renderTokenField() }
-					</Grid>
-					{ renderSubmitButton() }
-				</form>
-			</div>
-		</Container>
-	);
+  const handleSave = async () => {
+    try {
+      await update({ ...selected, dueDate, status: true });
+      toast.success("Vencimento atualizado com sucesso!");
+      handleEditClose();
+      fetchCompanies();
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  if (!user.super) {
+    return (
+      <MainContainer>
+        <Typography>Acesso restrito.</Typography>
+      </MainContainer>
+    );
+  }
+
+  return (
+    <MainContainer>
+      <MainHeader>
+        <Title>Gestão de Empresas</Title>
+        <MainHeaderButtonsWrapper>
+          <Button variant="contained" color="primary" onClick={fetchCompanies}>
+            Atualizar
+          </Button>
+        </MainHeaderButtonsWrapper>
+      </MainHeader>
+
+      <Paper className={classes.paper}>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
+            <CircularProgress />
+          </div>
+        ) : (
+          <Table className={classes.table} size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Nome</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Telefone</TableCell>
+                <TableCell align="center">Vencimento</TableCell>
+                <TableCell align="center">Status</TableCell>
+                <TableCell align="center">Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {companies.map((company) => {
+                const status = getStatus(company);
+                return (
+                  <TableRow
+                    key={company.id}
+                    className={status === "vencido" ? classes.expired : classes.active}
+                  >
+                    <TableCell>{company.id}</TableCell>
+                    <TableCell>{company.name}</TableCell>
+                    <TableCell>{company.email || "-"}</TableCell>
+                    <TableCell>{company.phone || "-"}</TableCell>
+                    <TableCell align="center">
+                      {company.dueDate
+                        ? moment(company.dueDate).format("DD/MM/YYYY")
+                        : "-"}
+                    </TableCell>
+                    <TableCell align="center">{renderChip(company)}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="Editar vencimento">
+                        <IconButton size="small" onClick={() => handleEditOpen(company)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </Paper>
+
+      <Dialog open={editOpen} onClose={handleEditClose} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          Editar Vencimento — {selected?.name}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Nova data de vencimento"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            style={{ marginTop: 8 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditClose} color="default">
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} color="primary" variant="contained">
+            Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </MainContainer>
+  );
 };
 
-export default FormCompany;
+export default CompaniesPage;
