@@ -1126,60 +1126,112 @@
             50% { opacity: 0.3; }
         }
 
-        /* Responsive */
+        /* ===== RESPONSIVO ===== */
+
+        /* Tablet grande */
         @media (max-width: 1024px) {
             .hero-content {
                 grid-template-columns: 1fr;
-                gap: 60px;
+                gap: 48px;
             }
-
             .features-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
             .pricing-grid {
                 grid-template-columns: 1fr;
+                max-width: 480px;
             }
-
             .pricing-card.featured {
                 transform: scale(1);
             }
+            .analytics-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .analytics-bottom {
+                grid-template-columns: 1fr;
+            }
+            .mock-body {
+                grid-template-columns: 42px 160px 1fr;
+            }
         }
 
+        /* Tablet / celular grande */
         @media (max-width: 768px) {
-            .hero-text h1 {
-                font-size: 42px;
-            }
+            .container { padding: 0 16px; }
 
-            .hero-text .subtitle {
-                font-size: 18px;
-            }
+            .hero { padding: 120px 0 60px; }
+            .hero-text h1 { font-size: 34px; line-height: 1.2; }
+            .hero-text .subtitle { font-size: 16px; }
+            .hero-buttons { flex-direction: column; gap: 12px; }
+            .hero-buttons .btn { width: 100%; justify-content: center; }
+            .hero-stats { gap: 24px; flex-wrap: wrap; }
+            .stat-item h3 { font-size: 26px; }
 
-            .section-title {
-                font-size: 36px;
-            }
+            /* Mockup no mobile: mostrar só lista + chat, esconder sidebar */
+            .mock-body { grid-template-columns: 0 160px 1fr; }
+            .mock-sidebar { display: none; }
+            .mock-body { grid-template-columns: 155px 1fr; }
 
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
+            .section-title { font-size: 30px; }
+            .section-description { font-size: 16px; }
 
-            .testimonials-grid {
-                grid-template-columns: 1fr;
-            }
+            .features { padding: 72px 0; }
+            .features-grid { grid-template-columns: 1fr; gap: 20px; }
+            .feature-card { padding: 28px; }
 
-            .benefits-grid {
-                grid-template-columns: 1fr;
-                gap: 40px;
-            }
+            .demo-section { padding: 72px 0; }
+            .analytics-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .analytics-stat-value { font-size: 20px; }
+            .analytics-bottom { grid-template-columns: 1fr; }
 
-            nav {
-                display: none;
-            }
+            .benefits { padding: 72px 0; }
+            .benefits-grid { grid-template-columns: 1fr; gap: 40px; }
+            .benefits-cards-row { grid-template-columns: 1fr 1fr; }
 
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 40px;
-            }
+            .testimonials { padding: 72px 0; }
+            .testimonials-grid { grid-template-columns: 1fr; gap: 20px; }
+
+            .pricing { padding: 72px 0; }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
+
+            .cta-content h2 { font-size: 34px; }
+            .cta-content p { font-size: 17px; }
+
+            nav { display: none; }
+            .header-cta .btn-secondary { display: none; }
+            .header-cta .btn { padding: 10px 18px; font-size: 14px; }
+
+            .footer-content { grid-template-columns: 1fr 1fr; gap: 32px; }
+            .footer-brand { grid-column: 1 / -1; }
+        }
+
+        /* Celular pequeno */
+        @media (max-width: 480px) {
+            .hero-text h1 { font-size: 28px; }
+            .hero-stats { gap: 16px; }
+            .stat-item h3 { font-size: 22px; }
+            .stat-item p { font-size: 12px; }
+
+            /* No celular pequeno esconder o mockup (muito apertado) e mostrar só stats */
+            .hero-image { display: none; }
+
+            .section-title { font-size: 26px; }
+            .feature-card { padding: 24px 20px; }
+            .feature-icon { width: 52px; height: 52px; font-size: 24px; }
+
+            .analytics-stats { grid-template-columns: 1fr 1fr; }
+            .analytics-stat { padding: 12px; }
+            .analytics-stat-value { font-size: 18px; }
+            .analytics-chart { height: 100px; }
+
+            .benefits-cards-row { grid-template-columns: 1fr; }
+
+            .cta-content h2 { font-size: 26px; }
+            .cta-content .btn { font-size: 16px; padding: 14px 28px; }
+
+            .footer-content { grid-template-columns: 1fr; gap: 28px; }
+            .pricing-card { padding: 32px 24px; }
+            .price { font-size: 44px; }
         }
     </style>
 </head>
