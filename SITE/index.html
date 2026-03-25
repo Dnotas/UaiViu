@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UaiViu - Plataforma Inteligente de Atendimento WhatsApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3CB371;
+            --primary-dark: #2D8B5F;
+            --primary-light: #4ECC85;
+            --secondary-color: #25D366;
+            --accent-color: #00E676;
+            --dark-bg: #0F1419;
+            --dark-surface: #1A1F26;
+            --text-light: #ffffff;
+            --text-gray: #8B8E98;
+            --gradient-primary: linear-gradient(135deg, #3CB371 0%, #25D366 100%);
+            --gradient-dark: linear-gradient(135deg, #0F1419 0%, #1A1F26 100%);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.15);
+            --shadow-xl: 0 16px 64px rgba(0,0,0,0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #1A1F26;
+            overflow-x: hidden;
+            background: #ffffff;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        header.scrolled {
+            box-shadow: var(--shadow-md);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo img {
+            height: 45px;
+            width: auto;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+
+        nav a {
+            color: #1A1F26;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav a:hover {
+            color: var(--primary-color);
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        .header-cta {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: 0 4px 16px rgba(60, 179, 113, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(60, 179, 113, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            padding: 160px 0 100px;
+            background: linear-gradient(135deg, #f8fffe 0%, #f0f9f6 100%);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(60, 179, 113, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 50%, rgba(37, 211, 102, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-text h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #1A1F26 0%, #3CB371 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-text .subtitle {
+            font-size: 22px;
+            color: var(--text-gray);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 48px;
+            padding-top: 40px;
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .stat-item h3 {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .stat-item p {
+            font-size: 14px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .floating-card {
+            position: absolute;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .card-1 {
+            top: 10%;
+            right: -10%;
+            animation-delay: 0s;
+        }
+
+        .card-2 {
+            bottom: 15%;
+            left: -10%;
+            animation-delay: 1s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Features Section */
+        .features {
+            padding: 120px 0;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 80px;
+        }
+
+        .section-tag {
+            display: inline-block;
+            padding: 8px 20px;
+            background: rgba(60, 179, 113, 0.1);
+            color: var(--primary-color);
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: #1A1F26;
+            line-height: 1.2;
+        }
+
+        .section-description {
+            font-size: 20px;
+            color: var(--text-gray);
+            line-height: 1.6;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(0,0,0,0.06);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(60, 179, 113, 0.2);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--gradient-primary);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(60, 179, 113, 0.3);
+        }
+
+        .feature-card h3 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1A1F26;
+        }
+
+        .feature-card p {
+            color: var(--text-gray);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        /* Demo Section */
+        .demo-section {
+            padding: 120px 0;
+            background: var(--gradient-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%233CB371" fill-opacity="0.05"><path d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/></g></g></svg>') repeat;
+            opacity: 0.4;
+        }
+
+        .demo-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .demo-section .section-tag {
+            background: rgba(60, 179, 113, 0.2);
+        }
+
+        .demo-section .section-title,
+        .demo-section .section-description {
+            color: white;
+        }
+
+        .demo-video {
+            margin-top: 60px;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 30px 100px rgba(0,0,0,0.5);
+        }
+
+        .demo-video { width: 100%; }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 120px 0;
+            background: white;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 80px;
+            align-items: center;
+        }
+
+        .benefit-item {
+            display: flex;
+            gap: 24px;
+            padding: 32px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-item:hover {
+            transform: translateX(8px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .benefit-icon {
+            width: 56px;
+            height: 56px;
+            min-width: 56px;
+            background: var(--gradient-primary);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 16px rgba(60, 179, 113, 0.3);
+        }
+
+        .benefit-text h4 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1A1F26;
+        }
+
+        .benefit-text p {
+            color: var(--text-gray);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .benefits-image {
+            position: relative;
+        }
+
+        .benefits-image { width: 100%; }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 120px 0;
+            background: linear-gradient(135deg, #f8fffe 0%, #ffffff 100%);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            margin-top: 60px;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .testimonial-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 20px;
+        }
+
+        .testimonial-info h4 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .testimonial-info p {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .testimonial-rating {
+            color: #FFB800;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .testimonial-text {
+            color: var(--text-gray);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        /* Pricing */
+        .pricing {
+            padding: 120px 0;
+            background: white;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            margin-top: 60px;
+        }
+
+        .pricing-card {
+            background: white;
+            padding: 48px;
+            border-radius: 24px;
+            border: 2px solid rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .pricing-card.featured {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.08) translateY(-8px);
+        }
+
+        .pricing-badge {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pricing-card h3 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .pricing-card .plan-description {
+            font-size: 15px;
+            margin-bottom: 32px;
+            opacity: 0.8;
+        }
+
+        .price {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .price-currency {
+            font-size: 28px;
+            margin-right: 4px;
+            margin-top: 8px;
+        }
+
+        .price-period {
+            font-size: 18px;
+            font-weight: 500;
+            opacity: 0.7;
+            margin-left: 8px;
+            align-self: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin: 32px 0;
+        }
+
+        .pricing-features li {
+            padding: 14px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+        }
+
+        .pricing-features li::before {
+            content: "✓";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: rgba(60, 179, 113, 0.15);
+            color: var(--primary-color);
+            border-radius: 50%;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .pricing-card.featured .pricing-features li::before {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .pricing-card .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .pricing-card.featured .btn {
+            background: white;
+            color: var(--primary-color);
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 120px 0;
+            background: var(--gradient-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .cta-content {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .cta-content h2 {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+
+        .cta-content p {
+            font-size: 22px;
+            margin-bottom: 48px;
+            opacity: 0.95;
+        }
+
+        .cta-content .btn {
+            background: white;
+            color: var(--primary-color);
+            font-size: 18px;
+            padding: 18px 48px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark-bg);
+            color: var(--text-gray);
+            padding: 80px 0 32px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 2fr repeat(4, 1fr);
+            gap: 60px;
+            margin-bottom: 60px;
+        }
+
+        .footer-brand img {
+            height: 40px;
+            margin-bottom: 20px;
+            filter: brightness(0) invert(1);
+        }
+
+        .footer-brand p {
+            line-height: 1.8;
+            margin-bottom: 24px;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 12px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .footer-section h4 {
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 14px;
+        }
+
+        .footer-section a {
+            color: var(--text-gray);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-size: 15px;
+        }
+
+        .footer-section a:hover {
+            color: var(--primary-color);
+        }
+
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* ===== DASHBOARD MOCKUP - HERO ===== */
+        .dashboard-mockup {
+            background: #0F1419;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+            transform: perspective(1000px) rotateY(-5deg);
+            transition: all 0.5s ease;
+            font-size: 12px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .dashboard-mockup:hover { transform: perspective(1000px) rotateY(0deg); }
+        .mock-topbar {
+            background: #1A1F26;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .mock-logo-text {
+            color: #3CB371;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mock-dot {
+            width: 8px; height: 8px;
+            background: #3CB371;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .mock-user-avatar {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, #3CB371, #25D366);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 11px;
+        }
+        .mock-body {
+            display: grid;
+            grid-template-columns: 48px 175px 1fr;
+            height: 360px;
+        }
+        .mock-sidebar {
+            background: #1A1F26;
+            padding: 16px 0;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .mock-nav-item {
+            width: 34px; height: 34px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; color: #8B8E98;
+        }
+        .mock-nav-item.active { background: rgba(60,179,113,0.15); color: #3CB371; }
+        .mock-list {
+            background: #141920;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+        .mock-search {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #8B8E98; font-size: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .mock-ticket {
+            padding: 10px 12px;
+            display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer;
+        }
+        .mock-ticket.active { background: rgba(60,179,113,0.08); }
+        .mock-ticket-avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 10px; flex-shrink: 0;
+        }
+        .mock-ticket-info { flex: 1; overflow: hidden; }
+        .mock-ticket-info strong {
+            display: block; color: #e0e0e0; font-size: 11px;
+            margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .mock-ticket-info span {
+            color: #8B8E98; font-size: 10px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+        }
+        .mock-status-dot {
+            width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+        }
+        .mock-chat { background: #0F1419; display: flex; flex-direction: column; }
+        .mock-chat-header {
+            padding: 10px 14px;
+            background: #1A1F26;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: white; font-weight: 600; font-size: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .mock-chat-status { width: 7px; height: 7px; background: #3CB371; border-radius: 50%; }
+        .mock-messages {
+            flex: 1; padding: 14px;
+            display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+        }
+        .mock-bubble {
+            padding: 7px 11px; border-radius: 12px;
+            font-size: 11px; max-width: 75%; line-height: 1.5; color: #e0e0e0;
+        }
+        .mock-bubble.recv { background: #1A1F26; align-self: flex-start; border-bottom-left-radius: 3px; }
+        .mock-bubble.sent {
+            background: linear-gradient(135deg, #2D8B5F, #3CB371);
+            color: white; align-self: flex-end; border-bottom-right-radius: 3px;
+        }
+        .mock-input-bar {
+            padding: 8px 12px; background: #1A1F26;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .mock-input-field {
+            flex: 1; background: rgba(255,255,255,0.05);
+            border-radius: 20px; padding: 5px 12px;
+            color: #8B8E98; font-size: 10px; font-family: inherit;
+        }
+        .mock-send-btn {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, #3CB371, #25D366);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 12px;
+        }
+
+        /* ===== ANALYTICS MOCKUP - DEMO ===== */
+        .analytics-mockup {
+            background: #1A1F26;
+            border-radius: 16px;
+            overflow: hidden;
+            padding: 28px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .analytics-top {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .analytics-title { color: white; font-size: 15px; font-weight: 700; }
+        .analytics-period {
+            background: rgba(60,179,113,0.15); color: #3CB371;
+            padding: 4px 14px; border-radius: 20px; font-size: 12px;
+        }
+        .analytics-stats {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 16px; margin-bottom: 24px;
+        }
+        .analytics-stat {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px; padding: 18px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .analytics-stat-value { font-size: 26px; font-weight: 800; color: #3CB371; margin-bottom: 4px; }
+        .analytics-stat-label { font-size: 11px; color: #8B8E98; }
+        .analytics-stat-delta { font-size: 11px; color: #4ECC85; margin-top: 4px; }
+        .analytics-chart {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px; padding: 20px 16px 12px;
+            display: flex; align-items: flex-end; gap: 6px;
+            border: 1px solid rgba(255,255,255,0.05); height: 140px;
+            position: relative;
+        }
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, #3CB371, #4ECC85);
+            border-radius: 4px 4px 0 0; opacity: 0.75; transition: opacity 0.3s;
+        }
+        .chart-bar:hover { opacity: 1; }
+        .chart-bar.highlight { opacity: 1; background: linear-gradient(to top, #25D366, #4ECC85); }
+        .analytics-chart-label {
+            position: absolute; top: 10px; left: 16px;
+            color: #8B8E98; font-size: 11px;
+        }
+        .analytics-bottom {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;
+        }
+        .analytics-table {
+            background: rgba(255,255,255,0.02); border-radius: 12px;
+            padding: 16px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .analytics-table-title { color: #8B8E98; font-size: 11px; margin-bottom: 12px; font-weight: 600; }
+        .analytics-table-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11px;
+        }
+        .analytics-table-row:last-child { border: none; }
+        .analytics-table-row span:first-child { color: #c0c0c0; }
+        .analytics-table-row span:last-child { color: #3CB371; font-weight: 700; }
+
+        /* ===== BENEFITS MOCKUP ===== */
+        .benefits-mockup {
+            background: linear-gradient(135deg, #0F1419 0%, #1A1F26 100%);
+            border-radius: 20px; padding: 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.06);
+            font-size: 12px;
+        }
+        .benefits-mockup-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px;
+        }
+        .benefits-mockup-title { color: white; font-size: 14px; font-weight: 700; }
+        .benefits-mockup-badge {
+            background: rgba(60,179,113,0.15); color: #3CB371;
+            padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600;
+        }
+        .benefits-metric-row { margin-bottom: 14px; }
+        .benefits-metric-labels {
+            display: flex; justify-content: space-between;
+            color: #8B8E98; font-size: 11px; margin-bottom: 6px;
+        }
+        .benefits-metric-labels span:last-child { color: #3CB371; font-weight: 700; }
+        .benefits-bar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px; height: 8px; overflow: hidden;
+        }
+        .benefits-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3CB371, #25D366);
+            border-radius: 20px; transition: width 1s ease;
+        }
+        .benefits-cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .benefits-mini-card {
+            background: rgba(60,179,113,0.08);
+            border: 1px solid rgba(60,179,113,0.15);
+            border-radius: 12px; padding: 16px;
+        }
+        .benefits-mini-card-value { font-size: 24px; font-weight: 800; color: #3CB371; margin-bottom: 4px; }
+        .benefits-mini-card-label { font-size: 10px; color: #8B8E98; }
+        .benefits-agents {
+            margin-top: 16px; background: rgba(255,255,255,0.02);
+            border-radius: 12px; padding: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .benefits-agents-title { color: #8B8E98; font-size: 10px; font-weight: 600; margin-bottom: 10px; }
+        .benefits-agent-row {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+        }
+        .benefits-agent-avatar {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: linear-gradient(135deg, #3CB371, #25D366);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 9px; font-weight: 700; flex-shrink: 0;
+        }
+        .benefits-agent-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+        .benefits-agent-fill { height: 100%; background: linear-gradient(90deg, #3CB371, #4ECC85); border-radius: 10px; }
+        .benefits-agent-count { color: #3CB371; font-size: 10px; font-weight: 700; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-text h1 {
+                font-size: 42px;
+            }
+
+            .hero-text .subtitle {
+                font-size: 18px;
+            }
+
+            .section-title {
+                font-size: 36px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            nav {
+                display: none;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header id="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo">
+                    <img src="Logo__UaiViu__SEM FUNDO.png" alt="UaiViu">
+                </a>
+                <nav>
+                    <a href="#features">Recursos</a>
+                    <a href="#benefits">Vantagens</a>
+                    <a href="#testimonials">Depoimentos</a>
+                    <a href="#pricing">Preços</a>
+                </nav>
+                <div class="header-cta">
+                    <a href="#" class="btn btn-secondary">Login</a>
+                    <a href="#" class="btn btn-primary">Começar Grátis →</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Transforme seu Atendimento WhatsApp</h1>
+                    <p class="subtitle">Plataforma completa e inteligente para gestão profissional de atendimento. Multi-tenant, automação avançada e resultados mensuráveis.</p>
+                    <div class="hero-buttons">
+                        <a href="#" class="btn btn-primary">Começar Agora - Grátis</a>
+                        <a href="#" class="btn btn-secondary">Agendar Demo</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <h3>+500</h3>
+                            <p>Empresas Ativas</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>2M+</h3>
+                            <p>Mensagens/Mês</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>98%</h3>
+                            <p>Satisfação</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <div class="dashboard-mockup">
+                        <div class="mock-topbar">
+                            <div class="mock-logo-text">
+                                <div class="mock-dot"></div>
+                                UaiViu — Painel de Atendimento
+                            </div>
+                            <div class="mock-user-avatar">AB</div>
+                        </div>
+                        <div class="mock-body">
+                            <div class="mock-sidebar">
+                                <div class="mock-nav-item active">💬</div>
+                                <div class="mock-nav-item">📊</div>
+                                <div class="mock-nav-item">👥</div>
+                                <div class="mock-nav-item">🤖</div>
+                                <div class="mock-nav-item">⚙️</div>
+                            </div>
+                            <div class="mock-list">
+                                <div class="mock-search">🔍 Buscar atendimento...</div>
+                                <div class="mock-ticket active">
+                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#3CB371,#25D366)">MR</div>
+                                    <div class="mock-ticket-info">
+                                        <strong>Maria Rita</strong>
+                                        <span>Preciso de suporte urgente</span>
+                                    </div>
+                                    <div class="mock-status-dot" style="background:#3CB371"></div>
+                                </div>
+                                <div class="mock-ticket">
+                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#F59E0B,#EF4444)">JC</div>
+                                    <div class="mock-ticket-info">
+                                        <strong>João Carlos</strong>
+                                        <span>Dúvida sobre o pedido #3821</span>
+                                    </div>
+                                    <div class="mock-status-dot" style="background:#F59E0B"></div>
+                                </div>
+                                <div class="mock-ticket">
+                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#8B5CF6,#6366F1)">AL</div>
+                                    <div class="mock-ticket-info">
+                                        <strong>Ana Lima</strong>
+                                        <span>Quero fazer um orçamento</span>
+                                    </div>
+                                    <div class="mock-status-dot" style="background:#8B8E98"></div>
+                                </div>
+                                <div class="mock-ticket">
+                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#06B6D4,#0EA5E9)">FS</div>
+                                    <div class="mock-ticket-info">
+                                        <strong>Felipe Santos</strong>
+                                        <span>Produto chegou com defeito</span>
+                                    </div>
+                                    <div class="mock-status-dot" style="background:#3CB371"></div>
+                                </div>
+                                <div class="mock-ticket">
+                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#EC4899,#F43F5E)">CM</div>
+                                    <div class="mock-ticket-info">
+                                        <strong>Carla Mendes</strong>
+                                        <span>Quando chega meu pedido?</span>
+                                    </div>
+                                    <div class="mock-status-dot" style="background:#8B8E98"></div>
+                                </div>
+                            </div>
+                            <div class="mock-chat">
+                                <div class="mock-chat-header">
+                                    <div class="mock-chat-status"></div>
+                                    Maria Rita &nbsp;·&nbsp; <span style="color:#8B8E98;font-weight:400">Fila: Suporte</span>
+                                </div>
+                                <div class="mock-messages">
+                                    <div class="mock-bubble recv">Olá! Preciso de ajuda com meu pedido 👋</div>
+                                    <div class="mock-bubble sent">Olá, Maria! Com prazer, pode me dizer o número?</div>
+                                    <div class="mock-bubble recv">É o pedido #4592, faz 5 dias e não chegou</div>
+                                    <div class="mock-bubble sent">Vou verificar agora mesmo para você! 🔍</div>
+                                    <div class="mock-bubble recv">Obrigada pelo atendimento rápido! 😊</div>
+                                </div>
+                                <div class="mock-input-bar">
+                                    <div class="mock-input-field">Digite uma mensagem...</div>
+                                    <div class="mock-send-btn">➤</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Recursos</span>
+                <h2 class="section-title">Tudo que você precisa em uma única plataforma</h2>
+                <p class="section-description">Ferramentas profissionais para elevar seu atendimento a outro nível</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Multi-Atendimento</h3>
+                    <p>Gerencie múltiplos atendimentos simultâneos com organização por filas, tags e prioridades. Interface intuitiva e produtiva.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Chatbot IA</h3>
+                    <p>Construtor visual de fluxos com integração OpenAI. Automatize respostas, qualifique leads e aumente conversões.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Analytics Avançado</h3>
+                    <p>Dashboard completo com métricas em tempo real. Acompanhe performance, produtividade e satisfação dos clientes.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏢</div>
+                    <h3>Multi-Tenant</h3>
+                    <p>Isolamento total de dados por empresa. Perfeito para agências, revendedores e operações white-label.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Múltiplas Conexões</h3>
+                    <p>Conecte vários números WhatsApp. Gerencie diferentes departamentos, equipes e campanhas separadamente.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Campanhas Inteligentes</h3>
+                    <p>Envie campanhas segmentadas com agendamento avançado. Gerencie listas de contatos e acompanhe entregas.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Respostas Rápidas</h3>
+                    <p>Biblioteca de respostas prontas e personalizáveis. Atenda com agilidade mantendo a qualidade.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Gestão de Equipe</h3>
+                    <p>Controle de permissões, monitoramento de performance e distribuição automática de tickets.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Integrações</h3>
+                    <p>Conecte com CRM, ERP, Dialogflow, N8N, Typebot e outras ferramentas via API REST.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section">
+        <div class="container">
+            <div class="demo-content">
+                <div class="section-header">
+                    <span class="section-tag">Demonstração</span>
+                    <h2 class="section-title">Interface moderna e intuitiva</h2>
+                    <p class="section-description">Design pensado para máxima produtividade e experiência do usuário</p>
+                </div>
+                <div class="demo-video">
+                    <div class="analytics-mockup">
+                        <div class="analytics-top">
+                            <div class="analytics-title">📊 Dashboard — Visão Geral</div>
+                            <div class="analytics-period">Últimos 30 dias</div>
+                        </div>
+                        <div class="analytics-stats">
+                            <div class="analytics-stat">
+                                <div class="analytics-stat-value">1.284</div>
+                                <div class="analytics-stat-label">Atendimentos</div>
+                                <div class="analytics-stat-delta">↑ +18% vs mês anterior</div>
+                            </div>
+                            <div class="analytics-stat">
+                                <div class="analytics-stat-value">4,2 min</div>
+                                <div class="analytics-stat-label">Tempo médio</div>
+                                <div class="analytics-stat-delta">↓ -22% mais rápido</div>
+                            </div>
+                            <div class="analytics-stat">
+                                <div class="analytics-stat-value">97%</div>
+                                <div class="analytics-stat-label">Satisfação</div>
+                                <div class="analytics-stat-delta">↑ +3 pts este mês</div>
+                            </div>
+                            <div class="analytics-stat">
+                                <div class="analytics-stat-value">12</div>
+                                <div class="analytics-stat-label">Agentes ativos</div>
+                                <div class="analytics-stat-delta">● Online agora</div>
+                            </div>
+                        </div>
+                        <div class="analytics-chart">
+                            <div class="analytics-chart-label">Atendimentos por dia</div>
+                            <div class="chart-bar" style="height:45%"></div>
+                            <div class="chart-bar" style="height:60%"></div>
+                            <div class="chart-bar" style="height:52%"></div>
+                            <div class="chart-bar" style="height:75%"></div>
+                            <div class="chart-bar" style="height:68%"></div>
+                            <div class="chart-bar" style="height:80%"></div>
+                            <div class="chart-bar highlight" style="height:95%"></div>
+                            <div class="chart-bar" style="height:88%"></div>
+                            <div class="chart-bar" style="height:72%"></div>
+                            <div class="chart-bar" style="height:65%"></div>
+                            <div class="chart-bar" style="height:78%"></div>
+                            <div class="chart-bar" style="height:84%"></div>
+                            <div class="chart-bar" style="height:70%"></div>
+                            <div class="chart-bar highlight" style="height:100%"></div>
+                        </div>
+                        <div class="analytics-bottom">
+                            <div class="analytics-table">
+                                <div class="analytics-table-title">FILAS COM MAIS ATENDIMENTOS</div>
+                                <div class="analytics-table-row"><span>Suporte Técnico</span><span>412</span></div>
+                                <div class="analytics-table-row"><span>Comercial</span><span>298</span></div>
+                                <div class="analytics-table-row"><span>Financeiro</span><span>187</span></div>
+                                <div class="analytics-table-row"><span>Pós-venda</span><span>143</span></div>
+                            </div>
+                            <div class="analytics-table">
+                                <div class="analytics-table-title">STATUS DOS TICKETS HOJE</div>
+                                <div class="analytics-table-row"><span>● Abertos</span><span>38</span></div>
+                                <div class="analytics-table-row"><span>◐ Em andamento</span><span>21</span></div>
+                                <div class="analytics-table-row"><span>○ Pendentes</span><span>14</span></div>
+                                <div class="analytics-table-row"><span>✓ Resolvidos</span><span>209</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits" id="benefits">
+        <div class="container">
+            <div class="benefits-grid">
+                <div>
+                    <div class="section-header" style="text-align: left; margin-bottom: 40px;">
+                        <span class="section-tag">Vantagens</span>
+                        <h2 class="section-title">Por que escolher o UaiViu?</h2>
+                        <p class="section-description">A plataforma mais completa do mercado</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">⚡</div>
+                        <div class="benefit-text">
+                            <h4>Implementação Rápida</h4>
+                            <p>Configure em minutos, sem complexidade técnica. Suporte completo desde o primeiro dia.</p>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🚀</div>
+                        <div class="benefit-text">
+                            <h4>Alta Performance</h4>
+                            <p>Arquitetura otimizada com Redis, Bull Queue e PostgreSQL para máxima velocidade.</p>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🔒</div>
+                        <div class="benefit-text">
+                            <h4>Segurança Total</h4>
+                            <p>Criptografia end-to-end, isolamento de dados e conformidade com LGPD.</p>
+                        </div>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🎨</div>
+                        <div class="benefit-text">
+                            <h4>White Label Completo</h4>
+                            <p>Personalize com sua marca, domínio próprio e identidade visual customizada.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="benefits-image">
+                    <div class="benefits-mockup">
+                        <div class="benefits-mockup-header">
+                            <div class="benefits-mockup-title">⚡ Performance da Equipe</div>
+                            <div class="benefits-mockup-badge">AO VIVO</div>
+                        </div>
+                        <div class="benefits-metric-row">
+                            <div class="benefits-metric-labels"><span>Taxa de resolução</span><span>94%</span></div>
+                            <div class="benefits-bar-track"><div class="benefits-bar-fill" style="width:94%"></div></div>
+                        </div>
+                        <div class="benefits-metric-row">
+                            <div class="benefits-metric-labels"><span>Satisfação dos clientes</span><span>97%</span></div>
+                            <div class="benefits-bar-track"><div class="benefits-bar-fill" style="width:97%"></div></div>
+                        </div>
+                        <div class="benefits-metric-row">
+                            <div class="benefits-metric-labels"><span>Automação via chatbot</span><span>68%</span></div>
+                            <div class="benefits-bar-track"><div class="benefits-bar-fill" style="width:68%"></div></div>
+                        </div>
+                        <div class="benefits-metric-row">
+                            <div class="benefits-metric-labels"><span>Primeira resposta &lt; 1 min</span><span>82%</span></div>
+                            <div class="benefits-bar-track"><div class="benefits-bar-fill" style="width:82%"></div></div>
+                        </div>
+                        <div class="benefits-cards-row">
+                            <div class="benefits-mini-card">
+                                <div class="benefits-mini-card-value">3,8 min</div>
+                                <div class="benefits-mini-card-label">Tempo médio de resolução</div>
+                            </div>
+                            <div class="benefits-mini-card">
+                                <div class="benefits-mini-card-value">+41%</div>
+                                <div class="benefits-mini-card-label">Ganho de produtividade</div>
+                            </div>
+                        </div>
+                        <div class="benefits-agents">
+                            <div class="benefits-agents-title">AGENTES MAIS PRODUTIVOS HOJE</div>
+                            <div class="benefits-agent-row">
+                                <div class="benefits-agent-avatar">CF</div>
+                                <div class="benefits-agent-bar"><div class="benefits-agent-fill" style="width:88%"></div></div>
+                                <div class="benefits-agent-count">88 aten.</div>
+                            </div>
+                            <div class="benefits-agent-row">
+                                <div class="benefits-agent-avatar">MS</div>
+                                <div class="benefits-agent-bar"><div class="benefits-agent-fill" style="width:72%"></div></div>
+                                <div class="benefits-agent-count">72 aten.</div>
+                            </div>
+                            <div class="benefits-agent-row">
+                                <div class="benefits-agent-avatar">RB</div>
+                                <div class="benefits-agent-bar"><div class="benefits-agent-fill" style="width:61%"></div></div>
+                                <div class="benefits-agent-count">61 aten.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Depoimentos</span>
+                <h2 class="section-title">O que nossos clientes dizem</h2>
+                <p class="section-description">Empresas que transformaram seu atendimento com o UaiViu</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">MR</div>
+                        <div class="testimonial-info">
+                            <h4>Maria Rita</h4>
+                            <p>CEO - Tech Solutions</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                    <p class="testimonial-text">"O UaiViu revolucionou nosso atendimento. Automatizamos 70% das conversas e triplicamos nossa capacidade de atendimento sem aumentar a equipe."</p>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">JS</div>
+                        <div class="testimonial-info">
+                            <h4>João Silva</h4>
+                            <p>Diretor - E-commerce Plus</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                    <p class="testimonial-text">"Interface incrível e recursos poderosos. A integração com nosso CRM foi perfeita. Recomendo para qualquer empresa séria sobre atendimento."</p>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">AC</div>
+                        <div class="testimonial-info">
+                            <h4>Ana Costa</h4>
+                            <p>Fundadora - Marketing Pro</p>
+                        </div>
+                    </div>
+                    <div class="testimonial-rating">★★★★★</div>
+                    <p class="testimonial-text">"Usamos o UaiViu white-label para nossos clientes. A plataforma é robusta, o suporte é excepcional e os resultados são impressionantes."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Planos</span>
+                <h2 class="section-title">Preços transparentes e justos</h2>
+                <p class="section-description">Escolha o plano ideal para o seu negócio</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <p class="plan-description">Perfeito para começar</p>
+                    <div class="price">
+                        <span class="price-currency">R$</span>
+                        197
+                        <span class="price-period">/mês</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>1 Conexão WhatsApp</li>
+                        <li>3 Usuários</li>
+                        <li>Chatbot Básico</li>
+                        <li>Respostas Rápidas</li>
+                        <li>Relatórios Essenciais</li>
+                        <li>Suporte via Email</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary">Começar Agora</a>
+                </div>
+                <div class="pricing-card featured">
+                    <span class="pricing-badge">Mais Popular</span>
+                    <h3>Professional</h3>
+                    <p class="plan-description">Para empresas em crescimento</p>
+                    <div class="price">
+                        <span class="price-currency">R$</span>
+                        397
+                        <span class="price-period">/mês</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>3 Conexões WhatsApp</li>
+                        <li>10 Usuários</li>
+                        <li>Chatbot Avançado + OpenAI</li>
+                        <li>Campanhas Ilimitadas</li>
+                        <li>Relatórios Completos</li>
+                        <li>Integrações API</li>
+                        <li>Suporte Prioritário</li>
+                    </ul>
+                    <a href="#" class="btn btn-primary">Começar Agora</a>
+                </div>
+                <div class="pricing-card">
+                    <h3>Enterprise</h3>
+                    <p class="plan-description">Solução corporativa completa</p>
+                    <div class="price">
+                        <span class="price-currency">R$</span>
+                        897
+                        <span class="price-period">/mês</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>Conexões Ilimitadas</li>
+                        <li>Usuários Ilimitados</li>
+                        <li>Todos os Recursos</li>
+                        <li>White Label Completo</li>
+                        <li>API Dedicada</li>
+                        <li>Servidor Dedicado</li>
+                        <li>Suporte 24/7 Premium</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary">Falar com Vendas</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Pronto para transformar<br>seu atendimento?</h2>
+                <p>Junte-se a centenas de empresas que já revolucionaram seu atendimento WhatsApp</p>
+                <a href="#" class="btn">Começar Gratuitamente →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="Logo__UaiViu__SEM FUNDO.png" alt="UaiViu">
+                    <p>Plataforma completa de atendimento WhatsApp multi-tenant. Desenvolvida para empresas que buscam excelência no relacionamento com clientes.</p>
+                    <div class="footer-social">
+                        <a href="#" class="social-link">f</a>
+                        <a href="#" class="social-link">in</a>
+                        <a href="#" class="social-link">yt</a>
+                        <a href="#" class="social-link">ig</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Produto</h4>
+                    <ul>
+                        <li><a href="#">Recursos</a></li>
+                        <li><a href="#">Preços</a></li>
+                        <li><a href="#">Integrações</a></li>
+                        <li><a href="#">API</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Empresa</h4>
+                    <ul>
+                        <li><a href="#">Sobre Nós</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Casos de Sucesso</a></li>
+                        <li><a href="#">Carreiras</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Recursos</h4>
+                    <ul>
+                        <li><a href="#">Documentação</a></li>
+                        <li><a href="#">Tutoriais</a></li>
+                        <li><a href="#">Webinars</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Suporte</h4>
+                    <ul>
+                        <li><a href="#">Central de Ajuda</a></li>
+                        <li><a href="#">Contato</a></li>
+                        <li><a href="#">Status</a></li>
+                        <li><a href="#">Termos de Uso</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 UaiViu - Todos os direitos reservados. CNPJ: 00.000.000/0001-00</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Header scroll effect
+        window.addEventListener('scroll', function() {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+    </script>
+</body>
+</html>
