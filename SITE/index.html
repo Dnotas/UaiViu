@@ -732,7 +732,7 @@
 
         .footer-content {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 60px;
             margin-bottom: 60px;
         }
@@ -806,133 +806,194 @@
 
         /* ===== DASHBOARD MOCKUP - HERO ===== */
         .dashboard-mockup {
-            background: #0F1419;
+            background: #f0f2f5;
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.2);
             transform: perspective(1000px) rotateY(-5deg);
             transition: all 0.5s ease;
             font-size: 12px;
             width: 100%;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid rgba(0,0,0,0.08);
         }
         .dashboard-mockup:hover { transform: perspective(1000px) rotateY(0deg); }
         .mock-topbar {
-            background: #1A1F26;
+            background: #25D366;
             padding: 10px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .mock-logo-text {
-            color: #3CB371;
-            font-weight: 700;
-            font-size: 13px;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
             display: flex;
             align-items: center;
             gap: 6px;
         }
         .mock-dot {
-            width: 8px; height: 8px;
-            background: #3CB371;
+            width: 7px; height: 7px;
+            background: white;
             border-radius: 50%;
+            opacity: 0.8;
             animation: pulse 2s infinite;
         }
         .mock-user-avatar {
             width: 28px; height: 28px;
-            background: linear-gradient(135deg, #3CB371, #25D366);
+            background: rgba(255,255,255,0.25);
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: white; font-weight: 700; font-size: 11px;
+            border: 2px solid rgba(255,255,255,0.4);
         }
         .mock-body {
             display: grid;
-            grid-template-columns: 48px 175px 1fr;
+            grid-template-columns: 42px 185px 1fr;
             height: 360px;
         }
         .mock-sidebar {
-            background: #1A1F26;
-            padding: 16px 0;
-            display: flex; flex-direction: column; align-items: center; gap: 6px;
-            border-right: 1px solid rgba(255,255,255,0.05);
+            background: white;
+            padding: 12px 0;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            border-right: 1px solid #e9ecef;
         }
         .mock-nav-item {
-            width: 34px; height: 34px;
-            border-radius: 10px;
+            width: 32px; height: 32px;
+            border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 15px; color: #8B8E98;
+            font-size: 14px; color: #8B8E98;
         }
-        .mock-nav-item.active { background: rgba(60,179,113,0.15); color: #3CB371; }
+        .mock-nav-item.active { background: rgba(37,211,102,0.12); color: #25D366; }
         .mock-list {
-            background: #141920;
-            border-right: 1px solid rgba(255,255,255,0.05);
+            background: white;
+            border-right: 1px solid #e9ecef;
             overflow: hidden;
+            display: flex; flex-direction: column;
         }
-        .mock-search {
-            padding: 10px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            color: #8B8E98; font-size: 10px;
+        .mock-list-header {
+            padding: 8px 10px 6px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .mock-list-tabs {
+            display: flex; gap: 0; margin-bottom: 8px;
+        }
+        .mock-tab {
+            flex: 1; text-align: center; padding: 5px 0;
+            font-size: 10px; color: #8B8E98; cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .mock-tab.active { color: #25D366; border-bottom-color: #25D366; font-weight: 700; }
+        .mock-list-actions {
             display: flex; align-items: center; gap: 6px;
         }
-        .mock-ticket {
-            padding: 10px 12px;
-            display: flex; align-items: center; gap: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer;
+        .mock-novo-btn {
+            background: #25D366; color: white;
+            padding: 3px 8px; border-radius: 6px;
+            font-size: 10px; font-weight: 700;
         }
-        .mock-ticket.active { background: rgba(60,179,113,0.08); }
+        .mock-toggle {
+            width: 22px; height: 12px; background: #25D366;
+            border-radius: 6px; position: relative;
+        }
+        .mock-toggle::after {
+            content: ''; position: absolute; right: 2px; top: 2px;
+            width: 8px; height: 8px; background: white; border-radius: 50%;
+        }
+        .mock-filas-btn {
+            background: #f0f2f5; border: 1px solid #ddd;
+            color: #444; padding: 2px 6px; border-radius: 5px;
+            font-size: 9px; margin-left: auto;
+        }
+        .mock-subtabs {
+            display: flex; gap: 0; padding: 5px 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .mock-subtab {
+            font-size: 10px; color: #8B8E98; padding: 4px 6px;
+            display: flex; align-items: center; gap: 3px;
+            border-bottom: 2px solid transparent; cursor: pointer;
+        }
+        .mock-subtab.active { color: #25D366; border-bottom-color: #25D366; font-weight: 700; }
+        .mock-subtab-badge {
+            background: #25D366; color: white;
+            border-radius: 10px; padding: 0 5px;
+            font-size: 9px; font-weight: 700;
+        }
+        .mock-subtab-badge.red { background: #EF4444; }
+        .mock-tickets { flex: 1; overflow: hidden; }
+        .mock-ticket {
+            padding: 8px 10px;
+            display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid #f0f2f5; cursor: pointer;
+        }
+        .mock-ticket.active { background: #f0fdf4; border-left: 3px solid #25D366; }
         .mock-ticket-avatar {
-            width: 30px; height: 30px; border-radius: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: white; font-weight: 700; font-size: 10px; flex-shrink: 0;
         }
-        .mock-ticket-info { flex: 1; overflow: hidden; }
+        .mock-ticket-info { flex: 1; overflow: hidden; min-width: 0; }
         .mock-ticket-info strong {
-            display: block; color: #e0e0e0; font-size: 11px;
+            display: block; color: #1A1F26; font-size: 11px;
             margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .mock-ticket-info span {
             color: #8B8E98; font-size: 10px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
         }
-        .mock-status-dot {
-            width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+        .mock-ticket-tags { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+        .mock-tag {
+            background: #e8f5e9; color: #2D8B5F;
+            border-radius: 3px; padding: 1px 4px; font-size: 8px; font-weight: 600;
         }
-        .mock-chat { background: #0F1419; display: flex; flex-direction: column; }
+        .mock-tag.blue { background: #e3f2fd; color: #1565C0; }
+        .mock-tag.gray { background: #f5f5f5; color: #666; }
+        .mock-chat {
+            background: #ECE5DD;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c5b9ad' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            display: flex; flex-direction: column;
+        }
         .mock-chat-header {
-            padding: 10px 14px;
-            background: #1A1F26;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            color: white; font-weight: 600; font-size: 12px;
+            padding: 8px 14px;
+            background: #f0f2f5;
+            border-bottom: 1px solid #e9ecef;
+            color: #1A1F26; font-weight: 700; font-size: 12px;
             display: flex; align-items: center; gap: 8px;
         }
-        .mock-chat-status { width: 7px; height: 7px; background: #3CB371; border-radius: 50%; }
+        .mock-chat-status { width: 7px; height: 7px; background: #25D366; border-radius: 50%; }
+        .mock-chat-sub { color: #8B8E98; font-weight: 400; font-size: 10px; }
         .mock-messages {
-            flex: 1; padding: 14px;
-            display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+            flex: 1; padding: 12px;
+            display: flex; flex-direction: column; gap: 6px; overflow: hidden;
         }
         .mock-bubble {
-            padding: 7px 11px; border-radius: 12px;
-            font-size: 11px; max-width: 75%; line-height: 1.5; color: #e0e0e0;
+            padding: 7px 11px; border-radius: 10px;
+            font-size: 11px; max-width: 78%; line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        .mock-bubble.recv { background: #1A1F26; align-self: flex-start; border-bottom-left-radius: 3px; }
+        .mock-bubble.recv {
+            background: white; color: #1A1F26;
+            align-self: flex-start; border-top-left-radius: 3px;
+        }
         .mock-bubble.sent {
-            background: linear-gradient(135deg, #2D8B5F, #3CB371);
-            color: white; align-self: flex-end; border-bottom-right-radius: 3px;
+            background: #DCF8C6; color: #1A1F26;
+            align-self: flex-end; border-top-right-radius: 3px;
         }
         .mock-input-bar {
-            padding: 8px 12px; background: #1A1F26;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            padding: 8px 12px; background: #f0f2f5;
+            border-top: 1px solid #e9ecef;
             display: flex; align-items: center; gap: 8px;
         }
         .mock-input-field {
-            flex: 1; background: rgba(255,255,255,0.05);
-            border-radius: 20px; padding: 5px 12px;
+            flex: 1; background: white;
+            border-radius: 20px; padding: 6px 14px;
             color: #8B8E98; font-size: 10px; font-family: inherit;
+            border: 1px solid #e9ecef;
         }
         .mock-send-btn {
             width: 28px; height: 28px; border-radius: 50%;
-            background: linear-gradient(135deg, #3CB371, #25D366);
+            background: #25D366;
             display: flex; align-items: center; justify-content: center;
             color: white; font-size: 12px;
         }
@@ -1175,72 +1236,94 @@
                         <div class="mock-topbar">
                             <div class="mock-logo-text">
                                 <div class="mock-dot"></div>
-                                UaiViu — Painel de Atendimento
+                                Olá William, Bem vindo a DNOTAS TECNOLOGIA LTDA!
                             </div>
-                            <div class="mock-user-avatar">AB</div>
+                            <div class="mock-user-avatar">W</div>
                         </div>
                         <div class="mock-body">
                             <div class="mock-sidebar">
                                 <div class="mock-nav-item active">💬</div>
-                                <div class="mock-nav-item">📊</div>
+                                <div class="mock-nav-item">📋</div>
                                 <div class="mock-nav-item">👥</div>
-                                <div class="mock-nav-item">🤖</div>
-                                <div class="mock-nav-item">⚙️</div>
+                                <div class="mock-nav-item">📅</div>
+                                <div class="mock-nav-item">♾️</div>
+                                <div class="mock-nav-item" style="margin-top:auto">⚙️</div>
                             </div>
                             <div class="mock-list">
-                                <div class="mock-search">🔍 Buscar atendimento...</div>
-                                <div class="mock-ticket active">
-                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#3CB371,#25D366)">MR</div>
-                                    <div class="mock-ticket-info">
-                                        <strong>Maria Rita</strong>
-                                        <span>Preciso de suporte urgente</span>
+                                <div class="mock-list-header">
+                                    <div class="mock-list-tabs">
+                                        <div class="mock-tab active">Abertas</div>
+                                        <div class="mock-tab">Resolvidos</div>
+                                        <div class="mock-tab">Busca</div>
                                     </div>
-                                    <div class="mock-status-dot" style="background:#3CB371"></div>
+                                    <div class="mock-list-actions">
+                                        <div class="mock-novo-btn">Novo</div>
+                                        <div class="mock-toggle"></div>
+                                        <div class="mock-filas-btn">Filas ▾</div>
+                                    </div>
                                 </div>
-                                <div class="mock-ticket">
-                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#F59E0B,#EF4444)">JC</div>
-                                    <div class="mock-ticket-info">
-                                        <strong>João Carlos</strong>
-                                        <span>Dúvida sobre o pedido #3821</span>
-                                    </div>
-                                    <div class="mock-status-dot" style="background:#F59E0B"></div>
+                                <div class="mock-subtabs">
+                                    <div class="mock-subtab active">Atendendo <span class="mock-subtab-badge">19</span></div>
+                                    <div class="mock-subtab">Urgência <span class="mock-subtab-badge red">4</span></div>
+                                    <div class="mock-subtab">Aguardando</div>
                                 </div>
-                                <div class="mock-ticket">
-                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#8B5CF6,#6366F1)">AL</div>
-                                    <div class="mock-ticket-info">
-                                        <strong>Ana Lima</strong>
-                                        <span>Quero fazer um orçamento</span>
+                                <div class="mock-tickets">
+                                    <div class="mock-ticket active">
+                                        <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#43A047,#1B5E20)">NF</div>
+                                        <div class="mock-ticket-info">
+                                            <strong>NF. OHYEAH</strong>
+                                            <span>Dia essa é a plataforma</span>
+                                            <div class="mock-ticket-tags">
+                                                <span class="mock-tag">SUPORTE</span>
+                                                <span class="mock-tag blue">CRISTIANO</span>
+                                                <span class="mock-tag gray">SEM FILA</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mock-status-dot" style="background:#8B8E98"></div>
-                                </div>
-                                <div class="mock-ticket">
-                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#06B6D4,#0EA5E9)">FS</div>
-                                    <div class="mock-ticket-info">
-                                        <strong>Felipe Santos</strong>
-                                        <span>Produto chegou com defeito</span>
+                                    <div class="mock-ticket">
+                                        <div class="mock-ticket-avatar" style="background:#1A1A2E">DG</div>
+                                        <div class="mock-ticket-info">
+                                            <strong>DGL NF-e</strong>
+                                            <span>Arquivo de mídia</span>
+                                            <div class="mock-ticket-tags">
+                                                <span class="mock-tag">SUPORTE</span>
+                                                <span class="mock-tag blue">WILLIAM</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mock-status-dot" style="background:#3CB371"></div>
-                                </div>
-                                <div class="mock-ticket">
-                                    <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#EC4899,#F43F5E)">CM</div>
-                                    <div class="mock-ticket-info">
-                                        <strong>Carla Mendes</strong>
-                                        <span>Quando chega meu pedido?</span>
+                                    <div class="mock-ticket">
+                                        <div class="mock-ticket-avatar" style="background:linear-gradient(135deg,#EC4899,#F43F5E)">LM</div>
+                                        <div class="mock-ticket-info">
+                                            <strong>Lorrana Magalhães</strong>
+                                            <span>Posso solicitar os arquivos na...</span>
+                                            <div class="mock-ticket-tags">
+                                                <span class="mock-tag">SUPORTE</span>
+                                                <span class="mock-tag blue">DIEGO</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mock-status-dot" style="background:#8B8E98"></div>
+                                    <div class="mock-ticket">
+                                        <div class="mock-ticket-avatar" style="background:#607D8B">LS</div>
+                                        <div class="mock-ticket-info">
+                                            <strong>Lucas Souza ⚡</strong>
+                                            <span>Show</span>
+                                            <div class="mock-ticket-tags">
+                                                <span class="mock-tag">SUPORTE</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mock-chat">
                                 <div class="mock-chat-header">
                                     <div class="mock-chat-status"></div>
-                                    Maria Rita &nbsp;·&nbsp; <span style="color:#8B8E98;font-weight:400">Fila: Suporte</span>
+                                    DGL NF-e &nbsp;<span class="mock-chat-sub">· Atribuído à: William</span>
                                 </div>
                                 <div class="mock-messages">
-                                    <div class="mock-bubble recv">Olá! Preciso de ajuda com meu pedido 👋</div>
-                                    <div class="mock-bubble sent">Olá, Maria! Com prazer, pode me dizer o número?</div>
-                                    <div class="mock-bubble recv">É o pedido #4592, faz 5 dias e não chegou</div>
-                                    <div class="mock-bubble sent">Vou verificar agora mesmo para você! 🔍</div>
-                                    <div class="mock-bubble recv">Obrigada pelo atendimento rápido! 😊</div>
+                                    <div class="mock-bubble recv">Aqui que fica valor certo então né</div>
+                                    <div class="mock-bubble sent">Acredito esta correta, vou confirmar com o Diego</div>
+                                    <div class="mock-bubble recv" style="background:#f0f0f0;font-size:10px;color:#555">🎙️ Áudio 0:27 &nbsp;<span style="color:#25D366;font-weight:600;cursor:pointer">Transcrever áudio</span></div>
+                                    <div class="mock-bubble recv">Direto da fábrica — pedido confirmado ✓</div>
                                 </div>
                                 <div class="mock-input-bar">
                                     <div class="mock-input-field">Digite uma mensagem...</div>
@@ -1619,6 +1702,12 @@
                     <ul>
                         <li><a href="https://app.uaiviu.com.br">Fazer Login</a></li>
                         <li><a href="https://app.uaiviu.com.br/signup">Criar Conta</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Suporte</h4>
+                    <ul>
+                        <li><a href="https://wa.me/5531972500555" target="_blank">💬 WhatsApp: (31) 7250-0555</a></li>
                     </ul>
                 </div>
             </div>
