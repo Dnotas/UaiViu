@@ -7,7 +7,126 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* ===== MODAL CHECKOUT ===== */
+        .checkout-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 16px;
+            backdrop-filter: blur(4px);
+            animation: fadeIn .2s ease;
+        }
+        @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+        .checkout-box {
+            background: #fff; border-radius: 20px;
+            width: 100%; max-width: 480px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+            overflow: hidden; position: relative;
+        }
+        .checkout-header {
+            background: linear-gradient(135deg, #3CB371, #25D366);
+            padding: 28px 32px 24px;
+            color: #fff; text-align: center;
+        }
+        .checkout-header img { height: 36px; margin-bottom: 12px; }
+        .checkout-header h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+        .checkout-header p  { font-size: 14px; opacity: .9; margin: 0; }
+        .checkout-close {
+            position: absolute; top: 14px; right: 18px;
+            background: rgba(255,255,255,.25); border: none; border-radius: 50%;
+            width: 32px; height: 32px; font-size: 18px; color: #fff;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background .2s;
+        }
+        .checkout-close:hover { background: rgba(255,255,255,.4); }
+        .checkout-body { padding: 28px 32px 32px; }
+
+        /* Steps */
+        .checkout-step { display: none; }
+        .checkout-step.active { display: block; }
+
+        /* Form */
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid #E5E7EB;
+            border-radius: 10px; font-size: 15px; font-family: inherit;
+            outline: none; transition: border-color .2s; box-sizing: border-box;
+        }
+        .form-group input:focus { border-color: #3CB371; }
+        .plan-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .plan-option { position: relative; }
+        .plan-option input[type=radio] { position: absolute; opacity: 0; }
+        .plan-option label {
+            display: block; padding: 14px 12px; border: 2px solid #E5E7EB;
+            border-radius: 12px; cursor: pointer; text-align: center;
+            transition: all .2s; font-size: 13px;
+        }
+        .plan-option label .plan-name { font-weight: 700; font-size: 15px; color: #111827; display: block; margin-bottom: 2px; }
+        .plan-option label .plan-price { color: #3CB371; font-weight: 700; font-size: 18px; display: block; }
+        .plan-option label .plan-sub { color: #6B7280; font-size: 11px; }
+        .plan-option input[type=radio]:checked + label {
+            border-color: #3CB371; background: #F0FDF4;
+        }
+        .checkout-btn {
+            width: 100%; padding: 14px; background: linear-gradient(135deg,#3CB371,#25D366);
+            color: #fff; border: none; border-radius: 12px; font-size: 16px;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: opacity .2s; margin-top: 4px;
+        }
+        .checkout-btn:hover { opacity: .9; }
+        .checkout-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+        /* PIX step */
+        .pix-plano-tag {
+            background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px;
+            padding: 8px 14px; text-align: center; margin-bottom: 20px;
+            font-size: 14px; color: #166534; font-weight: 600;
+        }
+        .pix-qr-wrap { text-align: center; margin-bottom: 20px; }
+        .pix-qr-wrap img { width: 180px; height: 180px; border-radius: 12px; border: 2px solid #E5E7EB; }
+        .pix-copy-box {
+            background: #F9FAFB; border: 1.5px solid #E5E7EB; border-radius: 10px;
+            padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px;
+        }
+        .pix-copy-box code {
+            flex: 1; font-size: 11px; color: #374151; word-break: break-all;
+            font-family: monospace;
+        }
+        .pix-copy-btn {
+            background: #3CB371; color: #fff; border: none; border-radius: 8px;
+            padding: 8px 14px; font-size: 13px; font-weight: 600;
+            cursor: pointer; white-space: nowrap; font-family: inherit;
+            transition: background .2s;
+        }
+        .pix-copy-btn:hover { background: #2D8B5F; }
+        .pix-info {
+            background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px;
+            padding: 12px 14px; font-size: 13px; color: #92400E; line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        .pix-info strong { display: block; margin-bottom: 4px; }
+        .pix-whats-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 13px; background: #25D366;
+            color: #fff; border: none; border-radius: 12px; font-size: 15px;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+            text-decoration: none; transition: opacity .2s;
+        }
+        .pix-whats-btn:hover { opacity: .9; }
+        .checkout-error {
+            background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
+            padding: 12px 14px; color: #991B1B; font-size: 13px;
+            margin-top: 12px; display: none;
+        }
+        @media (max-width: 480px) {
+            .checkout-body { padding: 20px; }
+            .checkout-header { padding: 22px 20px 18px; }
+            .plan-selector { grid-template-columns: 1fr; }
+        }
         :root {
             --primary-color: #3CB371;
             --primary-dark: #2D8B5F;
@@ -1689,7 +1808,7 @@
                         <li>Áudios Transcritos</li>
                         <li>Relatórios Básicos</li>
                     </ul>
-                    <a href="https://app.uaiviu.com.br/signup" class="btn btn-secondary">Criar Conta</a>
+                    <button onclick="abrirCheckout('basico')" class="btn btn-secondary" style="width:100%;cursor:pointer;border:none;">Assinar Agora</button>
                 </div>
                 <div class="pricing-card featured">
                     <span class="pricing-badge">Mais Popular</span>
@@ -1709,7 +1828,7 @@
                         <li>Integrações API</li>
                         <li>Suporte Prioritário</li>
                     </ul>
-                    <a href="https://app.uaiviu.com.br/signup" class="btn btn-primary">Criar Conta</a>
+                    <button onclick="abrirCheckout('professional')" class="btn btn-primary" style="width:100%;cursor:pointer;border:none;">Assinar Agora</button>
                 </div>
             </div>
         </div>
@@ -1769,6 +1888,80 @@
         </div>
     </footer>
 
+    <!-- ===== MODAL CHECKOUT ===== -->
+    <div id="checkout-overlay" class="checkout-overlay" style="display:none" onclick="fecharModalFora(event)">
+        <div class="checkout-box">
+            <div class="checkout-header">
+                <img src="Logo__UaiViu__SEM FUNDO.png" alt="UaiViu">
+                <h2>Assinar o UaiViu</h2>
+                <p>Pague via PIX e comece a usar em minutos</p>
+                <button class="checkout-close" onclick="fecharModal()">×</button>
+            </div>
+            <div class="checkout-body">
+
+                <!-- Step 1: Dados do cliente -->
+                <div id="step-form" class="checkout-step active">
+                    <div class="plan-selector">
+                        <div class="plan-option">
+                            <input type="radio" name="plano" id="plano-basico" value="basico">
+                            <label for="plano-basico">
+                                <span class="plan-name">Básico</span>
+                                <span class="plan-price">R$49,90</span>
+                                <span class="plan-sub">/mês</span>
+                            </label>
+                        </div>
+                        <div class="plan-option">
+                            <input type="radio" name="plano" id="plano-professional" value="professional">
+                            <label for="plano-professional">
+                                <span class="plan-name">Professional</span>
+                                <span class="plan-price">R$397</span>
+                                <span class="plan-sub">/mês</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome completo</label>
+                        <input type="text" id="co-nome" placeholder="Seu nome completo" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="co-email" placeholder="seu@email.com" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp</label>
+                        <input type="tel" id="co-telefone" placeholder="(31) 99999-9999" autocomplete="tel">
+                    </div>
+                    <button class="checkout-btn" id="btn-gerar-pix" onclick="gerarPix()">
+                        Gerar PIX →
+                    </button>
+                    <div class="checkout-error" id="form-error"></div>
+                </div>
+
+                <!-- Step 2: PIX -->
+                <div id="step-pix" class="checkout-step">
+                    <div class="pix-plano-tag" id="pix-plano-tag">Plano Básico — R$ 49,90/mês</div>
+                    <div class="pix-qr-wrap">
+                        <img id="pix-qr-img" src="" alt="QR Code PIX">
+                    </div>
+                    <p style="text-align:center;font-size:13px;color:#6B7280;margin:0 0 8px">Ou copie o código PIX:</p>
+                    <div class="pix-copy-box">
+                        <code id="pix-code"></code>
+                        <button class="pix-copy-btn" onclick="copiarPix()">Copiar</button>
+                    </div>
+                    <div class="pix-info">
+                        <strong>✅ Após pagar, o que acontece?</strong>
+                        Nossa equipe entrará em contato pelo seu WhatsApp em até 2 horas com os dados de acesso ao UaiViu.
+                    </div>
+                    <a href="https://wa.me/5531972500555?text=Ol%C3%A1%21+Acabei+de+assinar+o+UaiViu+e+gostaria+de+confirmar+meu+acesso."
+                       class="pix-whats-btn" target="_blank">
+                        💬 Falar com Suporte no WhatsApp
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <script>
         // Header scroll effect
         window.addEventListener('scroll', function() {
@@ -1779,6 +1972,100 @@
                 header.classList.remove('scrolled');
             }
         });
+
+        // ===== CHECKOUT =====
+        const SUPABASE_URL  = 'https://reubrhhceuxwbtaqxcnq.supabase.co'
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldWJyaGhjZXV4d2J0YXF4Y25xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5MDY5NDAsImV4cCI6MjA4NDQ4Mjk0MH0.A8QX4PkS4Vb0ZqZcn_L2aqbo73dxhSknfQPIFFF8un8'
+        const FN_URL = `${SUPABASE_URL}/functions/v1/create-payment`
+
+        function abrirCheckout(plano) {
+            document.getElementById('checkout-overlay').style.display = 'flex'
+            document.body.style.overflow = 'hidden'
+            mostrarStep('step-form')
+            if (plano) {
+                const radio = document.getElementById(`plano-${plano}`)
+                if (radio) radio.checked = true
+            }
+        }
+
+        function fecharModal() {
+            document.getElementById('checkout-overlay').style.display = 'none'
+            document.body.style.overflow = ''
+            document.getElementById('form-error').style.display = 'none'
+            document.getElementById('form-error').textContent = ''
+        }
+
+        function fecharModalFora(e) {
+            if (e.target === document.getElementById('checkout-overlay')) fecharModal()
+        }
+
+        function mostrarStep(id) {
+            document.querySelectorAll('.checkout-step').forEach(s => s.classList.remove('active'))
+            document.getElementById(id).classList.add('active')
+        }
+
+        function copiarPix() {
+            const code = document.getElementById('pix-code').textContent
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.pix-copy-btn')
+                btn.textContent = 'Copiado!'
+                setTimeout(() => btn.textContent = 'Copiar', 2500)
+            })
+        }
+
+        async function gerarPix() {
+            const nome     = document.getElementById('co-nome').value.trim()
+            const email    = document.getElementById('co-email').value.trim()
+            const telefone = document.getElementById('co-telefone').value.trim()
+            const plano    = document.querySelector('input[name="plano"]:checked')?.value
+            const errDiv   = document.getElementById('form-error')
+
+            errDiv.style.display = 'none'
+
+            if (!nome || !email || !telefone || !plano) {
+                errDiv.textContent = 'Por favor, preencha todos os campos e selecione um plano.'
+                errDiv.style.display = 'block'
+                return
+            }
+
+            const btn = document.getElementById('btn-gerar-pix')
+            btn.disabled = true
+            btn.textContent = 'Gerando PIX...'
+
+            try {
+                const res = await fetch(FN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON,
+                        'Authorization': `Bearer ${SUPABASE_ANON}`
+                    },
+                    body: JSON.stringify({ nome, email, telefone, plano })
+                })
+
+                const data = await res.json()
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Erro ao gerar PIX. Tente novamente.')
+                }
+
+                // Preenche step PIX
+                document.getElementById('pix-qr-img').src = `data:image/png;base64,${data.pixQrCode}`
+                document.getElementById('pix-code').textContent = data.pixCopyPaste
+                document.getElementById('pix-plano-tag').textContent = `${data.plano} — R$ ${data.valor.toFixed(2).replace('.',',')}/mês`
+
+                mostrarStep('step-pix')
+            } catch (err) {
+                errDiv.textContent = err.message
+                errDiv.style.display = 'block'
+            } finally {
+                btn.disabled = false
+                btn.textContent = 'Gerar PIX →'
+            }
+        }
+
+        // ESC fecha o modal
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal() })
     </script>
 </body>
 </html>
