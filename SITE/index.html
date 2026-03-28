@@ -1894,7 +1894,7 @@
             <div class="checkout-header">
                 <img src="Logo__UaiViu__SEM FUNDO.png" alt="UaiViu">
                 <h2>Assinar o UaiViu</h2>
-                <p>Pague via PIX e comece a usar em minutos</p>
+                <p>PIX · Boleto · Cartão — Recorrência automática</p>
                 <button class="checkout-close" onclick="fecharModal()">×</button>
             </div>
             <div class="checkout-body">
@@ -1924,36 +1924,52 @@
                         <input type="text" id="co-nome" placeholder="Seu nome completo" autocomplete="name">
                     </div>
                     <div class="form-group">
+                        <label>CPF ou CNPJ</label>
+                        <input type="text" id="co-cpf" placeholder="000.000.000-00 ou 00.000.000/0001-00" maxlength="18" oninput="mascararCpfCnpj(this)">
+                    </div>
+                    <div class="form-group">
                         <label>E-mail</label>
                         <input type="email" id="co-email" placeholder="seu@email.com" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label>WhatsApp</label>
-                        <input type="tel" id="co-telefone" placeholder="(31) 99999-9999" autocomplete="tel">
+                        <input type="tel" id="co-telefone" placeholder="(31) 99999-9999" autocomplete="tel" oninput="mascararTelefone(this)">
                     </div>
                     <button class="checkout-btn" id="btn-gerar-pix" onclick="gerarPix()">
-                        Gerar PIX →
+                        Ir para Pagamento →
                     </button>
+                    <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:10px">
+                        🔒 Pagamento seguro via Asaas · PIX · Boleto · Cartão
+                    </p>
                     <div class="checkout-error" id="form-error"></div>
                 </div>
 
-                <!-- Step 2: PIX -->
+                <!-- Step 2: Link de pagamento -->
                 <div id="step-pix" class="checkout-step">
                     <div class="pix-plano-tag" id="pix-plano-tag">Plano Básico — R$ 49,90/mês</div>
-                    <div class="pix-qr-wrap">
-                        <img id="pix-qr-img" src="" alt="QR Code PIX">
+
+                    <div style="text-align:center;margin:24px 0 20px">
+                        <div style="font-size:48px;margin-bottom:12px">✅</div>
+                        <h3 style="margin:0 0 8px;font-size:18px;color:#111827">Assinatura criada!</h3>
+                        <p style="font-size:14px;color:#6B7280;margin:0">Clique abaixo para escolher como pagar</p>
                     </div>
-                    <p style="text-align:center;font-size:13px;color:#6B7280;margin:0 0 8px">Ou copie o código PIX:</p>
-                    <div class="pix-copy-box">
-                        <code id="pix-code"></code>
-                        <button class="pix-copy-btn" onclick="copiarPix()">Copiar</button>
-                    </div>
+
+                    <a id="btn-pagar" href="#" target="_blank" class="checkout-btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:14px">
+                        💳 Pagar agora (PIX · Boleto · Cartão)
+                    </a>
+
                     <div class="pix-info">
-                        <strong>✅ Após pagar, o que acontece?</strong>
-                        Nossa equipe entrará em contato pelo seu WhatsApp em até 2 horas com os dados de acesso ao UaiViu.
+                        <strong>🔄 Cobrança automática mensal</strong>
+                        Se pagar com cartão, a renovação é automática todo mês. PIX e Boleto geram nova cobrança mensal com link por e-mail.
                     </div>
+
+                    <div class="pix-info" style="background:#F0FDF4;border-color:#BBF7D0;color:#166534;margin-top:10px">
+                        <strong>📲 Recebendo seu acesso</strong>
+                        Após a confirmação do pagamento, nossa equipe entra em contato pelo seu WhatsApp em até 2 horas com os dados de acesso.
+                    </div>
+
                     <a href="https://wa.me/5531972500555?text=Ol%C3%A1%21+Acabei+de+assinar+o+UaiViu+e+gostaria+de+confirmar+meu+acesso."
-                       class="pix-whats-btn" target="_blank">
+                       class="pix-whats-btn" target="_blank" style="margin-top:14px">
                         💬 Falar com Suporte no WhatsApp
                     </a>
                 </div>
@@ -1982,17 +1998,15 @@
             document.getElementById('checkout-overlay').style.display = 'flex'
             document.body.style.overflow = 'hidden'
             mostrarStep('step-form')
-            if (plano) {
-                const radio = document.getElementById(`plano-${plano}`)
-                if (radio) radio.checked = true
-            }
+            const radio = document.getElementById(`plano-${plano}`)
+            if (radio) radio.checked = true
         }
 
         function fecharModal() {
             document.getElementById('checkout-overlay').style.display = 'none'
             document.body.style.overflow = ''
-            document.getElementById('form-error').style.display = 'none'
-            document.getElementById('form-error').textContent = ''
+            const err = document.getElementById('form-error')
+            err.style.display = 'none'; err.textContent = ''
         }
 
         function fecharModalFora(e) {
@@ -2004,17 +2018,34 @@
             document.getElementById(id).classList.add('active')
         }
 
-        function copiarPix() {
-            const code = document.getElementById('pix-code').textContent
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = document.querySelector('.pix-copy-btn')
-                btn.textContent = 'Copiado!'
-                setTimeout(() => btn.textContent = 'Copiar', 2500)
-            })
+        function mascararCpfCnpj(input) {
+            let v = input.value.replace(/\D/g, '')
+            if (v.length <= 11) {
+                v = v.replace(/(\d{3})(\d)/, '$1.$2')
+                     .replace(/(\d{3})(\d)/, '$1.$2')
+                     .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+            } else {
+                v = v.replace(/(\d{2})(\d)/, '$1.$2')
+                     .replace(/(\d{3})(\d)/, '$1.$2')
+                     .replace(/(\d{3})(\d)/, '$1/$2')
+                     .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+            }
+            input.value = v
+        }
+
+        function mascararTelefone(input) {
+            let v = input.value.replace(/\D/g, '')
+            if (v.length > 10) {
+                v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+            } else {
+                v = v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+            }
+            input.value = v
         }
 
         async function gerarPix() {
             const nome     = document.getElementById('co-nome').value.trim()
+            const cpfCnpj  = document.getElementById('co-cpf').value.trim()
             const email    = document.getElementById('co-email').value.trim()
             const telefone = document.getElementById('co-telefone').value.trim()
             const plano    = document.querySelector('input[name="plano"]:checked')?.value
@@ -2022,15 +2053,15 @@
 
             errDiv.style.display = 'none'
 
-            if (!nome || !email || !telefone || !plano) {
-                errDiv.textContent = 'Por favor, preencha todos os campos e selecione um plano.'
+            if (!nome || !cpfCnpj || !email || !telefone || !plano) {
+                errDiv.textContent = 'Preencha todos os campos e selecione um plano.'
                 errDiv.style.display = 'block'
                 return
             }
 
             const btn = document.getElementById('btn-gerar-pix')
             btn.disabled = true
-            btn.textContent = 'Gerando PIX...'
+            btn.textContent = 'Aguarde, criando assinatura...'
 
             try {
                 const res = await fetch(FN_URL, {
@@ -2040,19 +2071,15 @@
                         'apikey': SUPABASE_ANON,
                         'Authorization': `Bearer ${SUPABASE_ANON}`
                     },
-                    body: JSON.stringify({ nome, email, telefone, plano })
+                    body: JSON.stringify({ nome, email, telefone, cpfCnpj, plano })
                 })
 
                 const data = await res.json()
+                if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao criar assinatura.')
 
-                if (!res.ok || !data.success) {
-                    throw new Error(data.error || 'Erro ao gerar PIX. Tente novamente.')
-                }
-
-                // Preenche step PIX
-                document.getElementById('pix-qr-img').src = `data:image/png;base64,${data.pixQrCode}`
-                document.getElementById('pix-code').textContent = data.pixCopyPaste
-                document.getElementById('pix-plano-tag').textContent = `${data.plano} — R$ ${data.valor.toFixed(2).replace('.',',')}/mês`
+                document.getElementById('pix-plano-tag').textContent =
+                    `${data.plano} — R$ ${data.valor.toFixed(2).replace('.',',')}/mês`
+                document.getElementById('btn-pagar').href = data.invoiceUrl
 
                 mostrarStep('step-pix')
             } catch (err) {
@@ -2060,11 +2087,10 @@
                 errDiv.style.display = 'block'
             } finally {
                 btn.disabled = false
-                btn.textContent = 'Gerar PIX →'
+                btn.textContent = 'Ir para Pagamento →'
             }
         }
 
-        // ESC fecha o modal
         document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal() })
     </script>
 </body>

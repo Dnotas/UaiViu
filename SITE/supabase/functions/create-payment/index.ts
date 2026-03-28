@@ -15,102 +15,109 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
-    const { nome, email, telefone, plano } = await req.json()
+    const { nome, email, telefone, cpfCnpj, plano } = await req.json()
 
-    if (!nome || !email || !telefone || !plano) {
+    if (!nome || !email || !telefone || !cpfCnpj || !plano) {
       return new Response(
-        JSON.stringify({ error: 'Campos obrigatórios: nome, email, telefone, plano' }),
+        JSON.stringify({ error: 'Preencha todos os campos: nome, email, telefone, CPF/CNPJ e plano.' }),
         { status: 400, headers: { ...CORS, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Busca token do Asaas na tabela token do Supabase
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Busca token do Asaas no banco
-    const { data: tokenRow, error: tokenError } = await supabase
-      .from('token')
-      .select('UAIVIU_TOKEN')
-      .single()
-
-    if (tokenError || !tokenRow?.UAIVIU_TOKEN) {
-      throw new Error('Token Asaas não encontrado no banco')
-    }
-    const asaasToken = tokenRow.UAIVIU_TOKEN
+    const { data: tokenRow } = await supabase.from('token').select('UAIVIU_TOKEN').single()
+    const asaasToken = tokenRow?.UAIVIU_TOKEN
+    if (!asaasToken) throw new Error('Token Asaas não configurado no banco.')
 
     const planoInfo = PLANOS[plano] ?? PLANOS.basico
     const telefoneLimpo = telefone.replace(/\D/g, '')
+    const cpfCnpjLimpo  = cpfCnpj.replace(/\D/g, '')
 
-    // Cria cliente no Asaas
+    // 1. Cria ou busca cliente no Asaas
     const custRes = await fetch('https://api.asaas.com/v3/customers', {
       method: 'POST',
       headers: { 'access_token': asaasToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: nome, email, mobilePhone: telefoneLimpo }),
+      body: JSON.stringify({
+        name:        nome,
+        email:       email,
+        mobilePhone: telefoneLimpo,
+        cpfCnpj:     cpfCnpjLimpo,
+      }),
     })
     const customer = await custRes.json()
 
-    if (!customer.id) {
-      const msg = customer.errors?.[0]?.description ?? JSON.stringify(customer)
-      throw new Error(`Erro ao criar cliente no Asaas: ${msg}`)
+    let customerId = customer.id
+    // Se CPF/CNPJ já existe, Asaas retorna erro — busca o cliente existente
+    if (!customerId && customer.errors) {
+      const searchRes = await fetch(
+        `https://api.asaas.com/v3/customers?cpfCnpj=${cpfCnpjLimpo}`,
+        { headers: { 'access_token': asaasToken } }
+      )
+      const searchData = await searchRes.json()
+      customerId = searchData.data?.[0]?.id
     }
+    if (!customerId) throw new Error('Erro ao criar cliente no Asaas: ' + JSON.stringify(customer.errors))
 
-    // Data de vencimento: amanhã
-    const dueDate = new Date()
-    dueDate.setDate(dueDate.getDate() + 1)
-    const dueDateStr = dueDate.toISOString().split('T')[0]
+    // 2. Cria assinatura recorrente mensal (cliente escolhe PIX, Boleto ou Cartão na página do Asaas)
+    const nextDueDate = new Date()
+    nextDueDate.setDate(nextDueDate.getDate() + 1)
+    const dueDateStr = nextDueDate.toISOString().split('T')[0]
 
-    // Cria cobrança PIX
-    const payRes = await fetch('https://api.asaas.com/v3/payments', {
+    const subRes = await fetch('https://api.asaas.com/v3/subscriptions', {
       method: 'POST',
       headers: { 'access_token': asaasToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        customer: customer.id,
-        billingType: 'PIX',
-        value: planoInfo.valor,
-        dueDate: dueDateStr,
+        customer:    customerId,
+        billingType: 'UNDEFINED',  // cliente escolhe: PIX, Boleto ou Cartão
+        value:       planoInfo.valor,
+        nextDueDate: dueDateStr,
+        cycle:       'MONTHLY',
         description: `Assinatura UaiViu - ${planoInfo.nome}`,
-        externalReference: `uaiviu_${Date.now()}`,
       }),
     })
-    const payment = await payRes.json()
+    const subscription = await subRes.json()
+    if (!subscription.id) throw new Error('Erro ao criar assinatura: ' + JSON.stringify(subscription.errors))
 
-    if (!payment.id) {
-      const msg = payment.errors?.[0]?.description ?? JSON.stringify(payment)
-      throw new Error(`Erro ao criar cobrança no Asaas: ${msg}`)
-    }
+    // 3. Busca a primeira cobrança gerada pela assinatura
+    await new Promise(r => setTimeout(r, 1500)) // Asaas demora ~1s para gerar o primeiro pagamento
+    const paymentsRes = await fetch(
+      `https://api.asaas.com/v3/payments?subscription=${subscription.id}&limit=1`,
+      { headers: { 'access_token': asaasToken } }
+    )
+    const paymentsData = await paymentsRes.json()
+    const firstPayment = paymentsData.data?.[0]
 
-    // Busca QR Code PIX
-    const pixRes = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`, {
-      headers: { 'access_token': asaasToken },
-    })
-    const pixData = await pixRes.json()
+    const invoiceUrl = firstPayment?.invoiceUrl ?? `https://www.asaas.com/i/${subscription.id}`
 
-    // Salva assinante pendente no Supabase
+    // 4. Salva no Supabase como pendente
     await supabase.from('assinaturas').insert({
       nome,
       email,
       telefone,
+      cpf_cnpj:              cpfCnpjLimpo,
       plano,
-      valor: planoInfo.valor,
-      asaas_customer_id: customer.id,
-      asaas_payment_id: payment.id,
-      status: 'pendente',
+      valor:                 planoInfo.valor,
+      asaas_customer_id:     customerId,
+      asaas_subscription_id: subscription.id,
+      asaas_payment_id:      firstPayment?.id ?? null,
+      status:                'pendente',
     })
 
     return new Response(
       JSON.stringify({
-        success: true,
-        paymentId: payment.id,
-        invoiceUrl: payment.invoiceUrl,
-        pixQrCode: pixData.encodedImage,   // base64 da imagem
-        pixCopyPaste: pixData.payload,      // chave copia-e-cola
-        valor: planoInfo.valor,
-        plano: planoInfo.nome,
+        success:    true,
+        invoiceUrl, // página Asaas onde cliente escolhe PIX / Boleto / Cartão
+        valor:      planoInfo.valor,
+        plano:      planoInfo.nome,
       }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } }
     )
+
   } catch (err) {
     console.error('create-payment error:', err)
     return new Response(
