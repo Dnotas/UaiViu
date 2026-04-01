@@ -300,8 +300,11 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
 
 // ─── API endpoint: boletos-vencidos (com juros recalculados) ──────────────────
 
-export const getBoletosVencidos = async (req: Request, res: Response): Promise<Response> => {
+export const getBoletosVencidos = async (req: Request, res: Response): Promise<void> => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const archiver = require("archiver");
+
     const { whatsappId } = req.params;
     const { cpfCnpj, month } = req.query as Record<string, string>;
 
@@ -314,39 +317,37 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<R
       { status: "OVERDUE", month: month || null }
     );
 
-    if (!payments || payments.length === 0) {
-      throw new AppError("Nenhum boleto vencido encontrado para os filtros informados.", 404);
+    const boletos = payments.filter(p => p.billingType === "BOLETO" && p.bankSlipUrl);
+    if (boletos.length === 0) throw new AppError("Nenhum boleto vencido com PDF disponível.", 404);
+
+    // Baixa todos os PDFs
+    const pdfs: { buffer: Buffer; fileName: string }[] = [];
+    for (const p of boletos) {
+      const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+      if (!pdfBuffer) continue;
+      pdfs.push({ buffer: pdfBuffer, fileName: buildBoletoPdfName(customer.name, p.dueDate, customer.cpfCnpj) });
     }
 
-    // Para cada boleto vencido, busca detalhes completos (fine/interest) e recalcula
-    const boletos = await Promise.all(
-      payments
-        .filter(p => p.billingType === "BOLETO")
-        .map(async p => {
-          const full = await getPaymentById(asaasConfig.token, asaasConfig.environment, p.id);
-          const payment = full || p;
-          const calc = calcularValorAtualizado(payment);
+    if (pdfs.length === 0) throw new AppError("Não foi possível baixar nenhum PDF.", 502);
 
-          return {
-            paymentId: payment.id,
-            dueDate: payment.dueDate,
-            diasAtraso: calc.diasAtraso,
-            valorOriginal: formatCurrency(calc.valorOriginal),
-            multaValor: formatCurrency(calc.multaValor),
-            jurosValor: formatCurrency(calc.jurosValor),
-            valorAtualizado: formatCurrency(calc.valorAtualizado),
-            status: payment.status,
-            bankSlipUrl: payment.bankSlipUrl || null,
-            linhaDigitavel: payment.identificationField || null,
-          };
-        })
-    );
+    // Um boleto → PDF direto
+    if (pdfs.length === 1) {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${pdfs[0].fileName}"`);
+      res.send(pdfs[0].buffer);
+      return;
+    }
 
-    return res.json({
-      customer: { id: customer.id, name: customer.name, cpfCnpj: customer.cpfCnpj },
-      total: boletos.length,
-      boletos,
-    });
+    // Vários boletos → ZIP
+    const zipName = `boletos_vencidos_${customer.cpfCnpj?.replace(/\D/g, "") || "cliente"}${month ? `_${month}` : ""}.zip`;
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
+    const archive = archiver("zip", { zlib: { level: 6 } });
+    archive.pipe(res);
+    for (const { buffer, fileName } of pdfs) {
+      archive.append(buffer, { name: fileName });
+    }
+    await archive.finalize();
   } catch (err: any) {
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
