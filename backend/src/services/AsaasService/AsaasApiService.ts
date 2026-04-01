@@ -136,9 +136,22 @@ export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<s
     const data = await pdfParse(pdfBuffer);
     const text: string = data.text || "";
 
-    // Padrão: 46191.11000 00000.000042 20518.746019 5 14220000039700
-    const match = text.match(/\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14}/);
-    if (match) return match[0].replace(/\s+/g, " ").trim();
+    // Padrão 1 (formatado): 46191.11000 00000.000042 20518.746019 5 14220000039700
+    const p1 = text.match(/\d{5}[\.\s]\d{5}[\s]+\d{5}[\.\s]\d{6}[\s]+\d{5}[\.\s]\d{6}[\s]+\d[\s]+\d{14}/);
+    if (p1) return p1[0].replace(/\s+/g, " ").trim();
+
+    // Padrão 2 (sem espaço entre grupos): 4619111000 0000000004202 0518746019 5 14220000039700
+    const p2 = text.match(/\d{10}[\s]+\d{13}[\s]+\d{10}[\s]+\d[\s]+\d{14}/);
+    if (p2) return p2[0].replace(/\s+/g, " ").trim();
+
+    // Padrão 3 (linha digitável label no PDF)
+    const p3 = text.match(/[Ll]inha\s+[Dd]igit[aá]vel[\s:]+([0-9][0-9\s\.]{40,60})/);
+    if (p3) return p3[1].replace(/\s+/g, " ").trim();
+
+    // Padrão 4 (47 dígitos seguidos — código de barras bruto)
+    const p4 = text.replace(/\s/g, "").match(/\d{47}/);
+    if (p4) return p4[0];
+
     return null;
   } catch {
     return null;
