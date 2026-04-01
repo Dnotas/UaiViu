@@ -80,19 +80,21 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
 
     const companyId = whatsapp.companyId;
 
-    // Find active Asaas config for this company
-    const asaasConfig = await AsaasConfig.findOne({
+    // Busca em todos os tokens ativos até achar o cliente
+    const allConfigs = await AsaasConfig.findAll({
       where: { companyId, active: true },
       order: [["createdAt", "ASC"]],
     });
-    if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada. Cadastre um token Asaas.", 404);
+    if (!allConfigs.length) throw new AppError("Nenhuma configuração Asaas ativa encontrada. Cadastre um token Asaas.", 404);
 
-    // Find customer in Asaas
-    const customers = await findCustomerByCpfCnpj(asaasConfig.token, asaasConfig.environment, cpfCnpj);
-    if (!customers || customers.length === 0) {
-      throw new AppError(`Nenhum cliente encontrado no Asaas com o CPF/CNPJ informado: ${cpfCnpj}`, 404);
+    let asaasConfig = allConfigs[0];
+    let foundCustomers: any[] = [];
+    for (const cfg of allConfigs) {
+      const result = await findCustomerByCpfCnpj(cfg.token, cfg.environment, cpfCnpj);
+      if (result && result.length > 0) { asaasConfig = cfg; foundCustomers = result; break; }
     }
-    const customer = customers[0];
+    if (!foundCustomers.length) throw new AppError(`Nenhum cliente encontrado no Asaas com o CPF/CNPJ: ${cpfCnpj}`, 404);
+    const customer = foundCustomers[0];
 
     // Get payments
     const payments = await getPaymentsByCustomer(
@@ -173,18 +175,21 @@ const resolveAsaasConfigAndCustomer = async (whatsappId: string, cpfCnpj: string
   if (!whatsapp) throw new AppError("Conexão WhatsApp não encontrada", 404);
   const companyId = whatsapp.companyId;
 
-  const asaasConfig = await AsaasConfig.findOne({
+  const allConfigs = await AsaasConfig.findAll({
     where: { companyId, active: true },
     order: [["createdAt", "ASC"]],
   });
-  if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada. Cadastre um token Asaas.", 404);
+  if (!allConfigs.length) throw new AppError("Nenhuma configuração Asaas ativa encontrada. Cadastre um token Asaas.", 404);
 
-  const customers = await findCustomerByCpfCnpj(asaasConfig.token, asaasConfig.environment, cpfCnpj);
-  if (!customers || customers.length === 0) {
-    throw new AppError(`Nenhum cliente encontrado no Asaas com o CPF/CNPJ informado: ${cpfCnpj}`, 404);
+  // Testa cada token até achar o cliente
+  for (const cfg of allConfigs) {
+    const customers = await findCustomerByCpfCnpj(cfg.token, cfg.environment, cpfCnpj);
+    if (customers && customers.length > 0) {
+      return { asaasConfig: cfg, customer: customers[0] };
+    }
   }
 
-  return { asaasConfig, customer: customers[0] };
+  throw new AppError(`Nenhum cliente encontrado no Asaas com o CPF/CNPJ informado: ${cpfCnpj}`, 404);
 };
 
 // ─── API endpoint: get-boleto (retorna o PDF) ─────────────────────────────────
@@ -366,20 +371,27 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
     if (!whatsapp) throw new AppError("Conexão WhatsApp não encontrada", 404);
     const companyId = whatsapp.companyId;
 
-    const asaasConfig = await AsaasConfig.findOne({
+    const allConfigs = await AsaasConfig.findAll({
       where: { companyId, active: true },
       order: [["createdAt", "ASC"]],
     });
-    if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada", 404);
+    if (!allConfigs.length) throw new AppError("Nenhuma configuração Asaas ativa encontrada", 404);
 
-    const payments = await getAllOverduePayments(asaasConfig.token, asaasConfig.environment, month || undefined);
-    if (!payments || payments.length === 0) throw new AppError("Nenhum boleto vencido encontrado.", 404);
+    // Consulta todos os tokens e junta os resultados
+    const allPayments: any[] = [];
+    for (const cfg of allConfigs) {
+      const result = await getAllOverduePayments(cfg.token, cfg.environment, month || undefined);
+      allPayments.push(...result.map(p => ({ ...p, _cfgToken: cfg.token, _cfgEnv: cfg.environment })));
+    }
 
-    // Cache de clientes
+    const payments = allPayments;
+    if (!payments.length) throw new AppError("Nenhum boleto vencido encontrado.", 404);
+
+    // Cache de clientes — usa o token do próprio pagamento
     const customerCache: Record<string, any> = {};
-    const getCustomer = async (customerId: string) => {
+    const getCustomer = async (customerId: string, token: string, environment: string) => {
       if (!customerCache[customerId]) {
-        customerCache[customerId] = await getCustomerById(asaasConfig.token, asaasConfig.environment, customerId);
+        customerCache[customerId] = await getCustomerById(token, environment, customerId);
       }
       return customerCache[customerId];
     };
@@ -388,7 +400,7 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
     const clientesMap: Record<string, { name: string; cpfCnpj: string; totalBoletos: number; totalVencido: number }> = {};
 
     for (const p of payments) {
-      const customer = await getCustomer(p.customer);
+      const customer = await getCustomer(p.customer, p._cfgToken, p._cfgEnv);
       const cpfCnpj = customer?.cpfCnpj || p.customer;
       const calc = calcularValorAtualizado(p);
 
