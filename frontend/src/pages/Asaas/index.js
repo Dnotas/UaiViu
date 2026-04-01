@@ -58,7 +58,8 @@ const AsaasPage = () => {
   const [saving, setSaving] = useState(false);
 
   const getEndpoint = () => process.env.REACT_APP_BACKEND_URL + "/api/asaas/send-boleto";
-  const getBaseUrl = () => process.env.REACT_APP_BACKEND_URL + "/api/asaas";
+  const getEndpointBoleto = () => process.env.REACT_APP_BACKEND_URL + "/api/asaas/boleto";
+  const getEndpointLinha = () => process.env.REACT_APP_BACKEND_URL + "/api/asaas/linha-digitavel";
 
   useEffect(() => {
     loadConfigs();
@@ -338,36 +339,36 @@ const AsaasPage = () => {
       {/* ─── SEÇÃO 3: BAIXAR BOLETO PDF ───────────────────────────────────── */}
       <Divider className={classes.section} style={{ marginTop: 32 }} />
       <Typography variant="h6" color="primary">3. Baixar PDF do Boleto</Typography>
-      <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
-        Retorna o arquivo PDF do boleto diretamente. Busca por CPF/CNPJ, sem enviar pelo WhatsApp.
-        O nome do arquivo segue o padrão <b>BOLETO NOME DO CLIENTE DD-MM-YYYY.pdf</b>.
-      </Typography>
 
       <Grid container spacing={4} style={{ marginTop: 8 }}>
-        <Grid item xs={12}>
+        <Grid item xs={12} sm={6}>
           <Typography component="div" className={classes.elementMargin}>
-            <b>Endpoint:</b> {getBaseUrl()}/<i style={{ color: "#1976d2" }}>{"{whatsappId}"}</i>/boleto<br />
+            <p>Retorna o arquivo PDF do boleto informando o CPF/CNPJ do cliente. Não envia pelo WhatsApp — o arquivo é devolvido direto na resposta.</p>
+            <b>Endpoint:</b> {getEndpointBoleto()}<br />
             <b>Método:</b> GET<br />
-            <b>Headers:</b> Authorization: Bearer &lt;token da conexão WhatsApp&gt;<br />
+            <b>Headers:</b> Authorization (Bearer token da conexão WhatsApp)<br />
             <br />
             <b>Parâmetros (query string):</b>
-            <ul>
-              <li><b>cpfCnpj</b> (obrigatório): CPF ou CNPJ do cliente — com ou sem máscara</li>
-              <li><b>month</b> (opcional): formato <code>YYYY-MM</code> — filtra por mês de vencimento</li>
-              <li><b>status</b> (opcional): <code>PENDING</code>, <code>OVERDUE</code>, <code>ALL</code> (padrão: ALL)</li>
-            </ul>
-            <b>Exemplo de chamada:</b>
             <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 4, fontSize: "0.8rem", overflowX: "auto" }}>
-{`GET ${getBaseUrl()}/{whatsappId}/boleto?cpfCnpj=12345678000195&month=2026-04&status=PENDING
-Authorization: Bearer SEU_TOKEN_WHATSAPP`}
+{`${getEndpointBoleto()}
+  ?cpfCnpj=12345678000195
+  &status=PENDING
+  &month=2026-04`}
             </pre>
-            <b>Resposta:</b> arquivo PDF com o nome <code>BOLETO NOME DO CLIENTE DD-MM-YYYY.pdf</code><br />
-            <br />
-            <b>Observações:</b>
+            <b>Parâmetros:</b>
             <ul>
-              <li>Se houver mais de um boleto no filtro, retorna o <b>primeiro encontrado</b> — use <b>month + status</b> para refinar</li>
-              <li>Retorna erro 404 se nenhum boleto com PDF disponível for encontrado</li>
-              <li>Retorna erro 400 se o pagamento não for do tipo BOLETO</li>
+              <li><b>cpfCnpj</b> (obrigatório): CPF (11 dígitos) ou CNPJ (14 dígitos) — com ou sem máscara</li>
+              <li><b>status</b> (opcional): <code>PENDING</code>, <code>OVERDUE</code>, <code>RECEIVED</code>, <code>CONFIRMED</code>, <code>ALL</code> (padrão: ALL)</li>
+              <li><b>month</b> (opcional): formato <code>YYYY-MM</code> — filtra por mês de vencimento</li>
+            </ul>
+            <b>Resposta:</b> arquivo PDF com nome no padrão <code>BOLETO NOME DO CLIENTE DD-MM-YYYY.pdf</code><br />
+            <br />
+            <b>Observações importantes:</b>
+            <ul>
+              <li>O token do Header é o <b>token da conexão WhatsApp</b> (o mesmo usado na API de mensagens)</li>
+              <li>O <b>token Asaas</b> é configurado na Seção 1 acima e é usado automaticamente</li>
+              <li>Se houver mais de um boleto, retorna o <b>primeiro encontrado</b> — use <b>month</b> para refinar</li>
+              <li>CPF/CNPJ deve estar cadastrado no seu Asaas para o cliente ser encontrado</li>
             </ul>
           </Typography>
         </Grid>
@@ -376,28 +377,28 @@ Authorization: Bearer SEU_TOKEN_WHATSAPP`}
       {/* ─── SEÇÃO 4: LINHA DIGITÁVEL ─────────────────────────────────────── */}
       <Divider className={classes.section} style={{ marginTop: 32 }} />
       <Typography variant="h6" color="primary">4. Buscar Linha Digitável</Typography>
-      <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
-        Retorna em JSON a linha digitável de todos os boletos encontrados para o CPF/CNPJ informado.
-      </Typography>
 
       <Grid container spacing={4} style={{ marginTop: 8 }}>
-        <Grid item xs={12}>
+        <Grid item xs={12} sm={6}>
           <Typography component="div" className={classes.elementMargin}>
-            <b>Endpoint:</b> {getBaseUrl()}/<i style={{ color: "#1976d2" }}>{"{whatsappId}"}</i>/linha-digitavel<br />
+            <p>Retorna a linha digitável do(s) boleto(s) do cliente informando o CPF/CNPJ. Útil para integrar com outros sistemas de envio.</p>
+            <b>Endpoint:</b> {getEndpointLinha()}<br />
             <b>Método:</b> GET<br />
-            <b>Headers:</b> Authorization: Bearer &lt;token da conexão WhatsApp&gt;<br />
+            <b>Headers:</b> Authorization (Bearer token da conexão WhatsApp)<br />
             <br />
             <b>Parâmetros (query string):</b>
-            <ul>
-              <li><b>cpfCnpj</b> (obrigatório): CPF ou CNPJ do cliente — com ou sem máscara</li>
-              <li><b>month</b> (opcional): formato <code>YYYY-MM</code> — filtra por mês de vencimento</li>
-              <li><b>status</b> (opcional): <code>PENDING</code>, <code>OVERDUE</code>, <code>ALL</code> (padrão: ALL)</li>
-            </ul>
-            <b>Exemplo de chamada:</b>
             <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 4, fontSize: "0.8rem", overflowX: "auto" }}>
-{`GET ${getBaseUrl()}/{whatsappId}/linha-digitavel?cpfCnpj=12345678000195&month=2026-04
-Authorization: Bearer SEU_TOKEN_WHATSAPP`}
+{`${getEndpointLinha()}
+  ?cpfCnpj=12345678000195
+  &status=PENDING
+  &month=2026-04`}
             </pre>
+            <b>Parâmetros:</b>
+            <ul>
+              <li><b>cpfCnpj</b> (obrigatório): CPF (11 dígitos) ou CNPJ (14 dígitos) — com ou sem máscara</li>
+              <li><b>status</b> (opcional): <code>PENDING</code>, <code>OVERDUE</code>, <code>RECEIVED</code>, <code>CONFIRMED</code>, <code>ALL</code> (padrão: ALL)</li>
+              <li><b>month</b> (opcional): formato <code>YYYY-MM</code> — filtra por mês de vencimento</li>
+            </ul>
             <b>Exemplo de resposta:</b>
             <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 4, fontSize: "0.8rem", overflowX: "auto" }}>
 {`{
@@ -418,11 +419,12 @@ Authorization: Bearer SEU_TOKEN_WHATSAPP`}
   ]
 }`}
             </pre>
-            <b>Observações:</b>
+            <b>Observações importantes:</b>
             <ul>
-              <li>Retorna <b>todos</b> os boletos encontrados no filtro (não apenas o primeiro)</li>
-              <li>A linha digitável (<code>identificationField</code>) pode não estar disponível em cobranças recém-criadas</li>
-              <li>Retorna erro 404 se nenhum boleto com linha digitável disponível for encontrado</li>
+              <li>O token do Header é o <b>token da conexão WhatsApp</b> (o mesmo usado na API de mensagens)</li>
+              <li>O <b>token Asaas</b> é configurado na Seção 1 acima e é usado automaticamente</li>
+              <li>Retorna <b>todos</b> os boletos encontrados no filtro</li>
+              <li>CPF/CNPJ deve estar cadastrado no seu Asaas para o cliente ser encontrado</li>
             </ul>
           </Typography>
         </Grid>

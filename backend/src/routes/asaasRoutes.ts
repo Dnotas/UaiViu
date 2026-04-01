@@ -13,7 +13,7 @@ routes.delete("/asaas/configs/:id", isAuth, AsaasController.deleteConfig);
 
 // External API (requires whatsapp token, same as messages API)
 routes.post("/api/asaas/send-boleto", tokenAuth, AsaasController.sendBoleto);
-routes.get("/api/asaas/:whatsappId/boleto", tokenAuth, AsaasController.getBoletoPdf);
-routes.get("/api/asaas/:whatsappId/linha-digitavel", tokenAuth, AsaasController.getLinhaDigitavel);
+routes.get("/api/asaas/boleto", tokenAuth, AsaasController.getBoletoPdf);
+routes.get("/api/asaas/linha-digitavel", tokenAuth, AsaasController.getLinhaDigitavel);
 
 export default routes;
