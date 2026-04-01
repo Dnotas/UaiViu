@@ -237,23 +237,33 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
     );
 
     const boletosRaw = payments.filter(p => p.billingType === "BOLETO");
+    console.log(`[ASAAS DEBUG] Total boletos encontrados: ${boletosRaw.length}`);
 
     const boletos = await Promise.all(
       boletosRaw.map(async p => {
+        console.log(`[ASAAS DEBUG] payment ${p.id} | identificationField: ${p.identificationField} | bankSlipUrl: ${p.bankSlipUrl}`);
+
         // 1. Tenta pelo campo da listagem
         let linhaDigitavel: string | null = p.identificationField || null;
 
         // 2. Tenta buscando o pagamento individualmente
         if (!linhaDigitavel) {
           const full = await getPaymentById(asaasConfig.token, asaasConfig.environment, p.id);
+          console.log(`[ASAAS DEBUG] busca individual ${p.id} | identificationField: ${full?.identificationField} | bankSlipUrl: ${full?.bankSlipUrl}`);
           linhaDigitavel = full?.identificationField || null;
+
+          // usa bankSlipUrl da busca individual se o da listagem estava vazio
+          if (!p.bankSlipUrl && full?.bankSlipUrl) p.bankSlipUrl = full.bankSlipUrl;
         }
 
         // 3. Último recurso: extrai o texto do PDF do boleto
         if (!linhaDigitavel && p.bankSlipUrl) {
+          console.log(`[ASAAS DEBUG] tentando extrair do PDF: ${p.bankSlipUrl}`);
           const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+          console.log(`[ASAAS DEBUG] pdfBuffer obtido: ${pdfBuffer ? pdfBuffer.length + " bytes" : "null"}`);
           if (pdfBuffer) {
             linhaDigitavel = await extractLinhaDigitavelFromPdf(pdfBuffer);
+            console.log(`[ASAAS DEBUG] linhaDigitavel extraída do PDF: ${linhaDigitavel}`);
           }
         }
 
