@@ -135,6 +135,7 @@ export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<s
     const pdfParse = require("pdf-parse");
     const data = await pdfParse(pdfBuffer);
     const text: string = data.text || "";
+    console.log("[PDF-PARSE] Texto extraído do boleto:", JSON.stringify(text.slice(0, 500)));
 
     // Padrão 1 (com pontos): 46191.11000 00000.000042 15221.865015 2 13910000039700
     const p1 = text.match(/\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14}/);
