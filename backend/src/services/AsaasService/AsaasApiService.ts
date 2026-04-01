@@ -39,11 +39,14 @@ export const getPaymentsByCustomer = async (
   }
 
   if (filters.month) {
-    const [year, month] = filters.month.split("-");
-    const pad = (n: string) => n.padStart(2, "0");
-    const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-    params["dueDate[ge]"] = `${year}-${pad(month)}-01`;
-    params["dueDate[le]"] = `${year}-${pad(month)}-${daysInMonth}`;
+    const parts = filters.month.split("-");
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      const [year, month] = parts;
+      const pad = (n: string) => n.padStart(2, "0");
+      const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+      params["dueDate[ge]"] = `${year}-${pad(month)}-01`;
+      params["dueDate[le]"] = `${year}-${pad(month)}-${daysInMonth}`;
+    }
   }
 
   const { data } = await axios.get(`${baseUrl}/payments`, {
