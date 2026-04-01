@@ -136,21 +136,29 @@ export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<s
     const data = await pdfParse(pdfBuffer);
     const text: string = data.text || "";
 
-    // Padrão 1 (formatado): 46191.11000 00000.000042 20518.746019 5 14220000039700
-    const p1 = text.match(/\d{5}[\.\s]\d{5}[\s]+\d{5}[\.\s]\d{6}[\s]+\d{5}[\.\s]\d{6}[\s]+\d[\s]+\d{14}/);
+    // Padrão 1 (com pontos): 46191.11000 00000.000042 15221.865015 2 13910000039700
+    const p1 = text.match(/\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14}/);
     if (p1) return p1[0].replace(/\s+/g, " ").trim();
 
-    // Padrão 2 (sem espaço entre grupos): 4619111000 0000000004202 0518746019 5 14220000039700
-    const p2 = text.match(/\d{10}[\s]+\d{13}[\s]+\d{10}[\s]+\d[\s]+\d{14}/);
+    // Padrão 2 (sem pontos, com espaços): 4619111000 0000000004215221865015 2 13910000039700
+    const p2 = text.match(/\d{10}\s+\d{11}\s*\d{11}\s+\d\s+\d{14}/);
     if (p2) return p2[0].replace(/\s+/g, " ").trim();
 
-    // Padrão 3 (linha digitável label no PDF)
-    const p3 = text.match(/[Ll]inha\s+[Dd]igit[aá]vel[\s:]+([0-9][0-9\s\.]{40,60})/);
-    if (p3) return p3[1].replace(/\s+/g, " ").trim();
+    // Padrão 3 (após label "Linha digitável")
+    const p3 = text.match(/[Ll]inha\s+[Dd]igit[aá]vel[\s\S]{0,10}?(\d[\d\s\.]{44,60}\d)/);
+    if (p3) {
+      const candidate = p3[1].replace(/\s+/g, " ").trim();
+      if (candidate.replace(/[\s\.]/g, "").length >= 47) return candidate;
+    }
 
-    // Padrão 4 (47 dígitos seguidos — código de barras bruto)
-    const p4 = text.replace(/\s/g, "").match(/\d{47}/);
-    if (p4) return p4[0];
+    // Padrão 4 (47 dígitos corridos no texto sem espaços)
+    const stripped = text.replace(/[^\d]/g, "");
+    const p4 = stripped.match(/\d{47}/);
+    if (p4) {
+      // Formata: XXXXX.XXXXX XXXXX.XXXXXX XXXXX.XXXXXX X XXXXXXXXXXXXXX
+      const d = p4[0];
+      return `${d.slice(0,5)}.${d.slice(5,10)} ${d.slice(10,15)}.${d.slice(15,21)} ${d.slice(21,26)}.${d.slice(26,32)} ${d[32]} ${d.slice(33)}`;
+    }
 
     return null;
   } catch {
