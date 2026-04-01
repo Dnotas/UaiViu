@@ -6,6 +6,7 @@ import AppError from "../errors/AppError";
 import {
   findCustomerByCpfCnpj,
   getPaymentsByCustomer,
+  getPaymentById,
   buildBoletoMessage,
   buildBoletoPdfName,
   downloadBoletoPdf,
@@ -234,15 +235,25 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
       { status: status || "ALL", month: month || null }
     );
 
-    const boletos = payments
-      .filter(p => p.billingType === "BOLETO")
-      .map(p => ({
-        paymentId: p.id,
-        linhaDigitavel: p.identificationField || null,
-        value: p.value,
-        dueDate: p.dueDate,
-        status: p.status,
-      }));
+    const boletosRaw = payments.filter(p => p.billingType === "BOLETO");
+
+    // Para boletos sem identificationField na listagem, busca individualmente
+    const boletos = await Promise.all(
+      boletosRaw.map(async p => {
+        let linhaDigitavel = p.identificationField || null;
+        if (!linhaDigitavel) {
+          const full = await getPaymentById(asaasConfig.token, asaasConfig.environment, p.id);
+          linhaDigitavel = full?.identificationField || null;
+        }
+        return {
+          paymentId: p.id,
+          linhaDigitavel,
+          value: p.value,
+          dueDate: p.dueDate,
+          status: p.status,
+        };
+      })
+    );
 
     if (boletos.length === 0) {
       throw new AppError("Nenhum boleto encontrado para os filtros informados.", 404);
