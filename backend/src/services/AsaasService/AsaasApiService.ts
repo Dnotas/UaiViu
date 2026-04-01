@@ -41,7 +41,10 @@ export const getPaymentsByCustomer = async (
   if (filters.month) {
     const parts = filters.month.split("-");
     if (parts.length === 2 && parts[0] && parts[1]) {
-      const [year, month] = parts;
+      // Aceita MM-YYYY e YYYY-MM
+      const [year, month] = parts[0].length === 4
+        ? [parts[0], parts[1]]   // YYYY-MM
+        : [parts[1], parts[0]];  // MM-YYYY
       const pad = (n: string) => n.padStart(2, "0");
       const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
       params["dueDate[ge]"] = `${year}-${pad(month)}-01`;
@@ -127,6 +130,36 @@ export const buildBoletoPdfName = (customerName: string, dueDate: string): strin
   const dateStr = d && m && y ? `${d}-${m}-${y}` : dueDate || "sem-data";
   const safeName = (customerName || "CLIENTE").toUpperCase().replace(/[^A-Z0-9\s]/g, "").trim();
   return `BOLETO ${safeName} ${dateStr}.pdf`;
+};
+
+export const calcularValorAtualizado = (payment: any): {
+  valorOriginal: number;
+  multaValor: number;
+  jurosValor: number;
+  valorAtualizado: number;
+  diasAtraso: number;
+} => {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const vencimento = new Date(payment.dueDate + "T00:00:00");
+  const diasAtraso = Math.max(0, Math.floor((hoje.getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24)));
+
+  const valorOriginal: number = payment.value || 0;
+
+  // Usa interestValue do Asaas se já vier calculado
+  if (payment.interestValue != null && payment.interestValue > 0) {
+    return { valorOriginal, multaValor: 0, jurosValor: payment.interestValue, valorAtualizado: valorOriginal + payment.interestValue, diasAtraso };
+  }
+
+  // Calcula manualmente a partir das configurações do boleto
+  const multaPerc: number = payment.fine?.value || 0;       // % única no vencimento
+  const jurosPercMensal: number = payment.interest?.value || 0; // % ao mês
+
+  const multaValor = diasAtraso > 0 ? valorOriginal * (multaPerc / 100) : 0;
+  const jurosValor = diasAtraso > 0 ? valorOriginal * (jurosPercMensal / 100 / 30) * diasAtraso : 0;
+  const valorAtualizado = valorOriginal + multaValor + jurosValor;
+
+  return { valorOriginal, multaValor, jurosValor, valorAtualizado, diasAtraso };
 };
 
 export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<string | null> => {

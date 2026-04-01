@@ -10,6 +10,8 @@ import {
   buildBoletoMessage,
   buildBoletoPdfName,
   downloadBoletoPdf,
+  calcularValorAtualizado,
+  formatCurrency,
   extractLinhaDigitavelFromPdf,
 } from "../services/AsaasService/AsaasApiService";
 import GetTicketWbot from "../helpers/GetTicketWbot";
@@ -290,5 +292,61 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
     throw new AppError(err?.message || "Erro ao buscar linha digitável", 500);
+  }
+};
+
+// ─── API endpoint: boletos-vencidos (com juros recalculados) ──────────────────
+
+export const getBoletosVencidos = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { whatsappId } = req.params;
+    const { cpfCnpj, month } = req.query as Record<string, string>;
+
+    const { asaasConfig, customer } = await resolveAsaasConfigAndCustomer(whatsappId, cpfCnpj);
+
+    const payments = await getPaymentsByCustomer(
+      asaasConfig.token,
+      asaasConfig.environment,
+      customer.id,
+      { status: "OVERDUE", month: month || null }
+    );
+
+    if (!payments || payments.length === 0) {
+      throw new AppError("Nenhum boleto vencido encontrado para os filtros informados.", 404);
+    }
+
+    // Para cada boleto vencido, busca detalhes completos (fine/interest) e recalcula
+    const boletos = await Promise.all(
+      payments
+        .filter(p => p.billingType === "BOLETO")
+        .map(async p => {
+          const full = await getPaymentById(asaasConfig.token, asaasConfig.environment, p.id);
+          const payment = full || p;
+          const calc = calcularValorAtualizado(payment);
+
+          return {
+            paymentId: payment.id,
+            dueDate: payment.dueDate,
+            diasAtraso: calc.diasAtraso,
+            valorOriginal: formatCurrency(calc.valorOriginal),
+            multaValor: formatCurrency(calc.multaValor),
+            jurosValor: formatCurrency(calc.jurosValor),
+            valorAtualizado: formatCurrency(calc.valorAtualizado),
+            status: payment.status,
+            bankSlipUrl: payment.bankSlipUrl || null,
+            linhaDigitavel: payment.identificationField || null,
+          };
+        })
+    );
+
+    return res.json({
+      customer: { id: customer.id, name: customer.name, cpfCnpj: customer.cpfCnpj },
+      total: boletos.length,
+      boletos,
+    });
+  } catch (err: any) {
+    Sentry.captureException(err);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || "Erro ao buscar boletos vencidos", 500);
   }
 };

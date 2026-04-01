@@ -15,5 +15,6 @@ routes.delete("/asaas/configs/:id", isAuth, AsaasController.deleteConfig);
 routes.post("/api/asaas/send-boleto", tokenAuth, AsaasController.sendBoleto);
 routes.get("/api/asaas/boleto", tokenAuth, AsaasController.getBoletoPdf);
 routes.get("/api/asaas/linha-digitavel", tokenAuth, AsaasController.getLinhaDigitavel);
+routes.get("/api/asaas/boletos-vencidos", tokenAuth, AsaasController.getBoletosVencidos);
 
 export default routes;
