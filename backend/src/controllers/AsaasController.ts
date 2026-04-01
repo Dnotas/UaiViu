@@ -355,13 +355,10 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<v
   }
 };
 
-// ─── API endpoint: todos-vencidos (ZIP com todos os PDFs) ────────────────────
+// ─── API endpoint: todos-vencidos (lista JSON com nome e CNPJ) ───────────────
 
-export const getTodosBoletosVencidos = async (req: Request, res: Response): Promise<void> => {
+export const getTodosBoletosVencidos = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const archiver = require("archiver");
-
     const { whatsappId } = req.params;
     const { month } = req.query as Record<string, string>;
 
@@ -387,26 +384,39 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
       return customerCache[customerId];
     };
 
-    const zipName = month ? `boletos_vencidos_${month}.zip` : `boletos_vencidos_todos.zip`;
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
-
-    const archive = archiver("zip", { zlib: { level: 6 } });
-    archive.pipe(res);
+    // Agrupa por cliente para não repetir o mesmo cliente
+    const clientesMap: Record<string, { name: string; cpfCnpj: string; totalBoletos: number; totalVencido: number }> = {};
 
     for (const p of payments) {
-      if (!p.bankSlipUrl) continue;
       const customer = await getCustomer(p.customer);
-      const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
-      if (!pdfBuffer) continue;
-      const fileName = buildBoletoPdfName(customer?.name || "CLIENTE", p.dueDate, customer?.cpfCnpj);
-      archive.append(pdfBuffer, { name: fileName });
+      const cpfCnpj = customer?.cpfCnpj || p.customer;
+      const calc = calcularValorAtualizado(p);
+
+      if (!clientesMap[cpfCnpj]) {
+        clientesMap[cpfCnpj] = {
+          name: customer?.name || "Desconhecido",
+          cpfCnpj,
+          totalBoletos: 0,
+          totalVencido: 0,
+        };
+      }
+      clientesMap[cpfCnpj].totalBoletos += 1;
+      clientesMap[cpfCnpj].totalVencido += calc.valorAtualizado;
     }
 
-    await archive.finalize();
+    const clientes = Object.values(clientesMap).map(c => ({
+      ...c,
+      totalVencido: formatCurrency(c.totalVencido),
+    }));
+
+    return res.json({
+      total: clientes.length,
+      filtroMes: month || "todos",
+      clientes,
+    });
   } catch (err: any) {
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
-    throw new AppError(err?.message || "Erro ao gerar ZIP dos boletos vencidos", 500);
+    throw new AppError(err?.message || "Erro ao buscar todos os vencidos", 500);
   }
 };
