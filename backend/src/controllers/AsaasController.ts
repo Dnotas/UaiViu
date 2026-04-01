@@ -235,17 +235,17 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
     );
 
     const boletos = payments
-      .filter(p => p.billingType === "BOLETO" && p.identificationField)
+      .filter(p => p.billingType === "BOLETO")
       .map(p => ({
         paymentId: p.id,
-        linhaDigitavel: p.identificationField,
+        linhaDigitavel: p.identificationField || null,
         value: p.value,
         dueDate: p.dueDate,
         status: p.status,
       }));
 
     if (boletos.length === 0) {
-      throw new AppError("Nenhum boleto com linha digitável disponível encontrado para os filtros informados.", 404);
+      throw new AppError("Nenhum boleto encontrado para os filtros informados.", 404);
     }
 
     return res.json({
