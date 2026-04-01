@@ -95,6 +95,37 @@ export const buildBoletoMessage = (payment: any): string => {
   return msg;
 };
 
+export const getPaymentById = async (
+  token: string,
+  environment: string,
+  paymentId: string
+): Promise<any | null> => {
+  const baseUrl = getBaseUrl(environment);
+  const { data } = await axios.get(`${baseUrl}/payments/${paymentId}`, {
+    headers: buildHeaders(token),
+  });
+  return data || null;
+};
+
+export const getCustomerById = async (
+  token: string,
+  environment: string,
+  customerId: string
+): Promise<any | null> => {
+  const baseUrl = getBaseUrl(environment);
+  const { data } = await axios.get(`${baseUrl}/customers/${customerId}`, {
+    headers: buildHeaders(token),
+  });
+  return data || null;
+};
+
+export const buildBoletoPdfName = (customerName: string, dueDate: string): string => {
+  const [y, m, d] = (dueDate || "").split("-");
+  const dateStr = d && m && y ? `${d}-${m}-${y}` : dueDate || "sem-data";
+  const safeName = (customerName || "CLIENTE").toUpperCase().replace(/[^A-Z0-9\s]/g, "").trim();
+  return `BOLETO ${safeName} ${dateStr}.pdf`;
+};
+
 export const downloadBoletoPdf = async (bankSlipUrl: string): Promise<Buffer | null> => {
   if (!bankSlipUrl) return null;
   try {

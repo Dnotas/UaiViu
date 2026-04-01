@@ -7,6 +7,7 @@ import {
   findCustomerByCpfCnpj,
   getPaymentsByCustomer,
   buildBoletoMessage,
+  buildBoletoPdfName,
   downloadBoletoPdf,
 } from "../services/AsaasService/AsaasApiService";
 import GetTicketWbot from "../helpers/GetTicketWbot";
@@ -129,7 +130,7 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
         if (pdfBuffer) {
           await wbot.sendMessage(numberJid, {
             document: pdfBuffer,
-            fileName: `boleto_${payment.id}.pdf`,
+            fileName: buildBoletoPdfName(customer.name, payment.dueDate),
             mimetype: "application/pdf",
           });
         }
@@ -153,5 +154,108 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
       throw new AppError(`Erro Asaas: ${JSON.stringify(err.response.data)}`, 400);
     }
     throw new AppError(err?.message || "Erro ao enviar cobranças", 500);
+  }
+};
+
+// ─── Helpers compartilhados entre os novos endpoints ─────────────────────────
+
+const resolveAsaasConfigAndCustomer = async (whatsappId: string, cpfCnpj: string) => {
+  if (!cpfCnpj) throw new AppError("CPF/CNPJ é obrigatório", 400);
+
+  const whatsapp = await Whatsapp.findByPk(whatsappId);
+  if (!whatsapp) throw new AppError("Conexão WhatsApp não encontrada", 404);
+  const companyId = whatsapp.companyId;
+
+  const asaasConfig = await AsaasConfig.findOne({
+    where: { companyId, active: true },
+    order: [["createdAt", "ASC"]],
+  });
+  if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada. Cadastre um token Asaas.", 404);
+
+  const customers = await findCustomerByCpfCnpj(asaasConfig.token, asaasConfig.environment, cpfCnpj);
+  if (!customers || customers.length === 0) {
+    throw new AppError(`Nenhum cliente encontrado no Asaas com o CPF/CNPJ informado: ${cpfCnpj}`, 404);
+  }
+
+  return { asaasConfig, customer: customers[0] };
+};
+
+// ─── API endpoint: get-boleto (retorna o PDF) ─────────────────────────────────
+
+export const getBoletoPdf = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { whatsappId } = req.params;
+    const { cpfCnpj, status, month } = req.query as Record<string, string>;
+
+    const { asaasConfig, customer } = await resolveAsaasConfigAndCustomer(whatsappId, cpfCnpj);
+
+    const payments = await getPaymentsByCustomer(
+      asaasConfig.token,
+      asaasConfig.environment,
+      customer.id,
+      { status: status || "ALL", month: month || null }
+    );
+
+    const boletos = payments.filter(p => p.billingType === "BOLETO" && p.bankSlipUrl);
+    if (boletos.length === 0) {
+      throw new AppError("Nenhum boleto com PDF disponível encontrado para os filtros informados.", 404);
+    }
+
+    // Retorna o primeiro boleto encontrado (use month/status para refinar)
+    const payment = boletos[0];
+    const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl);
+    if (!pdfBuffer) throw new AppError("Não foi possível baixar o PDF do boleto", 502);
+
+    const fileName = buildBoletoPdfName(customer.name, payment.dueDate);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
+  } catch (err: any) {
+    Sentry.captureException(err);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || "Erro ao buscar boleto", 500);
+  }
+};
+
+// ─── API endpoint: get-linha-digitavel ────────────────────────────────────────
+
+export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { whatsappId } = req.params;
+    const { cpfCnpj, status, month } = req.query as Record<string, string>;
+
+    const { asaasConfig, customer } = await resolveAsaasConfigAndCustomer(whatsappId, cpfCnpj);
+
+    const payments = await getPaymentsByCustomer(
+      asaasConfig.token,
+      asaasConfig.environment,
+      customer.id,
+      { status: status || "ALL", month: month || null }
+    );
+
+    const boletos = payments
+      .filter(p => p.billingType === "BOLETO" && p.identificationField)
+      .map(p => ({
+        paymentId: p.id,
+        linhaDigitavel: p.identificationField,
+        value: p.value,
+        dueDate: p.dueDate,
+        status: p.status,
+      }));
+
+    if (boletos.length === 0) {
+      throw new AppError("Nenhum boleto com linha digitável disponível encontrado para os filtros informados.", 404);
+    }
+
+    return res.json({
+      customer: { id: customer.id, name: customer.name, cpfCnpj: customer.cpfCnpj },
+      total: boletos.length,
+      boletos,
+    });
+  } catch (err: any) {
+    Sentry.captureException(err);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || "Erro ao buscar linha digitável", 500);
   }
 };
