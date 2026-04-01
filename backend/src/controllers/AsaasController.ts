@@ -10,6 +10,7 @@ import {
   buildBoletoMessage,
   buildBoletoPdfName,
   downloadBoletoPdf,
+  extractLinhaDigitavelFromPdf,
 } from "../services/AsaasService/AsaasApiService";
 import GetTicketWbot from "../helpers/GetTicketWbot";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
@@ -237,14 +238,25 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
 
     const boletosRaw = payments.filter(p => p.billingType === "BOLETO");
 
-    // Para boletos sem identificationField na listagem, busca individualmente
     const boletos = await Promise.all(
       boletosRaw.map(async p => {
-        let linhaDigitavel = p.identificationField || null;
+        // 1. Tenta pelo campo da listagem
+        let linhaDigitavel: string | null = p.identificationField || null;
+
+        // 2. Tenta buscando o pagamento individualmente
         if (!linhaDigitavel) {
           const full = await getPaymentById(asaasConfig.token, asaasConfig.environment, p.id);
           linhaDigitavel = full?.identificationField || null;
         }
+
+        // 3. Último recurso: extrai o texto do PDF do boleto
+        if (!linhaDigitavel && p.bankSlipUrl) {
+          const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+          if (pdfBuffer) {
+            linhaDigitavel = await extractLinhaDigitavelFromPdf(pdfBuffer);
+          }
+        }
+
         return {
           paymentId: p.id,
           linhaDigitavel,

@@ -129,6 +129,22 @@ export const buildBoletoPdfName = (customerName: string, dueDate: string): strin
   return `BOLETO ${safeName} ${dateStr}.pdf`;
 };
 
+export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<string | null> => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pdfParse = require("pdf-parse");
+    const data = await pdfParse(pdfBuffer);
+    const text: string = data.text || "";
+
+    // Padrão: 46191.11000 00000.000042 20518.746019 5 14220000039700
+    const match = text.match(/\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14}/);
+    if (match) return match[0].replace(/\s+/g, " ").trim();
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export const downloadBoletoPdf = async (bankSlipUrl: string): Promise<Buffer | null> => {
   if (!bankSlipUrl) return null;
   try {
