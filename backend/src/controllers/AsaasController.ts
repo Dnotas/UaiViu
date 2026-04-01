@@ -354,10 +354,13 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<R
   }
 };
 
-// ─── API endpoint: todos-vencidos (sem filtro de cliente) ─────────────────────
+// ─── API endpoint: todos-vencidos (ZIP com todos os PDFs) ────────────────────
 
-export const getTodosBoletosVencidos = async (req: Request, res: Response): Promise<Response> => {
+export const getTodosBoletosVencidos = async (req: Request, res: Response): Promise<void> => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const archiver = require("archiver");
+
     const { whatsappId } = req.params;
     const { month } = req.query as Record<string, string>;
 
@@ -372,12 +375,9 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
     if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada", 404);
 
     const payments = await getAllOverduePayments(asaasConfig.token, asaasConfig.environment, month || undefined);
+    if (!payments || payments.length === 0) throw new AppError("Nenhum boleto vencido encontrado.", 404);
 
-    if (!payments || payments.length === 0) {
-      throw new AppError("Nenhum boleto vencido encontrado.", 404);
-    }
-
-    // Cache de clientes para evitar chamadas repetidas
+    // Cache de clientes
     const customerCache: Record<string, any> = {};
     const getCustomer = async (customerId: string) => {
       if (!customerCache[customerId]) {
@@ -386,38 +386,26 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
       return customerCache[customerId];
     };
 
-    const boletos = await Promise.all(
-      payments.map(async p => {
-        const customer = await getCustomer(p.customer);
-        const calc = calcularValorAtualizado(p);
+    const zipName = month ? `boletos_vencidos_${month}.zip` : `boletos_vencidos_todos.zip`;
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
 
-        return {
-          paymentId: p.id,
-          cliente: {
-            id: customer?.id || p.customer,
-            name: customer?.name || "Desconhecido",
-            cpfCnpj: customer?.cpfCnpj || null,
-          },
-          vencimento: formatDate(p.dueDate),
-          diasAtraso: calc.diasAtraso,
-          valorOriginal: formatCurrency(calc.valorOriginal),
-          multaValor: formatCurrency(calc.multaValor),
-          jurosValor: formatCurrency(calc.jurosValor),
-          valorAtualizado: formatCurrency(calc.valorAtualizado),
-          bankSlipUrl: p.bankSlipUrl || null,
-          linhaDigitavel: p.identificationField || null,
-        };
-      })
-    );
+    const archive = archiver("zip", { zlib: { level: 6 } });
+    archive.pipe(res);
 
-    return res.json({
-      total: boletos.length,
-      filtroMes: month || "todos",
-      boletos,
-    });
+    for (const p of payments) {
+      if (!p.bankSlipUrl) continue;
+      const customer = await getCustomer(p.customer);
+      const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+      if (!pdfBuffer) continue;
+      const fileName = buildBoletoPdfName(customer?.name || "CLIENTE", p.dueDate);
+      archive.append(pdfBuffer, { name: fileName });
+    }
+
+    await archive.finalize();
   } catch (err: any) {
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
-    throw new AppError(err?.message || "Erro ao buscar todos os boletos vencidos", 500);
+    throw new AppError(err?.message || "Erro ao gerar ZIP dos boletos vencidos", 500);
   }
 };
