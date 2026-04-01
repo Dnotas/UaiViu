@@ -162,7 +162,8 @@ export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<s
     }
 
     return null;
-  } catch {
+  } catch (err: any) {
+    console.log("[PDF-PARSE] ERRO na extração:", err?.message || err);
     return null;
   }
 };
