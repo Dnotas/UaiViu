@@ -125,11 +125,12 @@ export const getCustomerById = async (
   return data || null;
 };
 
-export const buildBoletoPdfName = (customerName: string, dueDate: string): string => {
+export const buildBoletoPdfName = (customerName: string, dueDate: string, cpfCnpj?: string): string => {
   const [y, m, d] = (dueDate || "").split("-");
   const dateStr = d && m && y ? `${d}-${m}-${y}` : dueDate || "sem-data";
   const safeName = (customerName || "CLIENTE").toUpperCase().replace(/[^A-Z0-9\s]/g, "").trim();
-  return `BOLETO ${safeName} ${dateStr}.pdf`;
+  const doc = cpfCnpj ? ` ${cpfCnpj.replace(/\D/g, "")}` : "";
+  return `BOLETO ${safeName}${doc} ${dateStr}.pdf`;
 };
 
 export const getAllOverduePayments = async (

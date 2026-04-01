@@ -137,7 +137,7 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
         if (pdfBuffer) {
           await wbot.sendMessage(numberJid, {
             document: pdfBuffer,
-            fileName: buildBoletoPdfName(customer.name, payment.dueDate),
+            fileName: buildBoletoPdfName(customer.name, payment.dueDate, customer.cpfCnpj),
             mimetype: "application/pdf",
           });
         }
@@ -213,7 +213,7 @@ export const getBoletoPdf = async (req: Request, res: Response): Promise<void> =
     const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl);
     if (!pdfBuffer) throw new AppError("Não foi possível baixar o PDF do boleto", 502);
 
-    const fileName = buildBoletoPdfName(customer.name, payment.dueDate);
+    const fileName = buildBoletoPdfName(customer.name, payment.dueDate, customer.cpfCnpj);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
@@ -398,7 +398,7 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
       const customer = await getCustomer(p.customer);
       const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
       if (!pdfBuffer) continue;
-      const fileName = buildBoletoPdfName(customer?.name || "CLIENTE", p.dueDate);
+      const fileName = buildBoletoPdfName(customer?.name || "CLIENTE", p.dueDate, customer?.cpfCnpj);
       archive.append(pdfBuffer, { name: fileName });
     }
 
