@@ -11,7 +11,10 @@ import {
   buildBoletoPdfName,
   downloadBoletoPdf,
   calcularValorAtualizado,
+  getAllOverduePayments,
+  getCustomerById,
   formatCurrency,
+  formatDate,
   extractLinhaDigitavelFromPdf,
 } from "../services/AsaasService/AsaasApiService";
 import GetTicketWbot from "../helpers/GetTicketWbot";
@@ -348,5 +351,73 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<R
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
     throw new AppError(err?.message || "Erro ao buscar boletos vencidos", 500);
+  }
+};
+
+// ─── API endpoint: todos-vencidos (sem filtro de cliente) ─────────────────────
+
+export const getTodosBoletosVencidos = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { whatsappId } = req.params;
+    const { month } = req.query as Record<string, string>;
+
+    const whatsapp = await Whatsapp.findByPk(whatsappId);
+    if (!whatsapp) throw new AppError("Conexão WhatsApp não encontrada", 404);
+    const companyId = whatsapp.companyId;
+
+    const asaasConfig = await AsaasConfig.findOne({
+      where: { companyId, active: true },
+      order: [["createdAt", "ASC"]],
+    });
+    if (!asaasConfig) throw new AppError("Nenhuma configuração Asaas ativa encontrada", 404);
+
+    const payments = await getAllOverduePayments(asaasConfig.token, asaasConfig.environment, month || undefined);
+
+    if (!payments || payments.length === 0) {
+      throw new AppError("Nenhum boleto vencido encontrado.", 404);
+    }
+
+    // Cache de clientes para evitar chamadas repetidas
+    const customerCache: Record<string, any> = {};
+    const getCustomer = async (customerId: string) => {
+      if (!customerCache[customerId]) {
+        customerCache[customerId] = await getCustomerById(asaasConfig.token, asaasConfig.environment, customerId);
+      }
+      return customerCache[customerId];
+    };
+
+    const boletos = await Promise.all(
+      payments.map(async p => {
+        const customer = await getCustomer(p.customer);
+        const calc = calcularValorAtualizado(p);
+
+        return {
+          paymentId: p.id,
+          cliente: {
+            id: customer?.id || p.customer,
+            name: customer?.name || "Desconhecido",
+            cpfCnpj: customer?.cpfCnpj || null,
+          },
+          vencimento: formatDate(p.dueDate),
+          diasAtraso: calc.diasAtraso,
+          valorOriginal: formatCurrency(calc.valorOriginal),
+          multaValor: formatCurrency(calc.multaValor),
+          jurosValor: formatCurrency(calc.jurosValor),
+          valorAtualizado: formatCurrency(calc.valorAtualizado),
+          bankSlipUrl: p.bankSlipUrl || null,
+          linhaDigitavel: p.identificationField || null,
+        };
+      })
+    );
+
+    return res.json({
+      total: boletos.length,
+      filtroMes: month || "todos",
+      boletos,
+    });
+  } catch (err: any) {
+    Sentry.captureException(err);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || "Erro ao buscar todos os boletos vencidos", 500);
   }
 };

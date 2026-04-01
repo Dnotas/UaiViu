@@ -132,6 +132,44 @@ export const buildBoletoPdfName = (customerName: string, dueDate: string): strin
   return `BOLETO ${safeName} ${dateStr}.pdf`;
 };
 
+export const getAllOverduePayments = async (
+  token: string,
+  environment: string,
+  month?: string
+): Promise<any[]> => {
+  const baseUrl = getBaseUrl(environment);
+  const params: any = { status: "OVERDUE", billingType: "BOLETO", limit: 100 };
+
+  if (month) {
+    const parts = month.split("-");
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      const [year, mon] = parts[0].length === 4 ? [parts[0], parts[1]] : [parts[1], parts[0]];
+      const pad = (n: string) => n.padStart(2, "0");
+      const daysInMonth = new Date(parseInt(year), parseInt(mon), 0).getDate();
+      params["dueDate[ge]"] = `${year}-${pad(mon)}-01`;
+      params["dueDate[le]"] = `${year}-${pad(mon)}-${daysInMonth}`;
+    }
+  }
+
+  const allPayments: any[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data } = await axios.get(`${baseUrl}/payments`, {
+      headers: buildHeaders(token),
+      params: { ...params, offset },
+    });
+    const items: any[] = data?.data || [];
+    allPayments.push(...items);
+    hasMore = data?.hasMore === true;
+    offset += items.length;
+    if (items.length === 0) hasMore = false;
+  }
+
+  return allPayments;
+};
+
 export const calcularValorAtualizado = (payment: any): {
   valorOriginal: number;
   multaValor: number;

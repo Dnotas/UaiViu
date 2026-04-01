@@ -16,5 +16,6 @@ routes.post("/api/asaas/send-boleto", tokenAuth, AsaasController.sendBoleto);
 routes.get("/api/asaas/boleto", tokenAuth, AsaasController.getBoletoPdf);
 routes.get("/api/asaas/linha-digitavel", tokenAuth, AsaasController.getLinhaDigitavel);
 routes.get("/api/asaas/boletos-vencidos", tokenAuth, AsaasController.getBoletosVencidos);
+routes.get("/api/asaas/todos-vencidos", tokenAuth, AsaasController.getTodosBoletosVencidos);
 
 export default routes;
