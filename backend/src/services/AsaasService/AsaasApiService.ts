@@ -132,8 +132,7 @@ export const buildBoletoPdfName = (customerName: string, dueDate: string): strin
 export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<string | null> => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParseModule = require("pdf-parse");
-    const pdfParse = pdfParseModule.default || pdfParseModule;
+    const pdfParse = require("pdf-parse");
     const data = await pdfParse(pdfBuffer);
     const text: string = data.text || "";
     console.log("[PDF-PARSE] Texto extraído do boleto:", JSON.stringify(text.slice(0, 500)));
