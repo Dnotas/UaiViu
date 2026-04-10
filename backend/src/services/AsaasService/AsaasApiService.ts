@@ -171,6 +171,63 @@ export const getAllOverduePayments = async (
   return allPayments;
 };
 
+export const getAllPaidPayments = async (
+  token: string,
+  environment: string,
+  month?: string
+): Promise<any[]> => {
+  const baseUrl = getBaseUrl(environment);
+
+  const buildParams = (status: string, extraParams: any = {}) => {
+    const params: any = { status, billingType: "BOLETO", limit: 100, ...extraParams };
+    if (month) {
+      const parts = month.split("-");
+      if (parts.length === 2 && parts[0] && parts[1]) {
+        const [year, mon] = parts[0].length === 4 ? [parts[0], parts[1]] : [parts[1], parts[0]];
+        const pad = (n: string) => n.padStart(2, "0");
+        const daysInMonth = new Date(parseInt(year), parseInt(mon), 0).getDate();
+        params["paymentDate[ge]"] = `${year}-${pad(mon)}-01`;
+        params["paymentDate[le]"] = `${year}-${pad(mon)}-${daysInMonth}`;
+      }
+    }
+    return params;
+  };
+
+  const fetchAll = async (status: string): Promise<any[]> => {
+    const allPayments: any[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data } = await axios.get(`${baseUrl}/payments`, {
+        headers: buildHeaders(token),
+        params: { ...buildParams(status), offset },
+      });
+      const items: any[] = data?.data || [];
+      allPayments.push(...items);
+      hasMore = data?.hasMore === true;
+      offset += items.length;
+      if (items.length === 0) hasMore = false;
+    }
+    return allPayments;
+  };
+
+  const [received, confirmed, receivedInCash] = await Promise.all([
+    fetchAll("RECEIVED"),
+    fetchAll("CONFIRMED"),
+    fetchAll("RECEIVED_IN_CASH"),
+  ]);
+
+  // Remove duplicatas por id
+  const seen = new Set<string>();
+  const all = [...received, ...confirmed, ...receivedInCash].filter(p => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  return all;
+};
+
 export const calcularValorAtualizado = (payment: any): {
   valorOriginal: number;
   multaValor: number;

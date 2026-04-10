@@ -12,6 +12,7 @@ import {
   downloadBoletoPdf,
   calcularValorAtualizado,
   getAllOverduePayments,
+  getAllPaidPayments,
   getCustomerById,
   formatCurrency,
   formatDate,
@@ -430,5 +431,93 @@ export const getTodosBoletosVencidos = async (req: Request, res: Response): Prom
     Sentry.captureException(err);
     if (err instanceof AppError) throw err;
     throw new AppError(err?.message || "Erro ao buscar todos os vencidos", 500);
+  }
+};
+
+// ─── API endpoint: todos-pagos (lista JSON com nome, CNPJ e total pago) ──────
+
+export const getTodosPagos = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { whatsappId } = req.params;
+    const { month } = req.query as Record<string, string>;
+
+    const whatsapp = await Whatsapp.findByPk(whatsappId);
+    if (!whatsapp) throw new AppError("Conexão WhatsApp não encontrada", 404);
+    const companyId = whatsapp.companyId;
+
+    const allConfigs = await AsaasConfig.findAll({
+      where: { companyId, active: true },
+      order: [["createdAt", "ASC"]],
+    });
+    if (!allConfigs.length) throw new AppError("Nenhuma configuração Asaas ativa encontrada", 404);
+
+    // Consulta todos os tokens e junta os resultados
+    const allPayments: any[] = [];
+    for (const cfg of allConfigs) {
+      const result = await getAllPaidPayments(cfg.token, cfg.environment, month || undefined);
+      allPayments.push(...result.map(p => ({ ...p, _cfgToken: cfg.token, _cfgEnv: cfg.environment })));
+    }
+
+    if (!allPayments.length) throw new AppError("Nenhum boleto pago encontrado.", 404);
+
+    // Cache de clientes
+    const customerCache: Record<string, any> = {};
+    const getCustomer = async (customerId: string, token: string, environment: string) => {
+      if (!customerCache[customerId]) {
+        customerCache[customerId] = await getCustomerById(token, environment, customerId);
+      }
+      return customerCache[customerId];
+    };
+
+    // Agrupa por cliente
+    const clientesMap: Record<string, {
+      name: string;
+      cpfCnpj: string;
+      totalBoletos: number;
+      totalPago: number;
+      pagamentos: { paymentId: string; valor: string; dataPagamento: string; dataVencimento: string }[];
+    }> = {};
+
+    for (const p of allPayments) {
+      const customer = await getCustomer(p.customer, p._cfgToken, p._cfgEnv);
+      const cpfCnpj = customer?.cpfCnpj || p.customer;
+
+      if (!clientesMap[cpfCnpj]) {
+        clientesMap[cpfCnpj] = {
+          name: customer?.name || "Desconhecido",
+          cpfCnpj,
+          totalBoletos: 0,
+          totalPago: 0,
+          pagamentos: [],
+        };
+      }
+
+      clientesMap[cpfCnpj].totalBoletos += 1;
+      clientesMap[cpfCnpj].totalPago += p.value || 0;
+      clientesMap[cpfCnpj].pagamentos.push({
+        paymentId: p.id,
+        valor: formatCurrency(p.value || 0),
+        dataPagamento: formatDate(p.paymentDate || p.confirmedDate || ""),
+        dataVencimento: formatDate(p.dueDate || ""),
+      });
+    }
+
+    const clientes = Object.values(clientesMap).map(c => ({
+      name: c.name,
+      cpfCnpj: c.cpfCnpj,
+      totalBoletos: c.totalBoletos,
+      totalPago: formatCurrency(c.totalPago),
+      pagamentos: c.pagamentos,
+    }));
+
+    return res.json({
+      total: clientes.length,
+      filtroMes: month || "todos",
+      clientes,
+    });
+  } catch (err: any) {
+    Sentry.captureException(err);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || "Erro ao buscar boletos pagos", 500);
   }
 };
