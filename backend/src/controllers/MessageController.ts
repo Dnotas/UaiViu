@@ -201,8 +201,20 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
       number = cleanNumber;
       profilePicUrl = "";
     } else {
-      // Para contatos pessoais: valida normalmente
-      const CheckValidNumber = await CheckContactNumber(numberToTest, companyId);
+      // Para contatos pessoais: valida com retry (até 3 tentativas com 3s de intervalo)
+      let CheckValidNumber: any = null;
+      let lastError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          CheckValidNumber = await CheckContactNumber(numberToTest, companyId);
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`⚠️ [API EXTERNA] CheckContactNumber falhou (tentativa ${attempt}/3): ${err.message}`);
+          if (attempt < 3) await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+      if (!CheckValidNumber) throw lastError;
       number = CheckValidNumber.jid.replace(/\D/g, "");
       profilePicUrl = await GetProfilePicUrl(number, companyId);
     }
