@@ -323,8 +323,6 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<v
       { status: "OVERDUE", month: month || null }
     );
 
-    console.log(`[ASAAS DEBUG] Total pagamentos OVERDUE: ${payments.length}`);
-    payments.forEach(p => console.log(`[ASAAS DEBUG] id:${p.id} billingType:${p.billingType} bankSlipUrl:${p.bankSlipUrl || "VAZIO"} status:${p.status}`));
     const boletos = payments.filter(p => p.billingType === "BOLETO" && p.bankSlipUrl);
     if (boletos.length === 0) throw new AppError("Nenhum boleto vencido com PDF disponível.", 404);
 
