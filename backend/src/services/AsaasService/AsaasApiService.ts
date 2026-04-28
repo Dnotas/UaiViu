@@ -297,8 +297,10 @@ export const extractLinhaDigitavelFromPdf = async (pdfBuffer: Buffer): Promise<s
   }
 };
 
-export const downloadBoletoPdf = async (bankSlipUrl: string): Promise<Buffer | null> => {
+export const downloadBoletoPdf = async (bankSlipUrl: string, token?: string, environment?: string, paymentId?: string): Promise<Buffer | null> => {
   if (!bankSlipUrl) return null;
+
+  // Tenta 1: URL direta (bankSlipUrl)
   try {
     const response = await axios.get(bankSlipUrl, {
       responseType: "arraybuffer",
@@ -310,8 +312,30 @@ export const downloadBoletoPdf = async (bankSlipUrl: string): Promise<Buffer | n
     if (contentType.includes("pdf")) {
       return Buffer.from(response.data);
     }
-    return null;
-  } catch {
-    return null;
+    console.warn(`[ASAAS PDF] bankSlipUrl retornou content-type inesperado: ${contentType}`);
+  } catch (err: any) {
+    console.warn(`[ASAAS PDF] Falha ao baixar bankSlipUrl (${bankSlipUrl}): ${err?.response?.status || err?.message}`);
   }
+
+  // Tenta 2: endpoint autenticado /payments/{id}/bankSlipPdf
+  if (token && environment && paymentId) {
+    try {
+      const baseUrl = getBaseUrl(environment);
+      const response = await axios.get(`${baseUrl}/payments/${paymentId}/bankSlipPdf`, {
+        responseType: "arraybuffer",
+        headers: { ...buildHeaders(token), Accept: "application/pdf,*/*" },
+        maxRedirects: 5,
+        timeout: 15000,
+      });
+      const contentType: string = response.headers["content-type"] || "";
+      if (contentType.includes("pdf")) {
+        console.log(`[ASAAS PDF] PDF obtido via endpoint autenticado para payment ${paymentId}`);
+        return Buffer.from(response.data);
+      }
+    } catch (err: any) {
+      console.warn(`[ASAAS PDF] Falha no endpoint autenticado para payment ${paymentId}: ${err?.response?.status || err?.message}`);
+    }
+  }
+
+  return null;
 };

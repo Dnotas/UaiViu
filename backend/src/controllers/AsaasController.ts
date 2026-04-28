@@ -136,7 +136,7 @@ export const sendBoleto = async (req: Request, res: Response): Promise<Response>
 
       // 2. PDF attachment (BOLETO only, best-effort)
       if (payment.billingType === "BOLETO" && payment.bankSlipUrl) {
-        const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl);
+        const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl, asaasConfig.token, asaasConfig.environment, payment.id);
         if (pdfBuffer) {
           await wbot.sendMessage(numberJid, {
             document: pdfBuffer,
@@ -216,7 +216,7 @@ export const getBoletoPdf = async (req: Request, res: Response): Promise<void> =
 
     // Retorna o primeiro boleto encontrado (use month/status para refinar)
     const payment = boletos[0];
-    const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl);
+    const pdfBuffer = await downloadBoletoPdf(payment.bankSlipUrl, asaasConfig.token, asaasConfig.environment, payment.id);
     if (!pdfBuffer) throw new AppError("Não foi possível baixar o PDF do boleto", 502);
 
     const fileName = buildBoletoPdfName(customer.name, payment.dueDate, customer.cpfCnpj);
@@ -270,7 +270,7 @@ export const getLinhaDigitavel = async (req: Request, res: Response): Promise<Re
         // 3. Último recurso: extrai o texto do PDF do boleto
         if (!linhaDigitavel && p.bankSlipUrl) {
           console.log(`[ASAAS DEBUG] tentando extrair do PDF: ${p.bankSlipUrl}`);
-          const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+          const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl, asaasConfig.token, asaasConfig.environment, p.id);
           console.log(`[ASAAS DEBUG] pdfBuffer obtido: ${pdfBuffer ? pdfBuffer.length + " bytes" : "null"}`);
           if (pdfBuffer) {
             linhaDigitavel = await extractLinhaDigitavelFromPdf(pdfBuffer);
@@ -329,7 +329,7 @@ export const getBoletosVencidos = async (req: Request, res: Response): Promise<v
     // Baixa todos os PDFs
     const pdfs: { buffer: Buffer; fileName: string }[] = [];
     for (const p of boletos) {
-      const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl);
+      const pdfBuffer = await downloadBoletoPdf(p.bankSlipUrl, asaasConfig.token, asaasConfig.environment, p.id);
       if (!pdfBuffer) continue;
       pdfs.push({ buffer: pdfBuffer, fileName: buildBoletoPdfName(customer.name, p.dueDate, customer.cpfCnpj) });
     }
