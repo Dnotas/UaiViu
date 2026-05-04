@@ -184,7 +184,10 @@ const SendWhatsAppMedia = async ({
     // Se mimetype for genérico (octet-stream), detectar pela extensão
     if (mimetype === "application/octet-stream" || typeMessage === "application") {
       const ext = media.originalname.toLowerCase().split('.').pop();
-      if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "gif" || ext === "webp") {
+      if (ext === "pdf") {
+        mimetype = "application/pdf";
+        typeMessage = "application";
+      } else if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "gif" || ext === "webp") {
         mimetype = `image/${ext === "jpg" ? "jpeg" : ext}`;
         typeMessage = "image";
       } else if (ext === "mp4" || ext === "avi" || ext === "mov" || ext === "mkv") {
