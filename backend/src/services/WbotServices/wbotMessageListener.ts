@@ -75,6 +75,10 @@ const request = require("request");
 
 const fs = require("fs");
 
+// Mapa de @lid → JID real (phone), por sessão (wbot.id)
+// Populado via contacts.upsert para resolver destinatários com identidade @lid
+const lidPhoneMap = new Map<number, Map<string, string>>();
+
 type Session = WASocket & {
   id?: number;
   store?: Store;
@@ -2422,10 +2426,19 @@ const handleMessage = async (
       msg.key.remoteJid = senderPn;
       // Continua o processamento normalmente
     } else if (!msg.key.participant) {
-      // CORREÇÃO DEFINITIVA: Descartamos mensagens @lid sem participant E sem senderPn
-      // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
-      logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant e SEM senderPn descartada (evita ticket duplicado) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
-      return;
+      // Tenta resolver @lid via mapa de contatos (populado por contacts.upsert)
+      const sessionLidMap = lidPhoneMap.get(wbot.id);
+      const resolvedJid = sessionLidMap?.get(msg.key.remoteJid);
+      if (resolvedJid) {
+        logger.info(`🔧 [handleMessage] @lid resolvido via mapa: ${msg.key.remoteJid} → ${resolvedJid} - ID: ${msg.key.id} - Company: ${companyId}`);
+        msg.key.remoteJid = resolvedJid;
+        // Continua o processamento normalmente
+      } else {
+        // CORREÇÃO DEFINITIVA: Descartamos mensagens @lid sem participant, senderPn ou mapeamento
+        // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
+        logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant, senderPn ou mapeamento descartada - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+        return;
+      }
     } else {
       // Se tem participant, é uma mensagem válida (geralmente de grupo)
       logger.info(`🔧 [handleMessage] Mensagem @lid COM participant será processada - ID: ${msg.key.id} - participant: ${msg.key.participant} - Company: ${companyId}`);
@@ -3319,6 +3332,24 @@ const wbotMessageListener = async (
   companyId: number
 ): Promise<void> => {
   try {
+    // Popula o mapa @lid → JID real para resolver contatos com identidade de privacidade
+    wbot.ev.on("contacts.upsert", (contacts) => {
+      if (!lidPhoneMap.has(wbot.id)) {
+        lidPhoneMap.set(wbot.id, new Map());
+      }
+      const sessionMap = lidPhoneMap.get(wbot.id);
+      for (const contact of contacts) {
+        const c = contact as any;
+        // Baileys Contact pode ter campo 'lid' com o @lid e 'id' com o JID real
+        if (c.lid && c.id && !String(c.id).includes("@lid")) {
+          sessionMap.set(String(c.lid), String(c.id));
+        }
+        // Alternativamente, o próprio 'id' pode ser @lid mas ter 'notify'/'name' sem número
+        // Nesse caso não temos como resolver aqui
+      }
+      logger.info(`[lidPhoneMap] Mapa atualizado para wbot ${wbot.id}: ${sessionMap.size} entradas`);
+    });
+
     wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
       const messages = messageUpsert.messages;
 
