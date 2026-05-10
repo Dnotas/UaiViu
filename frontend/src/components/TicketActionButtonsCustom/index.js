@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 
 import { makeStyles, createTheme, ThemeProvider } from "@material-ui/core/styles";
@@ -15,8 +15,10 @@ import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import UndoRoundedIcon from '@material-ui/icons/UndoRounded';
 import Tooltip from '@material-ui/core/Tooltip';
-import { green } from '@material-ui/core/colors';
+import { green, orange } from '@material-ui/core/colors';
 import DifficultyRatingModal from "../DifficultyRatingModal";
+import AndroidIcon from '@material-ui/icons/Android';
+import BlockIcon from '@material-ui/icons/Block';
 
 
 const useStyles = makeStyles(theme => ({
@@ -31,15 +33,21 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketActionButtonsCustom = ({ ticket }) => {
+const TicketActionButtonsCustom = ({ ticket, contact }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [difficultyModalOpen, setDifficultyModalOpen] = useState(false);
+	const [botPaused, setBotPaused] = useState(false);
+	const [botLoading, setBotLoading] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
 	const { setCurrentTicket } = useContext(TicketsContext);
+
+	useEffect(() => {
+		setBotPaused(contact?.disableBot || false);
+	}, [contact?.disableBot]);
 
 	const customTheme = createTheme({
 		palette: {
@@ -77,6 +85,18 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 			setLoading(false);
 			toastError(err);
 		}
+	};
+
+	const handleToggleBot = async () => {
+		if (!contact?.id) return;
+		setBotLoading(true);
+		try {
+			await api.put(`/contacts/toggleDisableBot/${contact.id}`);
+			setBotPaused(prev => !prev);
+		} catch (err) {
+			toastError(err);
+		}
+		setBotLoading(false);
 	};
 
 	const handleDifficultyConfirm = async (difficultyLevel) => {
@@ -119,6 +139,15 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 			)}
 			{ticket.status === "open" && (
 				<>
+					{contact?.id && !ticket.isGroup && (
+						<Tooltip title={botPaused ? "Retomar IA (IA pausada para este contato)" : "Pausar IA (IA ativa para este contato)"}>
+							<span>
+								<IconButton onClick={handleToggleBot} disabled={botLoading} style={{ color: botPaused ? orange[700] : green[600] }}>
+									{botPaused ? <BlockIcon /> : <AndroidIcon />}
+								</IconButton>
+							</span>
+						</Tooltip>
+					)}
 					{ticket.userId === user?.id && (
 						<>
 							<Tooltip title={i18n.t("messagesList.header.buttons.return")}>

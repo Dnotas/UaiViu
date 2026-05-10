@@ -864,12 +864,20 @@ const handleOpenAi = async (
     limit: maxMessages
   });
 
+  // Monta instrução sobre arquivos disponíveis (cardápio, PDF, imagens)
+  let mediaFilesContext = "";
+  const promptMediaFiles: { name: string; path: string; mimetype: string }[] = prompt.mediaFiles || [];
+  if (promptMediaFiles.length > 0) {
+    const filesList = promptMediaFiles.map(f => `- ${f.name} (tag: [ENVIAR_ARQUIVO:${f.path.split("/").pop()}])`).join("\n");
+    mediaFilesContext = `\n\nVocê tem acesso aos seguintes arquivos que pode enviar ao cliente quando solicitado ou quando for relevante:\n${filesList}\nQuando quiser enviar um arquivo, inclua a tag correspondente no final da sua resposta. Exemplo: para enviar o cardápio escreva [ENVIAR_ARQUIVO:cardapio.pdf] ao final.\n`;
+  }
+
   const promptSystem = `Nas respostas utilize o nome ${sanitizeName(
     contact.name || "Amigo(a)"
   )} para identificar o cliente.\nSua resposta deve usar no máximo ${
     prompt.maxTokens
   } tokens e cuide para não truncar o final.\nSempre que possível, mencione o nome dele para ser mais personalizado o atendimento e mais educado. Quando a resposta requer uma transferência para o setor de atendimento, comece sua resposta com 'Ação: Transferir para o setor de atendimento'.\n
-  ${prompt.prompt}\n`;
+  ${prompt.prompt}\n${mediaFilesContext}`;
 
   let messagesOpenAi: ChatCompletionRequestMessage[] = [];
 
@@ -907,11 +915,48 @@ const handleOpenAi = async (
         .trim();
     }
 
+    // Detecta tags de envio de arquivo [ENVIAR_ARQUIVO:filename]
+    const fileTagMatches = response?.match(/\[ENVIAR_ARQUIVO:([^\]]+)\]/g) || [];
+    if (response) {
+      response = response.replace(/\[ENVIAR_ARQUIVO:[^\]]+\]/g, "").trim();
+    }
+
     if (response) {
       const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
         text: response
       });
       await verifyMessage(sentMessage!, ticket, contact);
+    }
+
+    // Envia arquivos referenciados pela IA
+    for (const tag of fileTagMatches) {
+      const fileNameMatch = tag.match(/\[ENVIAR_ARQUIVO:([^\]]+)\]/);
+      if (!fileNameMatch) continue;
+      const fileName = fileNameMatch[1];
+      const fileEntry = promptMediaFiles.find(f => f.path.split("/").pop() === fileName);
+      if (!fileEntry) continue;
+      const filePath = path.join(publicFolder, fileEntry.path);
+      if (!fs.existsSync(filePath)) continue;
+      const fileBuffer = fs.readFileSync(filePath);
+      const isImage = fileEntry.mimetype?.startsWith("image/");
+      try {
+        if (isImage) {
+          const sentFile = await wbot.sendMessage(msg.key.remoteJid!, {
+            image: fileBuffer,
+            caption: fileEntry.name
+          });
+          await verifyMessage(sentFile!, ticket, contact);
+        } else {
+          const sentFile = await wbot.sendMessage(msg.key.remoteJid!, {
+            document: fileBuffer,
+            mimetype: fileEntry.mimetype || "application/octet-stream",
+            fileName: fileEntry.name
+          });
+          await verifyMessage(sentFile!, ticket, contact);
+        }
+      } catch (fileErr) {
+        console.error(`[handleOpenAi] Erro ao enviar arquivo ${fileName}:`, fileErr);
+      }
     }
 
     /*

@@ -6,8 +6,11 @@ import ListPromptsService from "../services/PromptServices/ListPromptsService";
 import ShowPromptService from "../services/PromptServices/ShowPromptService";
 import UpdatePromptService from "../services/PromptServices/UpdatePromptService";
 import Whatsapp from "../models/Whatsapp";
+import Prompt from "../models/Prompt";
 import { verify } from "jsonwebtoken";
 import authConfig from "../config/auth";
+import path from "path";
+import fs from "fs";
 
 interface TokenPayload {
   id: string;
@@ -110,5 +113,62 @@ export const remove = async (
   } catch (err) {
     return res.status(500).json({ message: "Não foi possível excluir! Verifique se este prompt está sendo usado!" });
   }
+};
+
+export const uploadMedia = async (req: Request, res: Response): Promise<Response> => {
+  const { promptId } = req.params;
+  const authHeader = req.headers.authorization;
+  const [, token] = authHeader.split(" ");
+  const decoded = verify(token, authConfig.secret);
+  const { companyId } = decoded as TokenPayload;
+
+  if (!req.file) {
+    return res.status(400).json({ message: "Nenhum arquivo enviado" });
+  }
+
+  const prompt = await Prompt.findOne({ where: { id: promptId, companyId } });
+  if (!prompt) return res.status(404).json({ message: "Prompt não encontrado" });
+
+  const currentFiles: { name: string; path: string; mimetype: string }[] = prompt.mediaFiles || [];
+  const newFile = {
+    name: req.file.originalname,
+    path: `prompt/${promptId}/${req.file.filename}`,
+    mimetype: req.file.mimetype
+  };
+
+  await prompt.update({ mediaFiles: [...currentFiles, newFile] });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit("prompt", { action: "update", prompt });
+
+  return res.status(200).json(prompt);
+};
+
+export const deleteMedia = async (req: Request, res: Response): Promise<Response> => {
+  const { promptId, fileName } = req.params;
+  const authHeader = req.headers.authorization;
+  const [, token] = authHeader.split(" ");
+  const decoded = verify(token, authConfig.secret);
+  const { companyId } = decoded as TokenPayload;
+
+  const prompt = await Prompt.findOne({ where: { id: promptId, companyId } });
+  if (!prompt) return res.status(404).json({ message: "Prompt não encontrado" });
+
+  const currentFiles: { name: string; path: string; mimetype: string }[] = prompt.mediaFiles || [];
+  const fileToRemove = currentFiles.find(f => f.path.endsWith(fileName));
+
+  if (fileToRemove) {
+    const publicFolder = path.resolve(__dirname, "..", "..", "public");
+    const filePath = path.join(publicFolder, fileToRemove.path);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+
+  const updatedFiles = currentFiles.filter(f => !f.path.endsWith(fileName));
+  await prompt.update({ mediaFiles: updatedFiles });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit("prompt", { action: "update", prompt });
+
+  return res.status(200).json(prompt);
 };
 

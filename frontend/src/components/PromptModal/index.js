@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import { makeStyles } from "@material-ui/core/styles";
-import { green } from "@material-ui/core/colors";
+import { green, red } from "@material-ui/core/colors";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
 import Dialog from "@material-ui/core/Dialog";
@@ -14,8 +14,8 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
-import { MenuItem, FormControl, InputLabel, Select, Menu, Grid } from "@material-ui/core";
-import { Visibility, VisibilityOff } from "@material-ui/icons";
+import { MenuItem, FormControl, InputLabel, Select, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton as MuiIconButton, Typography, Divider } from "@material-ui/core";
+import { Visibility, VisibilityOff, CloudUpload, Delete, InsertDriveFile } from "@material-ui/icons";
 import { InputAdornment, IconButton } from "@material-ui/core";
 import QueueSelectSingle from "../../components/QueueSelectSingle";
 
@@ -54,6 +54,26 @@ const useStyles = makeStyles(theme => ({
         width: 20,
         height: 20,
     },
+    uploadSection: {
+        marginTop: theme.spacing(2),
+        padding: theme.spacing(2),
+        border: `1px dashed ${theme.palette.divider}`,
+        borderRadius: 4,
+    },
+    uploadButton: {
+        marginTop: theme.spacing(1),
+    },
+    fileList: {
+        marginTop: theme.spacing(1),
+    },
+    fileItem: {
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 4,
+        marginBottom: theme.spacing(0.5),
+    },
+    deleteFileBtn: {
+        color: red[500],
+    },
 }));
 
 const PromptSchema = Yup.object().shape({
@@ -71,6 +91,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
     const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
     const [showApiKey, setShowApiKey] = useState(false);
+    const [mediaFiles, setMediaFiles] = useState([]);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const fileInputRef = useRef(null);
 
     const handleToggleApiKey = () => {
         setShowApiKey(!showApiKey);
@@ -93,6 +116,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const fetchPrompt = async () => {
             if (!promptId) {
                 setPrompt(initialState);
+                setMediaFiles([]);
                 return;
             }
             try {
@@ -100,9 +124,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 setPrompt(prevState => {
                     return { ...prevState, ...data };
                 });
-                
                 setSelectedModel(data.model);
-            } catch (err) { 
+                setMediaFiles(data.mediaFiles || []);
+            } catch (err) {
                 toastError(err);
             }
         };
@@ -113,6 +137,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const handleClose = () => {
         setPrompt(initialState);
         setSelectedModel("gpt-3.5-turbo-1106");
+        setMediaFiles([]);
         onClose();
     };
 
@@ -122,7 +147,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
     const handleSavePrompt = async values => {
         const promptData = { ...values, model: selectedModel };
-        console.log(promptData);
         if (!values.queueId) {
             toastError(i18n.t("promptModal.setor"));
             return;
@@ -134,12 +158,52 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 await api.post("/prompt", promptData);
             }
             toast.success(i18n.t("promptModal.success"));
-            refreshPrompts(  )
+            refreshPrompts();
         } catch (err) {
             toastError(err);
         }
         handleClose();
     };
+
+    const handleFileUpload = async (e) => {
+        if (!promptId) {
+            toast.warning("Salve o prompt primeiro antes de adicionar arquivos.");
+            return;
+        }
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploadingFile(true);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("typeArch", "prompt");
+        formData.append("fileId", String(promptId));
+
+        try {
+            const { data } = await api.post(`/prompt/${promptId}/media`, formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            setMediaFiles(data.mediaFiles || []);
+            toast.success("Arquivo enviado com sucesso!");
+        } catch (err) {
+            toastError(err);
+        }
+        setUploadingFile(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const handleDeleteFile = async (fileName) => {
+        if (!promptId) return;
+        try {
+            const { data } = await api.delete(`/prompt/${promptId}/media/${fileName}`);
+            setMediaFiles(data.mediaFiles || []);
+            toast.success("Arquivo removido.");
+        } catch (err) {
+            toastError(err);
+        }
+    };
+
+    const getFileDisplayName = (file) => file.name || file.path?.split("/").pop() || "arquivo";
 
     return (
         <div className={classes.root}>
@@ -250,7 +314,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         }}
                                     />
                                 </div>
-                                
+
                                 <div className={classes.multFieldLine}>
                                     <Field
                                         as={TextField}
@@ -272,6 +336,75 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         margin="dense"
                                         fullWidth
                                     />
+                                </div>
+
+                                <Divider style={{ marginTop: 16, marginBottom: 8 }} />
+                                <div className={classes.uploadSection}>
+                                    <Typography variant="subtitle2" gutterBottom>
+                                        Arquivos da IA (cardápio, PDF, imagens)
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                        {promptId
+                                            ? "Adicione arquivos que a IA poderá enviar aos clientes (PDFs, imagens, cardápio, etc.)"
+                                            : "Salve o prompt primeiro para poder adicionar arquivos."}
+                                    </Typography>
+
+                                    {promptId && (
+                                        <>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                style={{ display: "none" }}
+                                                accept="image/*,.pdf"
+                                                onChange={handleFileUpload}
+                                            />
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                startIcon={uploadingFile ? <CircularProgress size={16} /> : <CloudUpload />}
+                                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                                disabled={uploadingFile}
+                                                className={classes.uploadButton}
+                                            >
+                                                {uploadingFile ? "Enviando..." : "Adicionar arquivo"}
+                                            </Button>
+
+                                            {mediaFiles.length > 0 && (
+                                                <List dense className={classes.fileList}>
+                                                    {mediaFiles.map((file, idx) => {
+                                                        const displayName = getFileDisplayName(file);
+                                                        const fileName = file.path?.split("/").pop();
+                                                        return (
+                                                            <ListItem key={idx} className={classes.fileItem}>
+                                                                <InsertDriveFile style={{ marginRight: 8, color: "#1976d2" }} />
+                                                                <ListItemText
+                                                                    primary={displayName}
+                                                                    secondary={file.mimetype}
+                                                                    primaryTypographyProps={{ noWrap: true, style: { maxWidth: 400 } }}
+                                                                />
+                                                                <ListItemSecondaryAction>
+                                                                    <MuiIconButton
+                                                                        edge="end"
+                                                                        size="small"
+                                                                        className={classes.deleteFileBtn}
+                                                                        onClick={() => handleDeleteFile(fileName)}
+                                                                    >
+                                                                        <Delete fontSize="small" />
+                                                                    </MuiIconButton>
+                                                                </ListItemSecondaryAction>
+                                                            </ListItem>
+                                                        );
+                                                    })}
+                                                </List>
+                                            )}
+
+                                            {mediaFiles.length === 0 && (
+                                                <Typography variant="caption" display="block" style={{ marginTop: 8, color: "#999" }}>
+                                                    Nenhum arquivo adicionado ainda.
+                                                </Typography>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             </DialogContent>
                             <DialogActions>

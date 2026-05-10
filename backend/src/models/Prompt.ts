@@ -4,6 +4,7 @@ import {
   BelongsTo,
   Column,
   CreatedAt,
+  DataType,
   ForeignKey,
   Model,
   PrimaryKey,
@@ -52,6 +53,10 @@ class Prompt extends Model<Prompt> {
 
   @Column
   model: string;
+
+  @AllowNull(true)
+  @Column({ type: DataType.JSONB, defaultValue: [] })
+  mediaFiles: { name: string; path: string; mimetype: string }[];
 
   @AllowNull
   @ForeignKey(() => Queue)
