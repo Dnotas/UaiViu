@@ -832,6 +832,9 @@ const handleOpenAi = async (
 
   if (!prompt) return;
 
+  // IA pausada globalmente pelo admin no Prompt IA
+  if (prompt.active === false) return;
+
   if (msg.messageStubType) return;
 
   const publicFolder: string = path.resolve(

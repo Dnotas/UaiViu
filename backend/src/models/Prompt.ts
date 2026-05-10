@@ -58,6 +58,9 @@ class Prompt extends Model<Prompt> {
   @Column({ type: DataType.JSONB, defaultValue: [] })
   mediaFiles: { name: string; path: string; mimetype: string }[];
 
+  @Column({ defaultValue: true })
+  active: boolean;
+
   @AllowNull
   @ForeignKey(() => Queue)
   @Column

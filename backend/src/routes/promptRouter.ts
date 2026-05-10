@@ -18,6 +18,8 @@ promptRoutes.put("/prompt/:promptId", isAuth, PromptController.update);
 
 promptRoutes.delete("/prompt/:promptId", isAuth, PromptController.remove);
 
+promptRoutes.put("/prompt/:promptId/toggle-active", isAuth, PromptController.toggleActive);
+
 promptRoutes.post("/prompt/:promptId/media", isAuth, upload.single("file"), PromptController.uploadMedia);
 
 promptRoutes.delete("/prompt/:promptId/media/:fileName", isAuth, PromptController.deleteMedia);

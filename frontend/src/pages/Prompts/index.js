@@ -4,12 +4,14 @@ import {
   Button,
   IconButton,
   Paper,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  Typography // Importar Typography do Material-UI
+  Tooltip,
+  Typography
 } from "@material-ui/core";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -43,12 +45,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Adicione um estilo para a box vermelha
-  redBox: {
-    backgroundColor: "#ffcccc", // Definindo a cor de fundo vermelha
-    padding: theme.spacing(2), // Adicionando um espaçamento interno
-    marginBottom: theme.spacing(2), // Adicionando margem inferior para separar do conteúdo abaixo
-  },
 }));
 
 const reducer = (state, action) => {
@@ -56,7 +52,7 @@ const reducer = (state, action) => {
     const prompts = action.payload;
     const newPrompts = [];
 
-    if( prompts.length === 0 )
+    if (prompts.length === 0)
       return [];
 
     prompts.forEach((prompt) => {
@@ -131,8 +127,7 @@ const Prompts = () => {
     (async () => {
       setLoading(true);
       try {
-        getPrompts(  );
-
+        getPrompts();
         setLoading(false);
       } catch (err) {
         toastError(err);
@@ -159,11 +154,10 @@ const Prompts = () => {
     };
   }, [companyId, socketManager]);
 
-  const getPrompts = async (  ) => {
-
+  const getPrompts = async () => {
     const { data } = await api.get("/prompt");
     dispatch({ type: "LOAD_PROMPTS", payload: data.prompts });
-  }
+  };
 
   const handleOpenPromptModal = () => {
     setPromptModalOpen(true);
@@ -187,15 +181,23 @@ const Prompts = () => {
 
   const handleDeletePrompt = async (promptId) => {
     try {
-
       const { data } = await api.delete(`/prompt/${promptId}`);
-      dispatch({type: "DELETE_PROMPT", payload: promptId});
+      dispatch({ type: "DELETE_PROMPT", payload: promptId });
       toast.info(i18n.t(data.message));
-  
     } catch (err) {
       toastError(err);
     }
     setSelectedPrompt(null);
+  };
+
+  const handleToggleActive = async (prompt) => {
+    try {
+      const { data } = await api.put(`/prompt/${prompt.id}/toggle-active`);
+      dispatch({ type: "UPDATE_PROMPTS", payload: data });
+      toast.success(data.active ? "IA ativada com sucesso!" : "IA pausada! Clientes serão atendidos manualmente.");
+    } catch (err) {
+      toastError(err);
+    }
   };
 
   return (
@@ -203,8 +205,7 @@ const Prompts = () => {
       <ConfirmationModal
         title={
           selectedPrompt &&
-          `${i18n.t("prompts.confirmationModal.deleteTitle")} ${selectedPrompt.name
-          }?`
+          `${i18n.t("prompts.confirmationModal.deleteTitle")} ${selectedPrompt.name}?`
         }
         open={confirmModalOpen}
         onClose={handleCloseConfirmationModal}
@@ -244,6 +245,9 @@ const Prompts = () => {
                 {i18n.t("prompts.table.max_tokens")}
               </TableCell>
               <TableCell align="center">
+                IA Ativa
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("prompts.table.actions")}
               </TableCell>
             </TableRow>
@@ -255,6 +259,19 @@ const Prompts = () => {
                   <TableCell align="left">{prompt.name}</TableCell>
                   <TableCell align="left">{prompt.queue?.name}</TableCell>
                   <TableCell align="left">{prompt.maxTokens}</TableCell>
+                  <TableCell align="center">
+                    <Tooltip title={prompt.active ? "IA respondendo automaticamente — clique para pausar" : "IA pausada — clique para ativar"}>
+                      <Switch
+                        checked={prompt.active !== false}
+                        onChange={() => handleToggleActive(prompt)}
+                        color="primary"
+                        size="small"
+                      />
+                    </Tooltip>
+                    <Typography variant="caption" display="block" style={{ color: prompt.active !== false ? "#4caf50" : "#f44336" }}>
+                      {prompt.active !== false ? "Ativa" : "Pausada"}
+                    </Typography>
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
@@ -275,7 +292,7 @@ const Prompts = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={5} />}
             </>
           </TableBody>
         </Table>

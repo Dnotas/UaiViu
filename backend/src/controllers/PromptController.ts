@@ -115,6 +115,24 @@ export const remove = async (
   }
 };
 
+export const toggleActive = async (req: Request, res: Response): Promise<Response> => {
+  const { promptId } = req.params;
+  const authHeader = req.headers.authorization;
+  const [, token] = authHeader.split(" ");
+  const decoded = verify(token, authConfig.secret);
+  const { companyId } = decoded as TokenPayload;
+
+  const prompt = await Prompt.findOne({ where: { id: promptId, companyId } });
+  if (!prompt) return res.status(404).json({ message: "Prompt não encontrado" });
+
+  await prompt.update({ active: !prompt.active });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit("prompt", { action: "update", prompt });
+
+  return res.status(200).json(prompt);
+};
+
 export const uploadMedia = async (req: Request, res: Response): Promise<Response> => {
   const { promptId } = req.params;
   const authHeader = req.headers.authorization;
