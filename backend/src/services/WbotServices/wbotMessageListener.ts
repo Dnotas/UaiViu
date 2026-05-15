@@ -595,6 +595,14 @@ const getValidWhatsAppNumber = (
     return me.id;
   }
 
+  // Para mensagens de entrada com @lid não resolvido: usa os dígitos como número temporário
+  // Melhor criar contato com número estranho do que perder a mensagem do cliente
+  if (!msg.key.fromMe && hasLid) {
+    const lidDigits = contactId.replace(/\D/g, "");
+    logger.warn(`⚠️  [getValidWhatsAppNumber] @lid de cliente não resolvido - usando dígitos como fallback: ${lidDigits} (contactId: ${contactId})`);
+    return jidNormalizedUser(`${lidDigits}@s.whatsapp.net`);
+  }
+
   // Se chegou aqui, não conseguiu encontrar número válido
   logger.error(`❌ [getValidWhatsAppNumber] FALHA: Não foi possível encontrar número válido para contactId: ${contactId}`);
   throw new AppError("ERR_INVALID_CONTACT_NUMBER", 400);
@@ -2482,10 +2490,35 @@ const handleMessage = async (
         msg.key.remoteJid = resolvedJid;
         // Continua o processamento normalmente
       } else {
-        // CORREÇÃO DEFINITIVA: Descartamos mensagens @lid sem participant, senderPn ou mapeamento
-        // Essas mensagens são duplicatas de dispositivos vinculados e NÃO devem criar tickets
-        logger.info(`🔧 [handleMessage] Mensagem @lid SEM participant, senderPn ou mapeamento descartada - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
-        return;
+        // Mensagens fromMe @lid = duplicata de dispositivo vinculado (WhatsApp Web/Desktop) → descartar
+        if (msg.key.fromMe) {
+          logger.info(`🔧 [handleMessage] Mensagem @lid fromMe SEM mapeamento descartada (duplicata multi-device) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+          return;
+        }
+        // Mensagens de CLIENTE (fromMe=false) com @lid: NUNCA descartar
+        // Tenta resolver via banco de dados (histórico de mensagens com mesmo remoteJid)
+        const prevMsg = await Message.findOne({
+          where: { remoteJid: msg.key.remoteJid },
+          include: [{
+            model: Ticket,
+            as: "ticket",
+            required: true,
+            where: { companyId },
+            include: [{ model: Contact, as: "contact", attributes: ["number"] }]
+          }],
+          order: [["createdAt", "DESC"]]
+        });
+        if ((prevMsg as any)?.ticket?.contact?.number) {
+          const resolvedJid = `${(prevMsg as any).ticket.contact.number}@s.whatsapp.net`;
+          logger.info(`🔧 [handleMessage] @lid de cliente resolvido via DB: ${msg.key.remoteJid} → ${resolvedJid} - ID: ${msg.key.id}`);
+          if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+          lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
+          msg.key.remoteJid = resolvedJid;
+        } else {
+          // Sem histórico: processa mesmo assim para não perder mensagem de cliente
+          // Os dígitos do @lid serão usados como número de contato temporário
+          logger.warn(`🔧 [handleMessage] @lid de cliente SEM histórico - processando com fallback numérico - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid}`);
+        }
       }
     } else {
       // Se tem participant, é uma mensagem válida (geralmente de grupo)
