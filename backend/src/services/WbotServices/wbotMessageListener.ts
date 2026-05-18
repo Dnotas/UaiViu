@@ -2512,42 +2512,42 @@ const handleMessage = async (
           lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
           msg.key.remoteJid = resolvedJid;
         } else {
-          // Sem histórico no DB: tenta resolver pelo nome (pushName) do contato
-          const pushName = msg.pushName;
-          if (pushName) {
+          // Sem histórico via remoteJid — tenta resolver por múltiplos métodos
+          const { Op } = require("sequelize");
+          const lidDigits = msg.key.remoteJid.replace(/\D/g, "");
+          let resolvedJid: string | null = null;
+
+          // Método 2: busca Contact com número = dígitos do @lid (já criado antes como duplicata)
+          const contactByLidNumber = await Contact.findOne({
+            where: { companyId, number: lidDigits }
+          });
+          if (contactByLidNumber) {
+            resolvedJid = `${lidDigits}@s.whatsapp.net`;
+            logger.info(`🔧 [handleMessage] @lid resolvido via Contact.number (duplicata existente): ${msg.key.remoteJid} → ${resolvedJid}`);
+          }
+
+          // Método 3: busca por pushName no cadastro de contatos
+          if (!resolvedJid && msg.pushName) {
             const contactByName = await Contact.findOne({
-              where: { companyId },
-              include: [{
-                model: Ticket,
-                as: "tickets",
-                required: true,
-                where: { companyId, whatsappId: wbot.id }
-              }],
-              order: [["updatedAt", "DESC"]]
-            });
-            // Busca contato cujo nome começa com o pushName
-            const { Op } = require("sequelize");
-            const contactByNameDirect = await Contact.findOne({
               where: {
                 companyId,
-                name: { [Op.iLike]: `${pushName}%` }
+                name: { [Op.iLike]: `${msg.pushName}%` }
               },
               order: [["updatedAt", "DESC"]]
             });
-            if (contactByNameDirect?.number) {
-              const resolvedJid = `${contactByNameDirect.number}@s.whatsapp.net`;
-              logger.info(`🔧 [handleMessage] @lid resolvido via pushName "${pushName}": ${msg.key.remoteJid} → ${resolvedJid}`);
-              if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
-              lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
-              msg.key.remoteJid = resolvedJid;
-            } else {
-              // Não conseguiu resolver: descarta para evitar contato duplicado
-              logger.warn(`🔧 [handleMessage] @lid de cliente não resolvido (sem histórico, sem pushName match) - descartando para evitar duplicata - ID: ${msg.key.id} - pushName: ${pushName}`);
-              return;
+            if (contactByName?.number) {
+              resolvedJid = `${contactByName.number}@s.whatsapp.net`;
+              logger.info(`🔧 [handleMessage] @lid resolvido via pushName "${msg.pushName}": ${msg.key.remoteJid} → ${resolvedJid}`);
             }
+          }
+
+          if (resolvedJid) {
+            if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+            lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
+            msg.key.remoteJid = resolvedJid;
           } else {
-            // Sem pushName: descarta para evitar contato duplicado
-            logger.warn(`🔧 [handleMessage] @lid de cliente não resolvido (sem histórico, sem pushName) - descartando - ID: ${msg.key.id}`);
+            // Nenhum método resolveu: descarta para não criar contato duplicado
+            logger.warn(`🔧 [handleMessage] @lid não resolvido por nenhum método - descartando ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - pushName: ${msg.pushName || "sem nome"}`);
             return;
           }
         }
