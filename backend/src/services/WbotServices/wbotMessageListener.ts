@@ -79,6 +79,11 @@ const fs = require("fs");
 // Populado via contacts.upsert para resolver destinatários com identidade @lid
 const lidPhoneMap = new Map<number, Map<string, string>>();
 
+// Contador de mensagens CIPHERTEXT (Bad MAC) por sessão para auto-recuperação
+const ciphertextCounterMap = new Map<number, { count: number; firstAt: number }>();
+const BAD_MAC_THRESHOLD = 5;       // 5 mensagens CIPHERTEXT
+const BAD_MAC_WINDOW_MS = 2 * 60 * 1000; // em 2 minutos → reconecta automaticamente
+
 type Session = WASocket & {
   id?: number;
   store?: Store;
@@ -593,14 +598,6 @@ const getValidWhatsAppNumber = (
   if (msg.key.fromMe) {
     logger.warn(`⚠️  [getValidWhatsAppNumber] FALLBACK: Usando ID do próprio bot (mensagem fromMe sem número válido)`);
     return me.id;
-  }
-
-  // Para mensagens de entrada com @lid não resolvido: usa os dígitos como número temporário
-  // Melhor criar contato com número estranho do que perder a mensagem do cliente
-  if (!msg.key.fromMe && hasLid) {
-    const lidDigits = contactId.replace(/\D/g, "");
-    logger.warn(`⚠️  [getValidWhatsAppNumber] @lid de cliente não resolvido - usando dígitos como fallback: ${lidDigits} (contactId: ${contactId})`);
-    return jidNormalizedUser(`${lidDigits}@s.whatsapp.net`);
   }
 
   // Se chegou aqui, não conseguiu encontrar número válido
@@ -2515,9 +2512,44 @@ const handleMessage = async (
           lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
           msg.key.remoteJid = resolvedJid;
         } else {
-          // Sem histórico: processa mesmo assim para não perder mensagem de cliente
-          // Os dígitos do @lid serão usados como número de contato temporário
-          logger.warn(`🔧 [handleMessage] @lid de cliente SEM histórico - processando com fallback numérico - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid}`);
+          // Sem histórico no DB: tenta resolver pelo nome (pushName) do contato
+          const pushName = msg.pushName;
+          if (pushName) {
+            const contactByName = await Contact.findOne({
+              where: { companyId },
+              include: [{
+                model: Ticket,
+                as: "tickets",
+                required: true,
+                where: { companyId, whatsappId: wbot.id }
+              }],
+              order: [["updatedAt", "DESC"]]
+            });
+            // Busca contato cujo nome começa com o pushName
+            const { Op } = require("sequelize");
+            const contactByNameDirect = await Contact.findOne({
+              where: {
+                companyId,
+                name: { [Op.iLike]: `${pushName}%` }
+              },
+              order: [["updatedAt", "DESC"]]
+            });
+            if (contactByNameDirect?.number) {
+              const resolvedJid = `${contactByNameDirect.number}@s.whatsapp.net`;
+              logger.info(`🔧 [handleMessage] @lid resolvido via pushName "${pushName}": ${msg.key.remoteJid} → ${resolvedJid}`);
+              if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+              lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
+              msg.key.remoteJid = resolvedJid;
+            } else {
+              // Não conseguiu resolver: descarta para evitar contato duplicado
+              logger.warn(`🔧 [handleMessage] @lid de cliente não resolvido (sem histórico, sem pushName match) - descartando para evitar duplicata - ID: ${msg.key.id} - pushName: ${pushName}`);
+              return;
+            }
+          } else {
+            // Sem pushName: descarta para evitar contato duplicado
+            logger.warn(`🔧 [handleMessage] @lid de cliente não resolvido (sem histórico, sem pushName) - descartando - ID: ${msg.key.id}`);
+            return;
+          }
         }
       }
     } else {
@@ -3449,6 +3481,25 @@ const wbotMessageListener = async (
           logger.info(`Mensagem deletada detectada via REVOKE - ID: ${message.key.id}`);
           await handleDeletedMessage(message, companyId);
           continue;  // Não processa como mensagem normal
+        }
+
+        // 2.5: Detecta Bad MAC (CIPHERTEXT) e reconecta automaticamente quando acumular
+        if (message.messageStubType === WAMessageStubType.CIPHERTEXT) {
+          const now = Date.now();
+          const counter = ciphertextCounterMap.get(wbot.id) || { count: 0, firstAt: now };
+          if (now - counter.firstAt > BAD_MAC_WINDOW_MS) {
+            ciphertextCounterMap.set(wbot.id, { count: 1, firstAt: now });
+          } else {
+            counter.count++;
+            ciphertextCounterMap.set(wbot.id, counter);
+            if (counter.count >= BAD_MAC_THRESHOLD) {
+              logger.warn(`[BadMAC] ${counter.count} mensagens CIPHERTEXT em ${BAD_MAC_WINDOW_MS / 1000}s para conexão ${wbot.id}. Reconectando automaticamente...`);
+              ciphertextCounterMap.delete(wbot.id);
+              setTimeout(() => {
+                try { wbot.ws.close(); } catch (e) { logger.error(`[BadMAC] Erro ao fechar ws: ${e}`); }
+              }, 1000);
+            }
+          }
         }
 
         // 3. TERCEIRO: Filtra mensagens normais (protocolMessages de edição, etc)
