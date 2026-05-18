@@ -2513,11 +2513,10 @@ const handleMessage = async (
           msg.key.remoteJid = resolvedJid;
         } else {
           // Sem histórico via remoteJid — tenta resolver por múltiplos métodos
-          const { Op } = require("sequelize");
           const lidDigits = msg.key.remoteJid.replace(/\D/g, "");
           let resolvedJid: string | null = null;
 
-          // Método 2: busca Contact com número = dígitos do @lid (já criado antes como duplicata)
+          // Método 2: busca Contact com número = dígitos do @lid (duplicata já existente no DB)
           const contactByLidNumber = await Contact.findOne({
             where: { companyId, number: lidDigits }
           });
@@ -2526,12 +2525,13 @@ const handleMessage = async (
             logger.info(`🔧 [handleMessage] @lid resolvido via Contact.number (duplicata existente): ${msg.key.remoteJid} → ${resolvedJid}`);
           }
 
-          // Método 3: busca por pushName no cadastro de contatos
+          // Método 3: busca por pushName no cadastro de contatos, filtrado pela mesma conexão WhatsApp
           if (!resolvedJid && msg.pushName) {
             const contactByName = await Contact.findOne({
               where: {
                 companyId,
-                name: { [Op.iLike]: `${msg.pushName}%` }
+                name: { [Op.iLike]: `${msg.pushName}%` },
+                whatsappId: wbot.id
               },
               order: [["updatedAt", "DESC"]]
             });
