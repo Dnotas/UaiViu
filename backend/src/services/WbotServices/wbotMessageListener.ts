@@ -3483,7 +3483,7 @@ const wbotMessageListener = async (
           continue;  // Não processa como mensagem normal
         }
 
-        // 2.5: Detecta Bad MAC (CIPHERTEXT) e reconecta automaticamente quando acumular
+        // 2.5: Detecta Bad MAC (CIPHERTEXT) - notifica ticket e aguarda renegociação Signal
         if (message.messageStubType === WAMessageStubType.CIPHERTEXT) {
           const now = Date.now();
           const counter = ciphertextCounterMap.get(wbot.id) || { count: 0, firstAt: now };
@@ -3493,11 +3493,55 @@ const wbotMessageListener = async (
             counter.count++;
             ciphertextCounterMap.set(wbot.id, counter);
             if (counter.count >= BAD_MAC_THRESHOLD) {
-              logger.warn(`[BadMAC] ${counter.count} mensagens CIPHERTEXT em ${BAD_MAC_WINDOW_MS / 1000}s para conexão ${wbot.id}. Reconectando automaticamente...`);
+              // Apenas loga — NÃO reconecta: o wbot.ws.close() interrompe a renegociação
+              // automática de sessão Signal (prekey bundle exchange) e piora o problema
+              logger.warn(`[BadMAC] ${counter.count} mensagens CIPHERTEXT em ${BAD_MAC_WINDOW_MS / 1000}s para conexão ${wbot.id}. Aguardando renegociação automática de sessão Signal...`);
               ciphertextCounterMap.delete(wbot.id);
-              setTimeout(() => {
-                try { wbot.ws.close(); } catch (e) { logger.error(`[BadMAC] Erro ao fechar ws: ${e}`); }
-              }, 1000);
+            }
+          }
+
+          // Notifica o ticket do cliente quando uma mensagem não pôde ser decriptada
+          if (
+            !message.key.fromMe &&
+            message.key.remoteJid &&
+            !message.key.remoteJid.includes("@g.us") &&
+            !message.key.remoteJid.includes("@lid")
+          ) {
+            try {
+              const number = message.key.remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
+              const contact = await Contact.findOne({ where: { number, companyId } });
+              if (contact) {
+                const ticket = await Ticket.findOne({
+                  where: {
+                    contactId: contact.id,
+                    companyId,
+                    status: { [Op.in]: ["open", "pending"] }
+                  },
+                  order: [["updatedAt", "DESC"]]
+                });
+                if (ticket) {
+                  const msgId = `badmac-${message.key.id || now}`;
+                  const existing = await Message.findByPk(msgId);
+                  if (!existing) {
+                    await CreateMessageService({
+                      messageData: {
+                        id: msgId,
+                        ticketId: ticket.id,
+                        contactId: contact.id,
+                        body: "⚠️ *Mensagem recebida com erro de criptografia (Bad MAC).* O conteúdo não pôde ser lido. Peça ao cliente para reenviar a mensagem.",
+                        fromMe: false,
+                        read: false,
+                        mediaType: "chat",
+                        ack: 0
+                      },
+                      companyId
+                    });
+                    logger.info(`[BadMAC] Notificação criada no ticket #${ticket.id} para contato ${contact.name} (${number})`);
+                  }
+                }
+              }
+            } catch (err) {
+              logger.error(`[BadMAC] Erro ao notificar ticket: ${err.message}`);
             }
           }
         }
