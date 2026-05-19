@@ -81,6 +81,21 @@ const useStyles = makeStyles((theme) => ({
     },
   },
 
+  messageBadMac: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "6px auto",
+    padding: "6px 14px",
+    maxWidth: 480,
+    backgroundColor: "#fff3e0",
+    border: "1px solid #ffb74d",
+    borderRadius: 8,
+    color: "#e65100",
+    fontSize: "0.82rem",
+    textAlign: "center",
+  },
+
   messageLeft: {
     marginRight: 20,
     marginTop: 2,
@@ -994,6 +1009,17 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const renderMessages = () => {
     if (messagesList.length > 0) {
       const viewMessagesList = messagesList.map((message, index) => {
+
+        if (message.mediaType === "badmac") {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              <div className={classes.messageBadMac}>
+                ⚠️ Mensagem recebida com erro de criptografia — o conteúdo não pôde ser lido. Peça ao cliente para reenviar.
+              </div>
+            </React.Fragment>
+          );
+        }
 
         if (message.mediaType === "call_log") {
           return (

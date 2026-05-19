@@ -3500,7 +3500,11 @@ const wbotMessageListener = async (
             }
           }
 
-          // Notifica o ticket do cliente quando uma mensagem não pôde ser decriptada
+          // Notifica o ticket do cliente quando uma mensagem não pôde ser decriptada.
+          // Cobre todos os cenários:
+          //   - Ticket aberto/pendente → adiciona aviso no ticket existente
+          //   - Ticket fechado → FindOrCreateTicketService reabre como pendente
+          //   - Primeiro contato → cria contato + ticket pendente
           if (
             !message.key.fromMe &&
             message.key.remoteJid &&
@@ -3509,36 +3513,37 @@ const wbotMessageListener = async (
           ) {
             try {
               const number = message.key.remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
-              const contact = await Contact.findOne({ where: { number, companyId } });
-              if (contact) {
-                const ticket = await Ticket.findOne({
-                  where: {
+              const contactName = (message as any).pushName || number;
+
+              // Cria contato se não existir, ou retorna o existente
+              const contact = await CreateOrUpdateContactService({
+                name: contactName,
+                number,
+                isGroup: false,
+                companyId,
+                whatsappId: wbot.id
+              });
+
+              // Abre/reabre/cria ticket conforme necessário
+              const ticket = await FindOrCreateTicketService(contact, wbot.id, 1, companyId);
+
+              const msgId = `badmac-${message.key.id || now}`;
+              const existing = await Message.findByPk(msgId);
+              if (!existing) {
+                await CreateMessageService({
+                  messageData: {
+                    id: msgId,
+                    ticketId: ticket.id,
                     contactId: contact.id,
-                    companyId,
-                    status: { [Op.in]: ["open", "pending"] }
+                    body: "⚠️ *Mensagem recebida com erro de criptografia (Bad MAC).* O conteúdo não pôde ser lido. Peça ao cliente para reenviar a mensagem.",
+                    fromMe: false,
+                    read: false,
+                    mediaType: "badmac",
+                    ack: 0
                   },
-                  order: [["updatedAt", "DESC"]]
+                  companyId
                 });
-                if (ticket) {
-                  const msgId = `badmac-${message.key.id || now}`;
-                  const existing = await Message.findByPk(msgId);
-                  if (!existing) {
-                    await CreateMessageService({
-                      messageData: {
-                        id: msgId,
-                        ticketId: ticket.id,
-                        contactId: contact.id,
-                        body: "⚠️ *Mensagem recebida com erro de criptografia (Bad MAC).* O conteúdo não pôde ser lido. Peça ao cliente para reenviar a mensagem.",
-                        fromMe: false,
-                        read: false,
-                        mediaType: "chat",
-                        ack: 0
-                      },
-                      companyId
-                    });
-                    logger.info(`[BadMAC] Notificação criada no ticket #${ticket.id} para contato ${contact.name} (${number})`);
-                  }
-                }
+                logger.info(`[BadMAC] Ticket #${ticket.id} notificado para contato ${contact.name} (${number})`);
               }
             } catch (err) {
               logger.error(`[BadMAC] Erro ao notificar ticket: ${err.message}`);
