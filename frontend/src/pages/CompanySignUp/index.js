@@ -14,6 +14,8 @@ import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import Paper from "@material-ui/core/Paper";
+import Checkbox from "@material-ui/core/Checkbox";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 import logo from "../../assets/logo.png";
 import { i18n } from "../../translate/i18n";
 import { openApi } from "../../services/api";
@@ -106,6 +108,7 @@ const CompanySignUp = () => {
     adminEmail: "",
     adminPassword: "",
     adminPasswordConfirm: "",
+    isRestaurant: false,
   };
 
   const handleSignUp = async (values) => {
@@ -118,6 +121,7 @@ const CompanySignUp = () => {
         adminName: values.adminName,
         adminEmail: values.adminEmail,
         adminPassword: values.adminPassword,
+        isRestaurant: values.isRestaurant,
       });
 
       toast.success("Cadastro realizado com sucesso! Você já pode fazer login.");
@@ -157,7 +161,7 @@ const CompanySignUp = () => {
               }, 400);
             }}
           >
-            {({ touched, errors, isSubmitting }) => (
+            {({ touched, errors, isSubmitting, values, setFieldValue }) => (
               <Form className={classes.form}>
                 <Grid container spacing={2}>
                   {/* Token de Ativação */}
@@ -278,6 +282,19 @@ const CompanySignUp = () => {
                       helperText={
                         touched.adminPasswordConfirm && errors.adminPasswordConfirm
                       }
+                    />
+                  </Grid>
+                  {/* Tipo de conta */}
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={values.isRestaurant}
+                          onChange={(e) => setFieldValue("isRestaurant", e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Minha empresa é um restaurante / delivery"
                     />
                   </Grid>
                 </Grid>

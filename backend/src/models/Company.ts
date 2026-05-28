@@ -42,6 +42,9 @@ class Company extends Model<Company> {
   @Column
   status: boolean;
 
+  @Column({ defaultValue: false })
+  isRestaurant: boolean;
+
   @Column
   dueDate: string;
 

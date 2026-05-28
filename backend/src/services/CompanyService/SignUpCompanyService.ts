@@ -15,6 +15,7 @@ interface SignUpData {
   adminName: string;
   adminEmail: string;
   adminPassword: string;
+  isRestaurant?: boolean;
 }
 
 interface SignUpResponse {
@@ -32,7 +33,8 @@ const SignUpCompanyService = async (
     companyEmail,
     adminName,
     adminEmail,
-    adminPassword
+    adminPassword,
+    isRestaurant = false
   } = data;
 
   // Validação dos dados
@@ -109,7 +111,8 @@ const SignUpCompanyService = async (
     status: true,
     planId: token.planId,
     dueDate: dueDate.toISOString().split('T')[0],
-    recurrence: "MENSAL"
+    recurrence: "MENSAL",
+    isRestaurant
   });
 
   // Criar usuário admin

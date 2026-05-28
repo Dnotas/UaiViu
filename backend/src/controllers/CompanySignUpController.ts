@@ -9,7 +9,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyEmail,
     adminName,
     adminEmail,
-    adminPassword
+    adminPassword,
+    isRestaurant
   } = req.body;
 
   const { company, user } = await SignUpCompanyService({
@@ -19,7 +20,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyEmail,
     adminName,
     adminEmail,
-    adminPassword
+    adminPassword,
+    isRestaurant: !!isRestaurant
   });
 
   return res.status(201).json({

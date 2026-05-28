@@ -110,6 +110,16 @@ const useAuth = () => {
         try {
           const { data } = await api.post("/auth/refresh_token");
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
+
+          // Se é restaurante e está na tela principal, redireciona
+          if (data.user?.isRestaurant || data.user?.company?.isRestaurant) {
+            const foodUrl = process.env.REACT_APP_FOOD_URL || "http://localhost:3002";
+            const companyId = data.user.companyId;
+            const userId = data.user.id;
+            window.location.href = `${foodUrl}/auth?token=${encodeURIComponent(data.token)}&companyId=${companyId}&userId=${userId}`;
+            return;
+          }
+
           setIsAuth(true);
           setUser(data.user);
         } catch (err) {
@@ -180,6 +190,11 @@ const useAuth = () => {
               Math.round(dias) === 1 ? "dia" : "dias"
             } `
           );
+        }
+        if (data.user.isRestaurant) {
+          const foodUrl = process.env.REACT_APP_FOOD_URL || "http://localhost:3002";
+          window.location.href = `${foodUrl}/auth?token=${encodeURIComponent(data.token)}&companyId=${companyId}&userId=${id}`;
+          return;
         }
         history.push("/tickets");
         setLoading(false);
