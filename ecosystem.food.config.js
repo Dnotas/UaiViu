@@ -6,7 +6,7 @@ module.exports = {
   apps: [
     {
       name: "uaiviu-food-backend",
-      script: "./backend-food/dist/server.js",
+      script: "./dist/server.js",
       cwd: "./backend-food",
       instances: 1,
       exec_mode: "fork",
