@@ -1,7 +1,6 @@
 import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
-  makeInMemoryStore,
   useMultiFileAuthState,
 } from "baileys";
 import { Boom } from "@hapi/boom";
