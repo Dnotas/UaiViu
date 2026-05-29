@@ -64,9 +64,10 @@ const PublicMenu = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [orderType, setOrderType] = useState("delivery");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [form, setForm] = useState({ customerName: "", customerPhone: "", customerAddress: "", customerAddressNumber: "", customerNeighborhood: "", notes: "" });
+  const [form, setForm] = useState({ customerName: "", customerPhone: "", cep: "", customerAddress: "", customerAddressNumber: "", customerAddressComplement: "", customerNeighborhood: "", notes: "" });
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
+  const [cepLoading, setCepLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -106,6 +107,23 @@ const PublicMenu = () => {
   };
 
   const getQty = (itemId) => cart.find(c => c.menuItemId === itemId)?.quantity || 0;
+
+  const handleCepChange = async (value) => {
+    const cep = value.replace(/\D/g, "");
+    setForm(f => ({ ...f, cep: value }));
+    if (cep.length === 8) {
+      setCepLoading(true);
+      try {
+        const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        if (!res.data.erro) {
+          setForm(f => ({ ...f, cep: value, customerAddress: res.data.logradouro || "", customerNeighborhood: res.data.bairro || "" }));
+        } else {
+          toast.error("CEP não encontrado");
+        }
+      } catch { toast.error("Erro ao buscar CEP"); }
+      finally { setCepLoading(false); }
+    }
+  };
 
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const deliveryFee = orderType === "delivery" ? parseFloat(restaurant?.deliveryFee || 0) : 0;
@@ -242,11 +260,16 @@ const PublicMenu = () => {
 
           {orderType === "delivery" && (
             <>
+              <Grid container spacing={1} alignItems="center">
+                <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
+                <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
+              </Grid>
               <TextField fullWidth size="small" margin="dense" label="Endereço" value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
               <Grid container spacing={1}>
-                <Grid item xs={5}><TextField fullWidth size="small" margin="dense" label="Número" value={form.customerAddressNumber} onChange={e => setForm(f => ({ ...f, customerAddressNumber: e.target.value }))} /></Grid>
-                <Grid item xs={7}><TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Número" value={form.customerAddressNumber} onChange={e => setForm(f => ({ ...f, customerAddressNumber: e.target.value }))} /></Grid>
+                <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
+              <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} />
             </>
           )}
 
