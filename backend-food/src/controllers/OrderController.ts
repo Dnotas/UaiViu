@@ -16,25 +16,42 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
   let jid: string;
   if (order.customerJid) {
     jid = order.customerJid;
+    console.log(`[WA-Send] Pedido #${order.id} → JID salvo: ${jid}`);
   } else {
     let phone = order.customerPhone.replace(/\D/g, "");
     if (!phone.startsWith("55")) phone = `55${phone}`;
     jid = `${phone}@s.whatsapp.net`;
+    console.log(`[WA-Send] Pedido #${order.id} → JID construído do telefone: ${jid}`);
   }
 
-  // Tenta todos os whatsapps da empresa sem depender do status no banco
-  const whatsapps = await FoodWhatsapp.findAll({ where: { companyId: order.companyId } });
+  // Monta lista de IDs a tentar: whatsappId salvo primeiro, depois todos da empresa
+  const tryIds: number[] = [];
+  if (order.whatsappId) tryIds.push(order.whatsappId);
 
+  const whatsapps = await FoodWhatsapp.findAll({ where: { companyId: order.companyId } });
   for (const w of whatsapps) {
+    if (!tryIds.includes(w.id)) tryIds.push(w.id);
+  }
+
+  if (tryIds.length === 0) {
+    console.error(`[WA-Send] ❌ Pedido #${order.id}: nenhum whatsapp encontrado para empresa ${order.companyId}`);
+    return;
+  }
+
+  console.log(`[WA-Send] Pedido #${order.id} → tentando via whatsapps: [${tryIds.join(", ")}]`);
+
+  for (const wbotId of tryIds) {
     try {
-      const wbotId = order.whatsappId || w.id;
       const wbot = getWbot(wbotId);
       await wbot.sendMessage(jid, { text: message });
-      return; // enviado com sucesso
-    } catch (err) {
-      console.error(`[OrderController] Falha ao enviar via whatsapp ${w.id}:`, err);
+      console.log(`[WA-Send] ✅ Pedido #${order.id} → mensagem enviada via whatsapp ${wbotId}`);
+      return;
+    } catch (err: any) {
+      console.error(`[WA-Send] ❌ Pedido #${order.id} → falha via whatsapp ${wbotId}: ${err?.message}`);
     }
   }
+
+  console.error(`[WA-Send] ❌ Pedido #${order.id} → todos os whatsapps falharam`);
 };
 
 // ─── Endpoints do painel do restaurante (autenticados) ────────────────────────
@@ -92,8 +109,13 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
       delivered: config.msgOrderDelivered,
     };
     if (msgMap[status]) {
+      console.log(`[Order] Status do pedido #${order.id} → '${status}', enviando mensagem WhatsApp`);
       await sendWhatsAppStatusMessage(order, msgMap[status]);
+    } else {
+      console.warn(`[Order] Mensagem para status '${status}' não configurada para empresa ${companyId}`);
     }
+  } else {
+    console.warn(`[Order] Config não encontrada para empresa ${companyId}, mensagem WhatsApp não enviada`);
   }
 
   // Notifica via socket o painel
@@ -146,7 +168,12 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     if (sessionData) {
       customerJid = sessionData.jid;
       whatsappId = sessionData.whatsappId;
+      console.log(`[Order] Sessão válida: JID=${customerJid}, whatsappId=${whatsappId}`);
+    } else {
+      console.warn(`[Order] Sessão '${session}' não encontrada — backend pode ter reiniciado. Fallback para telefone.`);
     }
+  } else {
+    console.warn(`[Order] Pedido sem session token — sem JID salvo, usará telefone para envio.`);
   }
 
   const order = await FoodOrder.create({
@@ -187,8 +214,11 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
 
   // Confirma automaticamente e envia mensagem de pedido recebido
   await order.update({ status: "confirmed" });
+  console.log(`[Order] Pedido #${order.id} criado e confirmado para empresa ${config.companyId}`);
   if (config.msgOrderConfirmed) {
     await sendWhatsAppStatusMessage(order, config.msgOrderConfirmed);
+  } else {
+    console.warn(`[Order] msgOrderConfirmed não configurado — mensagem de confirmação não enviada`);
   }
 
   // Notifica painel do restaurante via socket
