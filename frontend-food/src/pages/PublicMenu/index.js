@@ -87,7 +87,12 @@ const PublicMenu = () => {
     load();
     // Tenta pegar o número do WhatsApp da URL (ex: aberto por link do WhatsApp)
     const phone = new URLSearchParams(window.location.search).get("phone");
-    if (phone) setForm(f => ({ ...f, customerPhone: phone }));
+    if (phone) {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length >= 10 && digits.length <= 13) {
+        setForm(f => ({ ...f, customerPhone: digits }));
+      }
+    }
   }, [slug]);
 
   const addToCart = (item) => {
