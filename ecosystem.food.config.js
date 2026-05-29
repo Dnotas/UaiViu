@@ -22,7 +22,7 @@ module.exports = {
     },
     {
       name: "uaiviu-food-frontend",
-      script: "./node_modules/.bin/serve",
+      script: "serve",
       args: "-s build -l 3002",
       cwd: "./frontend-food",
       instances: 1,
