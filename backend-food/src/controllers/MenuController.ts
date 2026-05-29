@@ -12,7 +12,7 @@ export const listGroups = async (req: Request, res: Response): Promise<Response>
   const groups = await FoodMenuGroup.findAll({
     where: { companyId },
     include: [{ model: FoodMenuItem, where: { active: true }, required: false }],
-    order: [["sortOrder", "ASC"], [FoodMenuItem, "sortOrder", "ASC"]]
+    order: [["sortOrder", "ASC"], [{ model: FoodMenuItem, as: "items" }, "sortOrder", "ASC"]]
   });
   return res.json(groups);
 };
