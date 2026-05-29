@@ -38,7 +38,7 @@ export const handleFoodMessage = async (
     if (greeted.has(jid)) return;
     greeted.add(jid);
 
-    const phone = jid.split("@")[0];
+    const phone = jid.split("@")[0].split(":")[0].replace(/\D/g, "");
     const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?phone=${phone}`;
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
