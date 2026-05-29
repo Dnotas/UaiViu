@@ -68,6 +68,13 @@ class FoodOrder extends Model<FoodOrder> {
   @Column({ type: DataType.UUID })
   deliveryToken: string;
 
+  // JID do WhatsApp do cliente (pode ser LID) para envio de mensagens
+  @Column({ allowNull: true })
+  customerJid: string;
+
+  @Column({ allowNull: true })
+  whatsappId: number;
+
   // Tipo: delivery ou retirada
   @Column({ type: DataType.ENUM("delivery", "pickup"), defaultValue: "delivery" })
   orderType: "delivery" | "pickup";

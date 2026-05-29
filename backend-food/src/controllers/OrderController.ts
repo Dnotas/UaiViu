@@ -7,20 +7,33 @@ import FoodWhatsapp from "../models/FoodWhatsapp";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
+import { getJidBySession } from "../services/wbot/FoodMessageHandler";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
   try {
-    const whatsapp = await FoodWhatsapp.findOne({
-      where: { companyId: order.companyId, status: "CONNECTED" }
-    });
-    if (!whatsapp) return;
+    // Usa JID salvo no pedido (pode ser LID) ou reconstrói a partir do telefone
+    let jid: string;
+    if (order.customerJid) {
+      jid = order.customerJid;
+    } else {
+      let phone = order.customerPhone.replace(/\D/g, "");
+      if (!phone.startsWith("55")) phone = `55${phone}`;
+      jid = `${phone}@s.whatsapp.net`;
+    }
 
-    const wbot = getWbot(whatsapp.id);
-    let phone = order.customerPhone.replace(/\D/g, "");
-    if (!phone.startsWith("55")) phone = `55${phone}`;
-    const jid = `${phone}@s.whatsapp.net`;
+    let wbot;
+    if (order.whatsappId) {
+      wbot = getWbot(order.whatsappId);
+    } else {
+      const whatsapp = await FoodWhatsapp.findOne({
+        where: { companyId: order.companyId, status: "CONNECTED" }
+      });
+      if (!whatsapp) return;
+      wbot = getWbot(whatsapp.id);
+    }
+
     await wbot.sendMessage(jid, { text: message });
   } catch (err) {
     console.error("[OrderController] Erro ao enviar mensagem WhatsApp:", err);
@@ -115,7 +128,8 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     paymentMethod,
     orderType,
     notes,
-    items
+    items,
+    session
   } = req.body;
 
   if (!items || !items.length) throw new AppError("Carrinho vazio", 400);
@@ -126,6 +140,17 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   const subtotal: number = items.reduce((sum: number, i: any) => sum + (i.unitPrice * i.quantity), 0);
   const deliveryFee = orderType === "delivery" ? Number(config.deliveryFee) : 0;
   const total = subtotal + deliveryFee;
+
+  // Resolve JID do cliente a partir da sessão (se veio pelo link do WhatsApp)
+  let customerJid: string | null = null;
+  let whatsappId: number | null = null;
+  if (session) {
+    const sessionData = getJidBySession(session);
+    if (sessionData) {
+      customerJid = sessionData.jid;
+      whatsappId = sessionData.whatsappId;
+    }
+  }
 
   const order = await FoodOrder.create({
     companyId: config.companyId,
@@ -143,7 +168,9 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     paymentStatus: "pending",
     deliveryToken: uuidv4(),
     orderType: orderType || "delivery",
-    notes
+    notes,
+    customerJid,
+    whatsappId
   });
 
   // Cria os itens

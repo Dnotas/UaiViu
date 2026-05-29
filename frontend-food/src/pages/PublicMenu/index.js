@@ -68,6 +68,7 @@ const PublicMenu = () => {
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
+  const [sessionToken, setSessionToken] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -85,8 +86,14 @@ const PublicMenu = () => {
       finally { setLoading(false); }
     };
     load();
-    // Tenta pegar o número do WhatsApp da URL (ex: aberto por link do WhatsApp)
-    const phone = new URLSearchParams(window.location.search).get("phone");
+
+    const params = new URLSearchParams(window.location.search);
+    // Sessão gerada pelo FoodMessageHandler — permite envio de mensagem de volta pelo JID real
+    const session = params.get("session");
+    if (session) setSessionToken(session);
+
+    // Fallback: preenche telefone se vier como parâmetro (apenas números reais, ignora LID)
+    const phone = params.get("phone");
     if (phone) {
       const digits = phone.replace(/\D/g, "");
       if (digits.length >= 10 && digits.length <= 13) {
@@ -146,6 +153,7 @@ const PublicMenu = () => {
         paymentMethod,
         orderType,
         items: cart,
+        session: sessionToken || undefined,
       });
       setOrderDone(data);
       setCart([]);

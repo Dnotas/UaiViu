@@ -1,4 +1,5 @@
 import { proto, WASocket } from "baileys";
+import { v4 as uuidv4 } from "uuid";
 import FoodWhatsapp from "../../models/FoodWhatsapp";
 import FoodRestaurantConfig from "../../models/FoodRestaurantConfig";
 
@@ -9,8 +10,21 @@ import FoodRestaurantConfig from "../../models/FoodRestaurantConfig";
  */
 
 // Cache simples em memória para evitar enviar boas-vindas múltiplas vezes
-// para o mesmo número na mesma sessão
 const greetedNumbers = new Map<number, Set<string>>();
+
+// Mapa de sessionToken → { jid, whatsappId } para envio de confirmações
+// Expira em 24h para não crescer indefinidamente
+export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; expiresAt: number }>();
+
+export const getJidBySession = (token: string) => {
+  const entry = jidSessionMap.get(token);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    jidSessionMap.delete(token);
+    return null;
+  }
+  return entry;
+};
 
 export const handleFoodMessage = async (
   msg: proto.IWebMessageInfo,
@@ -38,8 +52,15 @@ export const handleFoodMessage = async (
     if (greeted.has(jid)) return;
     greeted.add(jid);
 
-    const phone = jid.split("@")[0].split(":")[0].replace(/\D/g, "");
-    const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?phone=${phone}`;
+    // Gera token de sessão vinculado ao JID real do cliente
+    const sessionToken = uuidv4();
+    jidSessionMap.set(sessionToken, {
+      jid,
+      whatsappId: whatsapp.id,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
+    });
+
+    const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?session=${sessionToken}`;
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
     await wbot.sendMessage(jid, { text: fullMessage });
