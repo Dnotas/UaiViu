@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import Drawer from "@material-ui/core/Drawer";
@@ -10,6 +10,7 @@ import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
 import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
+import Badge from "@material-ui/core/Badge";
 import MenuIcon from "@material-ui/icons/Menu";
 import DashboardIcon from "@material-ui/icons/Dashboard";
 import RestaurantMenuIcon from "@material-ui/icons/RestaurantMenu";
@@ -17,7 +18,12 @@ import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import PhoneAndroidIcon from "@material-ui/icons/PhoneAndroid";
 import SettingsIcon from "@material-ui/icons/Settings";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
+import ChatIcon from "@material-ui/icons/Chat";
 import Hidden from "@material-ui/core/Hidden";
+import io from "socket.io-client";
+import api from "../../services/api";
+
+const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
 
 const DRAWER_WIDTH = 240;
 
@@ -33,10 +39,11 @@ const useStyles = makeStyles((theme) => ({
   activeItem: { backgroundColor: theme.palette.action.selected, borderRadius: 8 },
 }));
 
-const menuItems = [
+const staticMenuItems = [
   { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
   { label: "Cardápio", path: "/menu", icon: <RestaurantMenuIcon /> },
   { label: "Pedidos", path: "/pedidos", icon: <ShoppingCartIcon /> },
+  { label: "Conversas", path: "/conversas", icon: <ChatIcon />, badgeKey: "conversations" },
   { label: "WhatsApp", path: "/whatsapp", icon: <PhoneAndroidIcon /> },
   { label: "Configurações", path: "/configuracoes", icon: <SettingsIcon /> },
 ];
@@ -46,6 +53,38 @@ const Layout = ({ children }) => {
   const history = useHistory();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadConversations, setUnreadConversations] = useState(0);
+  const socketRef = useRef(null);
+  const companyId = localStorage.getItem("food_companyId");
+
+  useEffect(() => {
+    // Carrega contagem inicial de não lidas
+    api.get("/api/food/conversations")
+      .then(({ data }) => {
+        const total = data.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+        setUnreadConversations(total);
+      })
+      .catch(() => {});
+
+    // Socket para receber atualizações em tempo real
+    const socket = io(FOOD_API, { transports: ["websocket"] });
+    socketRef.current = socket;
+    socket.emit("joinCompany", companyId);
+    socket.on("food:conversation:message", ({ message }) => {
+      if (!message.fromMe) {
+        setUnreadConversations((prev) => prev + 1);
+      }
+    });
+
+    return () => socket.disconnect();
+  }, []); // eslint-disable-line
+
+  // Zera contador ao entrar na página de conversas
+  useEffect(() => {
+    if (location.pathname === "/conversas") {
+      setUnreadConversations(0);
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("food_token");
@@ -59,14 +98,20 @@ const Layout = ({ children }) => {
     <div>
       <div className={classes.toolbar} />
       <List>
-        {menuItems.map((item) => (
+        {staticMenuItems.map((item) => (
           <ListItem
             button
             key={item.path}
             onClick={() => { history.push(item.path); setMobileOpen(false); }}
             className={location.pathname === item.path ? classes.activeItem : ""}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemIcon>
+              {item.badgeKey === "conversations" ? (
+                <Badge badgeContent={unreadConversations} color="error" max={99} invisible={!unreadConversations}>
+                  {item.icon}
+                </Badge>
+              ) : item.icon}
+            </ListItemIcon>
             <ListItemText primary={item.label} />
           </ListItem>
         ))}

@@ -7,6 +7,7 @@ import * as MenuController from "../controllers/MenuController";
 import * as OrderController from "../controllers/OrderController";
 import * as PaymentConfigController from "../controllers/PaymentConfigController";
 import * as WhatsappFoodController from "../controllers/WhatsappFoodController";
+import * as ConversationController from "../controllers/ConversationController";
 
 const router = Router();
 
@@ -36,6 +37,12 @@ router.patch("/orders/:id/status", isAuth, OrderController.updateStatus);
 // ─── Pagamentos (autenticado) ─────────────────────────────────────────────────
 router.get("/payment-config", isAuth, PaymentConfigController.show);
 router.post("/payment-config", isAuth, PaymentConfigController.upsert);
+
+// ─── Conversas (autenticado) ──────────────────────────────────────────────────
+router.get("/conversations", isAuth, ConversationController.listConversations);
+router.get("/conversations/:id/messages", isAuth, ConversationController.getMessages);
+router.post("/conversations/:id/messages", isAuth, ConversationController.sendMessage);
+router.patch("/conversations/:id/read", isAuth, ConversationController.markRead);
 
 // ─── WhatsApp (autenticado) ───────────────────────────────────────────────────
 router.get("/whatsapp", isAuth, WhatsappFoodController.list);

@@ -11,6 +11,7 @@ import MenuPage from "./pages/Menu";
 import OrdersPage from "./pages/Orders";
 import WhatsappPage from "./pages/Whatsapp";
 import SettingsPage from "./pages/Settings";
+import ConversationsPage from "./pages/Conversations";
 import PublicMenuPage from "./pages/PublicMenu";
 import DeliveryConfirmPage from "./pages/DeliveryConfirm";
 import Layout from "./components/Layout";
@@ -62,6 +63,7 @@ const App = () => {
           <PrivateRoute path="/menu" component={MenuPage} />
           <PrivateRoute path="/pedidos" component={OrdersPage} />
           <PrivateRoute path="/whatsapp" component={WhatsappPage} />
+          <PrivateRoute path="/conversas" component={ConversationsPage} />
           <PrivateRoute path="/configuracoes" component={SettingsPage} />
 
           <Redirect from="/" to="/dashboard" />

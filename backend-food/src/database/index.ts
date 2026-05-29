@@ -6,6 +6,8 @@ import FoodMenuItem from "../models/FoodMenuItem";
 import FoodOrder from "../models/FoodOrder";
 import FoodOrderItem from "../models/FoodOrderItem";
 import FoodPaymentConfig from "../models/FoodPaymentConfig";
+import FoodConversation from "../models/FoodConversation";
+import FoodMessage from "../models/FoodMessage";
 
 const sequelize = new Sequelize({
   dialect: "postgres",
@@ -22,7 +24,9 @@ const sequelize = new Sequelize({
     FoodMenuItem,
     FoodOrder,
     FoodOrderItem,
-    FoodPaymentConfig
+    FoodPaymentConfig,
+    FoodConversation,
+    FoodMessage
   ]
 });
 
