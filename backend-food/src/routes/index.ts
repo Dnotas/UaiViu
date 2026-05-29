@@ -62,6 +62,13 @@ router.get("/public/:slug/menu", async (req, res) => {
 // Formas de pagamento disponíveis
 router.get("/public/:slug/payment-methods", PaymentConfigController.publicPaymentMethods);
 
+// Consultar dados da sessão (para preencher telefone automaticamente)
+router.get("/public/session/:token", (req, res) => {
+  const { getJidBySession } = require("../services/wbot/FoodMessageHandler");
+  const session = getJidBySession(req.params.token);
+  return res.json({ phone: session?.phone || "" });
+});
+
 // Criar pedido
 router.post("/public/:slug/orders", OrderController.createPublicOrder);
 

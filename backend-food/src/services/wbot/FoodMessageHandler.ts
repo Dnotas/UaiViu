@@ -12,9 +12,9 @@ import FoodRestaurantConfig from "../../models/FoodRestaurantConfig";
 // Cache simples em memória para evitar enviar boas-vindas múltiplas vezes
 const greetedNumbers = new Map<number, Set<string>>();
 
-// Mapa de sessionToken → { jid, whatsappId } para envio de confirmações
+// Mapa de sessionToken → { jid, whatsappId, phone } para envio de confirmações
 // Expira em 24h para não crescer indefinidamente
-export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; expiresAt: number }>();
+export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; phone: string; expiresAt: number }>();
 
 export const getJidBySession = (token: string) => {
   const entry = jidSessionMap.get(token);
@@ -52,11 +52,21 @@ export const handleFoodMessage = async (
     if (greeted.has(jid)) return;
     greeted.add(jid);
 
+    // Extrai telefone do JID quando possível (JIDs regulares: 5511999998888@s.whatsapp.net)
+    // Para LID (@lid) não é possível extrair o telefone
+    let phone = "";
+    if (!jid.endsWith("@lid")) {
+      const raw = jid.split("@")[0].split(":")[0].replace(/\D/g, "");
+      // Remove DDI 55 para exibir apenas DDD+número no formulário
+      phone = raw.startsWith("55") && raw.length >= 12 ? raw.slice(2) : raw;
+    }
+
     // Gera token de sessão vinculado ao JID real do cliente
     const sessionToken = uuidv4();
     jidSessionMap.set(sessionToken, {
       jid,
       whatsappId: whatsapp.id,
+      phone,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
     });
 

@@ -90,7 +90,15 @@ const PublicMenu = () => {
     const params = new URLSearchParams(window.location.search);
     // Sessão gerada pelo FoodMessageHandler — permite envio de mensagem de volta pelo JID real
     const session = params.get("session");
-    if (session) setSessionToken(session);
+    if (session) {
+      setSessionToken(session);
+      // Consulta telefone associado à sessão para preencher automaticamente
+      axios.get(`${FOOD_API}/api/food/public/session/${session}`)
+        .then(({ data }) => {
+          if (data.phone) setForm(f => ({ ...f, customerPhone: data.phone }));
+        })
+        .catch(() => {});
+    }
 
     // Fallback: preenche telefone se vier como parâmetro (apenas números reais, ignora LID)
     const phone = params.get("phone");
