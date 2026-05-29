@@ -23,6 +23,9 @@ class FoodMenuGroup extends Model<FoodMenuGroup> {
   @Column({ defaultValue: true })
   active: boolean;
 
+  @Column({ allowNull: true })
+  imageUrl: string;
+
   @HasMany(() => FoodMenuItem, { onDelete: "CASCADE", hooks: true })
   items: FoodMenuItem[];
 

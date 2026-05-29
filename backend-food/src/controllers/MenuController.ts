@@ -21,7 +21,8 @@ export const createGroup = async (req: Request, res: Response): Promise<Response
   const { companyId } = req.user;
   const { name, sortOrder } = req.body;
   if (!name) throw new AppError("Nome do grupo é obrigatório", 400);
-  const group = await FoodMenuGroup.create({ companyId, name, sortOrder: sortOrder || 0 });
+  const imageUrl = req.file ? `/uploads/menu/${req.file.filename}` : null;
+  const group = await FoodMenuGroup.create({ companyId, name, sortOrder: sortOrder || 0, imageUrl });
   return res.status(201).json(group);
 };
 
@@ -30,6 +31,15 @@ export const updateGroup = async (req: Request, res: Response): Promise<Response
   const { id } = req.params;
   const group = await FoodMenuGroup.findOne({ where: { id, companyId } });
   if (!group) throw new AppError("Grupo não encontrado", 404);
+
+  if (req.file) {
+    if (group.imageUrl) {
+      const oldPath = path.resolve(process.cwd(), group.imageUrl.replace(/^\//, ""));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    req.body.imageUrl = `/uploads/menu/${req.file.filename}`;
+  }
+
   await group.update(req.body);
   return res.json(group);
 };

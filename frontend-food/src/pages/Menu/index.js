@@ -43,7 +43,7 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
 
   // Diálogo grupo
-  const [groupDialog, setGroupDialog] = useState({ open: false, id: null, name: "", sortOrder: 0 });
+  const [groupDialog, setGroupDialog] = useState({ open: false, id: null, name: "", sortOrder: 0, image: null, imageUrl: null });
 
   // Diálogo item
   const [itemDialog, setItemDialog] = useState({ open: false, groupId: null, id: null, ...emptyItem });
@@ -61,13 +61,18 @@ const MenuPage = () => {
   // ── Grupos ──
   const saveGroup = async () => {
     try {
+      const form = new FormData();
+      form.append("name", groupDialog.name);
+      form.append("sortOrder", groupDialog.sortOrder);
+      if (groupDialog.image) form.append("image", groupDialog.image);
+
       if (groupDialog.id) {
-        await api.put(`/api/food/menu/groups/${groupDialog.id}`, { name: groupDialog.name, sortOrder: groupDialog.sortOrder });
+        await api.put(`/api/food/menu/groups/${groupDialog.id}`, form, { headers: { "Content-Type": "multipart/form-data" } });
       } else {
-        await api.post("/api/food/menu/groups", { name: groupDialog.name, sortOrder: groupDialog.sortOrder });
+        await api.post("/api/food/menu/groups", form, { headers: { "Content-Type": "multipart/form-data" } });
       }
       toast.success("Grupo salvo!");
-      setGroupDialog({ open: false, id: null, name: "", sortOrder: 0 });
+      setGroupDialog({ open: false, id: null, name: "", sortOrder: 0, image: null, imageUrl: null });
       load();
     } catch (err) { toast.error(err?.response?.data?.error || "Erro"); }
   };
@@ -133,7 +138,7 @@ const MenuPage = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
               <Typography className={classes.groupHeader}>{group.name}</Typography>
               <Box onClick={e => e.stopPropagation()}>
-                <IconButton size="small" onClick={() => setGroupDialog({ open: true, id: group.id, name: group.name, sortOrder: group.sortOrder })}>
+                <IconButton size="small" onClick={() => setGroupDialog({ open: true, id: group.id, name: group.name, sortOrder: group.sortOrder, image: null, imageUrl: group.imageUrl })}>
                   <EditIcon fontSize="small" />
                 </IconButton>
                 <IconButton size="small" onClick={() => deleteGroup(group.id)}>
@@ -184,6 +189,13 @@ const MenuPage = () => {
             onChange={e => setGroupDialog(g => ({ ...g, name: e.target.value }))} margin="normal" />
           <TextField fullWidth label="Ordem" type="number" value={groupDialog.sortOrder}
             onChange={e => setGroupDialog(g => ({ ...g, sortOrder: e.target.value }))} margin="normal" />
+          {groupDialog.imageUrl && !groupDialog.image && (
+            <img src={`${FOOD_API}${groupDialog.imageUrl}`} alt="grupo" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, marginTop: 8 }} />
+          )}
+          <Button variant="outlined" component="label" style={{ marginTop: 8, display: "block" }}>
+            {groupDialog.image ? "Foto selecionada ✓" : "Foto do grupo (opcional)"}
+            <input type="file" accept="image/*" hidden onChange={e => setGroupDialog(g => ({ ...g, image: e.target.files[0] }))} />
+          </Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setGroupDialog(g => ({ ...g, open: false }))}>Cancelar</Button>

@@ -21,6 +21,7 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
+import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -28,28 +29,13 @@ import "react-toastify/dist/ReactToastify.css";
 const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
 
 const useStyles = makeStyles((theme) => ({
-  header: {
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    padding: theme.spacing(2, 3),
-    position: "sticky", top: 0, zIndex: 100,
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-  },
-  groupTitle: {
-    padding: theme.spacing(2, 2, 1),
-    fontWeight: "bold",
-    backgroundColor: "#f5f5f5",
-    borderLeft: `4px solid ${theme.palette.primary.main}`,
-    margin: theme.spacing(2, 0, 1),
-  },
-  card: { display: "flex", marginBottom: theme.spacing(1) },
-  cardInfo: { flex: 1 },
-  cardImg: { width: 90, height: 90, objectFit: "cover", borderRadius: 8, margin: 8 },
   qty: { display: "flex", alignItems: "center", gap: 4 },
   cartDrawer: { width: 360, padding: theme.spacing(2), [theme.breakpoints.down("xs")]: { width: "100vw" } },
   cartItem: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: theme.spacing(1) },
-  total: { fontWeight: "bold", fontSize: 18, color: theme.palette.primary.main },
+  total: { fontWeight: "bold", fontSize: 18 },
   payOption: { border: "1px solid #ddd", borderRadius: 8, marginBottom: 4, padding: "4px 12px" },
+  itemCard: { display: "flex", marginBottom: theme.spacing(1), borderRadius: 12, overflow: "hidden" },
+  itemImg: { width: 90, height: 90, objectFit: "cover", flexShrink: 0 },
 }));
 
 const PublicMenu = () => {
@@ -68,6 +54,7 @@ const PublicMenu = () => {
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
   useEffect(() => {
@@ -190,57 +177,139 @@ const PublicMenu = () => {
     </Box>
   );
 
+  const primaryColor = restaurant?.primaryColor || "#FF5722";
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+
+  const ItemCard = ({ item }) => (
+    <Card className={classes.itemCard} elevation={1}>
+      <CardContent style={{ flex: 1, padding: "12px 12px 8px" }}>
+        <Typography variant="subtitle2" style={{ fontWeight: 600 }}>{item.name}</Typography>
+        {item.description && (
+          <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 4 }}>
+            {item.description}
+          </Typography>
+        )}
+        <Typography variant="body2" style={{ fontWeight: "bold", color: primaryColor }}>
+          R$ {parseFloat(item.price).toFixed(2)}
+        </Typography>
+        <div className={classes.qty} style={{ marginTop: 6 }}>
+          {getQty(item.id) > 0 ? (
+            <>
+              <IconButton size="small" onClick={() => removeFromCart(item.id)}><RemoveIcon fontSize="small" /></IconButton>
+              <Typography style={{ minWidth: 20, textAlign: "center" }}>{getQty(item.id)}</Typography>
+              <IconButton size="small" onClick={() => addToCart(item)} style={{ color: primaryColor }}><AddIcon fontSize="small" /></IconButton>
+            </>
+          ) : (
+            <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addToCart(item)}
+              style={{ borderColor: primaryColor, color: primaryColor, borderRadius: 20 }}>
+              Adicionar
+            </Button>
+          )}
+        </div>
+      </CardContent>
+      {item.imageUrl && (
+        <img src={`${FOOD_API}${item.imageUrl}`} alt={item.name} className={classes.itemImg} />
+      )}
+    </Card>
+  );
+
   return (
-    <div>
-      <div className={classes.header}>
-        <Typography variant="h6">🍽️ Cardápio</Typography>
-        <IconButton color="inherit" onClick={() => setCartOpen(true)}>
-          <Badge badgeContent={cart.reduce((s, i) => s + i.quantity, 0)} color="secondary">
+    <div style={{ minHeight: "100vh", backgroundColor: "#f8f8f8" }}>
+
+      {/* ── Banner / Header ── */}
+      <div style={{
+        position: "relative", height: 170, overflow: "hidden",
+        background: restaurant?.bannerImageUrl
+          ? `url(${FOOD_API}${restaurant.bannerImageUrl}) center/cover no-repeat`
+          : primaryColor,
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.55))" }} />
+        <div style={{ position: "absolute", bottom: 14, left: 16, display: "flex", alignItems: "center", gap: 10 }}>
+          {restaurant?.logoUrl && (
+            <img src={`${FOOD_API}${restaurant.logoUrl}`} alt="logo"
+              style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", border: "2px solid white" }} />
+          )}
+          <div>
+            <Typography variant="h6" style={{ color: "white", fontWeight: "bold", lineHeight: 1.2, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
+              {restaurant?.restaurantName || "Cardápio"}
+            </Typography>
+            {parseFloat(restaurant?.deliveryFee || 0) > 0 && (
+              <Typography variant="caption" style={{ color: "rgba(255,255,255,0.9)" }}>
+                Taxa de entrega: R$ {parseFloat(restaurant.deliveryFee).toFixed(2)}
+              </Typography>
+            )}
+          </div>
+        </div>
+        <IconButton onClick={() => setCartOpen(true)}
+          style={{ position: "absolute", top: 10, right: 10, color: "white", background: "rgba(0,0,0,0.25)", padding: 8 }}>
+          <Badge badgeContent={cartCount} color="secondary">
             <ShoppingCartIcon />
           </Badge>
         </IconButton>
       </div>
 
-      <Box px={2} pb={10}>
-        {groups.map(group => (
-          <div key={group.id}>
-            <Typography className={classes.groupTitle}>{group.name}</Typography>
-            {(group.items || []).map(item => (
-              <Card key={item.id} className={classes.card} elevation={1}>
-                <CardContent className={classes.cardInfo}>
-                  <Typography variant="subtitle2">{item.name}</Typography>
-                  {item.description && <Typography variant="caption" color="textSecondary">{item.description}</Typography>}
-                  <Typography variant="body2" color="primary" style={{ fontWeight: "bold", marginTop: 4 }}>
-                    R$ {parseFloat(item.price).toFixed(2)}
-                  </Typography>
-                  <div className={classes.qty}>
-                    {getQty(item.id) > 0 ? (
-                      <>
-                        <IconButton size="small" onClick={() => removeFromCart(item.id)}><RemoveIcon fontSize="small" /></IconButton>
-                        <Typography>{getQty(item.id)}</Typography>
-                        <IconButton size="small" color="primary" onClick={() => addToCart(item)}><AddIcon fontSize="small" /></IconButton>
-                      </>
-                    ) : (
-                      <Button size="small" variant="outlined" color="primary" startIcon={<AddIcon />} onClick={() => addToCart(item)}>
-                        Adicionar
-                      </Button>
-                    )}
+      {/* ── Conteúdo ── */}
+      <Box px={2} pb={12} pt={2}>
+
+        {/* Vista de grupo selecionado */}
+        {selectedGroup ? (
+          <>
+            <Box display="flex" alignItems="center" mb={2}>
+              <IconButton size="small" onClick={() => setSelectedGroup(null)} style={{ marginRight: 8 }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography variant="h6" style={{ fontWeight: "bold" }}>{selectedGroup.name}</Typography>
+            </Box>
+            {(selectedGroup.items || []).length === 0 ? (
+              <Typography color="textSecondary">Nenhum item nesta categoria.</Typography>
+            ) : (
+              (selectedGroup.items || []).map(item => <ItemCard key={item.id} item={item} />)
+            )}
+          </>
+        ) : (
+          /* Vista de categorias (grid de quadrados) */
+          <>
+            <Typography variant="subtitle1" style={{ fontWeight: "bold", marginBottom: 12 }}>Categorias</Typography>
+            <Grid container spacing={2}>
+              {groups.map(group => (
+                <Grid item xs={4} sm={3} key={group.id}>
+                  <div onClick={() => setSelectedGroup(group)} style={{ cursor: "pointer", textAlign: "center" }}>
+                    <div style={{
+                      width: "100%", paddingTop: "100%", position: "relative",
+                      borderRadius: 12, overflow: "hidden",
+                      background: group.imageUrl ? "transparent" : primaryColor,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                    }}>
+                      {group.imageUrl ? (
+                        <img src={`${FOOD_API}${group.imageUrl}`} alt={group.name}
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+                          🍽️
+                        </div>
+                      )}
+                      {/* overlay escuro na parte inferior */}
+                      {group.imageUrl && (
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.45))" }} />
+                      )}
+                    </div>
+                    <Typography variant="caption" style={{ fontWeight: 600, display: "block", marginTop: 4, lineHeight: 1.2 }}>
+                      {group.name}
+                    </Typography>
                   </div>
-                </CardContent>
-                {item.imageUrl && (
-                  <img src={`${FOOD_API}${item.imageUrl}`} alt={item.name} className={classes.cardImg} />
-                )}
-              </Card>
-            ))}
-          </div>
-        ))}
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
       </Box>
 
-      {/* Botão flutuante do carrinho no mobile */}
-      {cart.length > 0 && !cartOpen && (
+      {/* Botão flutuante do carrinho */}
+      {cartCount > 0 && !cartOpen && (
         <Box position="fixed" bottom={16} left={0} right={0} display="flex" justifyContent="center" zIndex={200}>
-          <Button variant="contained" color="primary" startIcon={<ShoppingCartIcon />}
-            onClick={() => setCartOpen(true)} style={{ borderRadius: 24, padding: "12px 32px" }}>
+          <Button variant="contained" startIcon={<ShoppingCartIcon />}
+            onClick={() => setCartOpen(true)}
+            style={{ borderRadius: 24, padding: "12px 32px", backgroundColor: primaryColor, color: "white" }}>
             Ver carrinho · R$ {total.toFixed(2)}
           </Button>
         </Box>

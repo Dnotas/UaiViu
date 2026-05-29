@@ -13,11 +13,13 @@ const router = Router();
 // ─── Configuração do restaurante (autenticado) ────────────────────────────────
 router.get("/restaurant-config", isAuth, RestaurantConfigController.show);
 router.post("/restaurant-config", isAuth, RestaurantConfigController.upsert);
+router.post("/restaurant-config/upload-logo", isAuth, uploadMenu.single("image"), RestaurantConfigController.uploadLogo);
+router.post("/restaurant-config/upload-banner", isAuth, uploadMenu.single("image"), RestaurantConfigController.uploadBanner);
 
 // ─── Cardápio — grupos (autenticado) ─────────────────────────────────────────
 router.get("/menu/groups", isAuth, MenuController.listGroups);
-router.post("/menu/groups", isAuth, MenuController.createGroup);
-router.put("/menu/groups/:id", isAuth, MenuController.updateGroup);
+router.post("/menu/groups", isAuth, uploadMenu.single("image"), MenuController.createGroup);
+router.put("/menu/groups/:id", isAuth, uploadMenu.single("image"), MenuController.updateGroup);
 router.delete("/menu/groups/:id", isAuth, MenuController.deleteGroup);
 
 // ─── Cardápio — itens (autenticado) ──────────────────────────────────────────
@@ -56,7 +58,20 @@ router.get("/public/:slug/menu", async (req, res) => {
     order: [["sortOrder", "ASC"], [{ model: FoodMenuItem, as: "items" }, "sortOrder", "ASC"]]
   });
 
-  return res.json({ restaurant: { slug: config.slug, deliveryFee: config.deliveryFee, estimatedMinutes: config.estimatedDeliveryMinutes, deliveryEnabled: config.deliveryEnabled, pickupEnabled: config.pickupEnabled }, groups });
+  return res.json({
+    restaurant: {
+      slug: config.slug,
+      deliveryFee: config.deliveryFee,
+      estimatedMinutes: config.estimatedDeliveryMinutes,
+      deliveryEnabled: config.deliveryEnabled,
+      pickupEnabled: config.pickupEnabled,
+      restaurantName: config.restaurantName,
+      primaryColor: config.primaryColor || "#FF5722",
+      logoUrl: config.logoUrl,
+      bannerImageUrl: config.bannerImageUrl,
+    },
+    groups
+  });
 });
 
 // Formas de pagamento disponíveis

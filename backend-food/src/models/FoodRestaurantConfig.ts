@@ -49,6 +49,19 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ defaultValue: 30 })
   estimatedDeliveryMinutes: number;
 
+  // Personalização visual
+  @Column({ allowNull: true })
+  restaurantName: string;
+
+  @Column({ type: DataType.STRING(7), allowNull: true, defaultValue: "#FF5722" })
+  primaryColor: string;
+
+  @Column({ allowNull: true })
+  logoUrl: string;
+
+  @Column({ allowNull: true })
+  bannerImageUrl: string;
+
   @CreatedAt
   createdAt: Date;
 
