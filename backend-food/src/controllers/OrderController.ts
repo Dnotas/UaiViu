@@ -12,31 +12,28 @@ import { getJidBySession } from "../services/wbot/FoodMessageHandler";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
-  try {
-    // Usa JID salvo no pedido (pode ser LID) ou reconstrói a partir do telefone
-    let jid: string;
-    if (order.customerJid) {
-      jid = order.customerJid;
-    } else {
-      let phone = order.customerPhone.replace(/\D/g, "");
-      if (!phone.startsWith("55")) phone = `55${phone}`;
-      jid = `${phone}@s.whatsapp.net`;
-    }
+  // Determina o JID do destinatário
+  let jid: string;
+  if (order.customerJid) {
+    jid = order.customerJid;
+  } else {
+    let phone = order.customerPhone.replace(/\D/g, "");
+    if (!phone.startsWith("55")) phone = `55${phone}`;
+    jid = `${phone}@s.whatsapp.net`;
+  }
 
-    let wbot;
-    if (order.whatsappId) {
-      wbot = getWbot(order.whatsappId);
-    } else {
-      const whatsapp = await FoodWhatsapp.findOne({
-        where: { companyId: order.companyId, status: "CONNECTED" }
-      });
-      if (!whatsapp) return;
-      wbot = getWbot(whatsapp.id);
-    }
+  // Tenta todos os whatsapps da empresa sem depender do status no banco
+  const whatsapps = await FoodWhatsapp.findAll({ where: { companyId: order.companyId } });
 
-    await wbot.sendMessage(jid, { text: message });
-  } catch (err) {
-    console.error("[OrderController] Erro ao enviar mensagem WhatsApp:", err);
+  for (const w of whatsapps) {
+    try {
+      const wbotId = order.whatsappId || w.id;
+      const wbot = getWbot(wbotId);
+      await wbot.sendMessage(jid, { text: message });
+      return; // enviado com sucesso
+    } catch (err) {
+      console.error(`[OrderController] Falha ao enviar via whatsapp ${w.id}:`, err);
+    }
   }
 };
 

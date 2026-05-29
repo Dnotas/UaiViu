@@ -71,6 +71,7 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
 
     if (connection === "open") {
       const phone = wbot.user?.id?.split(":")[0] || "";
+      sessions.set(whatsapp.id, wbot);
       await whatsapp.update({ status: "CONNECTED", qrcode: null, phone });
       io.to(`food-company-${whatsapp.companyId}`).emit("food-whatsapp-update", {
         action: "update",
@@ -87,8 +88,6 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
       }
     }
   });
-
-  sessions.set(whatsapp.id, wbot);
 };
 
 export const initWbotFood = async () => {
