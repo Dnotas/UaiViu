@@ -38,7 +38,8 @@ export const handleFoodMessage = async (
     if (greeted.has(jid)) return;
     greeted.add(jid);
 
-    const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}`;
+    const phone = jid.split("@")[0];
+    const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?phone=${phone}`;
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
     await wbot.sendMessage(jid, { text: fullMessage });

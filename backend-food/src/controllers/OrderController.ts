@@ -18,7 +18,9 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
     if (!whatsapp) return;
 
     const wbot = getWbot(whatsapp.id);
-    const jid = `${order.customerPhone}@s.whatsapp.net`;
+    let phone = order.customerPhone.replace(/\D/g, "");
+    if (!phone.startsWith("55")) phone = `55${phone}`;
+    const jid = `${phone}@s.whatsapp.net`;
     await wbot.sendMessage(jid, { text: message });
   } catch (err) {
     console.error("[OrderController] Erro ao enviar mensagem WhatsApp:", err);
