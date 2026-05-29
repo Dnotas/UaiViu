@@ -11,19 +11,36 @@ import { getJidBySession } from "../services/wbot/FoodMessageHandler";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
-  // Determina o JID do destinatário
-  let jid: string;
-  if (order.customerJid) {
-    jid = order.customerJid;
-    console.log(`[WA-Send] Pedido #${order.id} → JID salvo: ${jid}`);
-  } else {
-    let phone = order.customerPhone.replace(/\D/g, "");
-    if (!phone.startsWith("55")) phone = `55${phone}`;
-    jid = `${phone}@s.whatsapp.net`;
-    console.log(`[WA-Send] Pedido #${order.id} → JID construído do telefone: ${jid}`);
+const resolveJid = async (wbot: ReturnType<typeof getWbot>, rawPhone: string): Promise<string> => {
+  let phone = rawPhone.replace(/\D/g, "");
+  if (!phone.startsWith("55")) phone = `55${phone}`;
+
+  try {
+    // Verifica o número no WhatsApp e obtém o JID real (resolve o problema do 9 extra no Brasil)
+    const [result] = await (wbot as any).onWhatsApp(phone);
+    if (result?.exists) {
+      console.log(`[WA-Send] onWhatsApp resolveu: ${phone} → ${result.jid}`);
+      return result.jid;
+    }
+
+    // Tenta com/sem o nono dígito (DDDs que ainda não migraram)
+    const altPhone = /^55\d{2}9\d{8}$/.test(phone)
+      ? phone.replace(/^(55\d{2})9/, "$1")   // remove o 9 extra
+      : phone.replace(/^(55\d{2})(\d{8})$/, "$19$2"); // adiciona o 9
+
+    const [altResult] = await (wbot as any).onWhatsApp(altPhone);
+    if (altResult?.exists) {
+      console.log(`[WA-Send] onWhatsApp (alt) resolveu: ${phone} → ${altResult.jid}`);
+      return altResult.jid;
+    }
+  } catch (err: any) {
+    console.warn(`[WA-Send] onWhatsApp falhou (${err?.message}), usando JID direto`);
   }
 
+  return `${phone}@s.whatsapp.net`;
+};
+
+const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
   // Monta lista de IDs a tentar: whatsappId salvo primeiro, depois todos da empresa
   const tryIds: number[] = [];
   if (order.whatsappId) tryIds.push(order.whatsappId);
@@ -43,6 +60,17 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
   for (const wbotId of tryIds) {
     try {
       const wbot = getWbot(wbotId);
+
+      // Determina o JID: usa o JID salvo (LID/session) ou resolve via onWhatsApp
+      let jid: string;
+      if (order.customerJid) {
+        jid = order.customerJid;
+        console.log(`[WA-Send] Pedido #${order.id} → JID salvo: ${jid}`);
+      } else {
+        jid = await resolveJid(wbot, order.customerPhone);
+        console.log(`[WA-Send] Pedido #${order.id} → JID resolvido: ${jid}`);
+      }
+
       await wbot.sendMessage(jid, { text: message });
       console.log(`[WA-Send] ✅ Pedido #${order.id} → mensagem enviada via whatsapp ${wbotId}`);
       return;
