@@ -53,7 +53,7 @@ router.get("/public/:slug/menu", async (req, res) => {
   const groups = await FoodMenuGroup.findAll({
     where: { companyId: config.companyId, active: true },
     include: [{ model: FoodMenuItem, where: { active: true }, required: false }],
-    order: [["sortOrder", "ASC"], [FoodMenuItem, "sortOrder", "ASC"]]
+    order: [["sortOrder", "ASC"], [{ model: FoodMenuItem, as: "items" }, "sortOrder", "ASC"]]
   });
 
   return res.json({ restaurant: { slug: config.slug, deliveryFee: config.deliveryFee, estimatedMinutes: config.estimatedDeliveryMinutes, deliveryEnabled: config.deliveryEnabled, pickupEnabled: config.pickupEnabled }, groups });
