@@ -44,3 +44,30 @@ export const disconnect = async (req: Request, res: Response): Promise<Response>
   await whatsapp.update({ status: "DISCONNECTED", qrcode: null });
   return res.json({ message: "Desconectado" });
 };
+
+export const reconnect = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+
+  const whatsapp = await FoodWhatsapp.findOne({ where: { id, companyId } });
+  if (!whatsapp) throw new AppError("Conexão não encontrada", 404);
+
+  await initWbotSession(whatsapp);
+  return res.json(whatsapp);
+};
+
+export const remove = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+
+  const whatsapp = await FoodWhatsapp.findOne({ where: { id, companyId } });
+  if (!whatsapp) throw new AppError("Conexão não encontrada", 404);
+
+  try {
+    const wbot = getWbot(whatsapp.id);
+    await wbot.logout();
+  } catch { }
+
+  await whatsapp.destroy();
+  return res.json({ message: "Removido" });
+};

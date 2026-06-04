@@ -22,6 +22,7 @@ const STATUS_LABEL = {
 const useStyles = makeStyles((theme) => ({
   paper: { padding: theme.spacing(3), maxWidth: 400 },
   qrBox: { display: "flex", justifyContent: "center", margin: theme.spacing(2, 0) },
+  danger: { color: theme.palette.error.main, borderColor: theme.palette.error.main },
 }));
 
 const WhatsappPage = () => {
@@ -64,6 +65,16 @@ const WhatsappPage = () => {
     }
   };
 
+  const handleReconnect = async () => {
+    try {
+      await api.post(`/api/food/whatsapp/${connection.id}/reconnect`);
+      setConnection(prev => ({ ...prev, status: "OPENING", qrcode: null }));
+      toast.info("Reconectando... aguarde o QR code");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao reconectar");
+    }
+  };
+
   const handleDisconnect = async () => {
     if (!window.confirm("Desconectar o WhatsApp?")) return;
     try {
@@ -72,6 +83,17 @@ const WhatsappPage = () => {
       toast.success("Desconectado");
     } catch {
       toast.error("Erro ao desconectar");
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm("Remover esta conexão? Você poderá conectar um novo número depois.")) return;
+    try {
+      await api.delete(`/api/food/whatsapp/${connection.id}`);
+      setConnection(null);
+      toast.success("Conexão removida. Clique em Conectar para usar outro número.");
+    } catch {
+      toast.error("Erro ao remover conexão");
     }
   };
 
@@ -115,17 +137,25 @@ const WhatsappPage = () => {
               </Typography>
             )}
 
-            {connection.status === "CONNECTED" && (
-              <Button variant="outlined" color="secondary" onClick={handleDisconnect} style={{ marginTop: 16 }}>
-                Desconectar
-              </Button>
-            )}
+            <Box mt={2} display="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+              {connection.status === "CONNECTED" && (
+                <Button variant="outlined" color="secondary" onClick={handleDisconnect}>
+                  Desconectar
+                </Button>
+              )}
 
-            {(connection.status === "DISCONNECTED" || connection.status === "TIMEOUT") && (
-              <Button variant="contained" color="primary" onClick={handleConnect} style={{ marginTop: 16 }}>
-                Reconectar
-              </Button>
-            )}
+              {(connection.status === "DISCONNECTED" || connection.status === "TIMEOUT") && (
+                <Button variant="contained" color="primary" onClick={handleReconnect}>
+                  Reconectar
+                </Button>
+              )}
+
+              {connection.status !== "QRCODE" && connection.status !== "OPENING" && (
+                <Button variant="outlined" className={classes.danger} onClick={handleRemove}>
+                  Trocar número
+                </Button>
+              )}
+            </Box>
           </>
         )}
       </Paper>

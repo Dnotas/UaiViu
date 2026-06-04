@@ -48,6 +48,8 @@ router.patch("/conversations/:id/read", isAuth, ConversationController.markRead)
 router.get("/whatsapp", isAuth, WhatsappFoodController.list);
 router.post("/whatsapp", isAuth, WhatsappFoodController.create);
 router.post("/whatsapp/:id/disconnect", isAuth, WhatsappFoodController.disconnect);
+router.post("/whatsapp/:id/reconnect", isAuth, WhatsappFoodController.reconnect);
+router.delete("/whatsapp/:id", isAuth, WhatsappFoodController.remove);
 
 // ─── Endpoints PÚBLICOS (sem auth — acessados pelo cliente final) ─────────────
 // Cardápio público
