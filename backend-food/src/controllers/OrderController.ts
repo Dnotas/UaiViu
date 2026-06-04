@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import FoodOrder from "../models/FoodOrder";
 import FoodOrderItem from "../models/FoodOrderItem";
@@ -129,10 +130,17 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
 // GET /api/food/orders
 export const list = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
-  const { status, date } = req.query as Record<string, string>;
+  const { status, dateFrom, dateTo } = req.query as Record<string, string>;
 
   const where: any = { companyId };
   if (status) where.status = status;
+
+  if (dateFrom || dateTo) {
+    const from = dateFrom ? new Date(dateFrom) : new Date("2000-01-01");
+    const to = dateTo ? new Date(dateTo) : new Date();
+    to.setHours(23, 59, 59, 999);
+    where.createdAt = { [Op.between]: [from, to] };
+  }
 
   const orders = await FoodOrder.findAll({
     where,
