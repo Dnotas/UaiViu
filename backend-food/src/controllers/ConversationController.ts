@@ -8,7 +8,7 @@ import { getIO } from "../libs/socket";
 
 export const listConversations = async (req: Request, res: Response) => {
   try {
-    const companyId = (req as any).companyId;
+    const companyId = (req as any).user?.companyId;
     const conversations = await FoodConversation.findAll({
       where: { companyId },
       order: [["lastMessageAt", "DESC"]],
@@ -22,7 +22,7 @@ export const listConversations = async (req: Request, res: Response) => {
 
 export const getMessages = async (req: Request, res: Response) => {
   try {
-    const companyId = (req as any).companyId;
+    const companyId = (req as any).user?.companyId;
     const id = parseInt(req.params.id, 10);
 
     const conversation = await FoodConversation.findOne({ where: { id, companyId } });
@@ -42,7 +42,7 @@ export const getMessages = async (req: Request, res: Response) => {
 
 export const sendMessage = async (req: Request, res: Response) => {
   try {
-    const companyId = (req as any).companyId;
+    const companyId = (req as any).user?.companyId;
     const id = parseInt(req.params.id, 10);
     const { body } = req.body;
 
@@ -103,7 +103,7 @@ export const sendMessage = async (req: Request, res: Response) => {
 
 export const markRead = async (req: Request, res: Response) => {
   try {
-    const companyId = (req as any).companyId;
+    const companyId = (req as any).user?.companyId;
     const id = parseInt(req.params.id, 10);
 
     const conversation = await FoodConversation.findOne({ where: { id, companyId } });
