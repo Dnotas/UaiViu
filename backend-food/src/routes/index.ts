@@ -106,6 +106,28 @@ router.get("/public/:slug/menu", async (req, res) => {
 // Formas de pagamento disponíveis
 router.get("/public/:slug/payment-methods", PaymentConfigController.publicPaymentMethods);
 
+// Buscar dados do cliente pelo telefone (auto-preenchimento no cardápio)
+router.get("/public/:slug/customer/:phone", async (req, res) => {
+  const FoodRestaurantConfig = require("../models/FoodRestaurantConfig").default;
+  const FoodCustomer = require("../models/FoodCustomer").default;
+
+  const config = await FoodRestaurantConfig.findOne({ where: { slug: req.params.slug } });
+  if (!config) return res.status(404).json({ error: "Restaurante não encontrado" });
+
+  const phone = req.params.phone.replace(/\D/g, "");
+  const customer = await FoodCustomer.findOne({ where: { companyId: config.companyId, phone } });
+  if (!customer) return res.json(null);
+
+  return res.json({
+    customerName: customer.customerName,
+    cep: customer.cep,
+    customerAddress: customer.customerAddress,
+    customerAddressNumber: customer.customerAddressNumber,
+    customerAddressComplement: customer.customerAddressComplement,
+    customerNeighborhood: customer.customerNeighborhood,
+  });
+});
+
 // Consultar dados da sessão (para preencher telefone automaticamente)
 router.get("/public/session/:token", (req, res) => {
   const { getJidBySession } = require("../services/wbot/FoodMessageHandler");

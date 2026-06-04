@@ -9,6 +9,7 @@ import FoodPaymentConfig from "../models/FoodPaymentConfig";
 import FoodConversation from "../models/FoodConversation";
 import FoodMessage from "../models/FoodMessage";
 import FoodItemComplement from "../models/FoodItemComplement";
+import FoodCustomer from "../models/FoodCustomer";
 
 const sequelize = new Sequelize({
   dialect: "postgres",
@@ -28,7 +29,8 @@ const sequelize = new Sequelize({
     FoodPaymentConfig,
     FoodConversation,
     FoodMessage,
-    FoodItemComplement
+    FoodItemComplement,
+    FoodCustomer
   ]
 });
 

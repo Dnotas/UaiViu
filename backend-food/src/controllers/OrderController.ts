@@ -10,6 +10,7 @@ import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
 import { getJidBySession } from "../services/wbot/FoodMessageHandler";
+import FoodCustomer from "../models/FoodCustomer";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -280,6 +281,25 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       })
     )
   );
+
+  // Salva/atualiza dados do cliente para auto-preenchimento futuro
+  if (customerPhone) {
+    const phone = customerPhone.replace(/\D/g, "");
+    try {
+      await FoodCustomer.upsert({
+        companyId: config.companyId,
+        phone,
+        customerName: customerName || undefined,
+        cep: req.body.cep || undefined,
+        customerAddress: customerAddress || undefined,
+        customerAddressNumber: customerAddressNumber || undefined,
+        customerAddressComplement: customerAddressComplement || undefined,
+        customerNeighborhood: customerNeighborhood || undefined,
+      });
+    } catch (e) {
+      console.warn("[Order] Erro ao salvar dados do cliente:", e);
+    }
+  }
 
   // Confirma automaticamente e envia mensagem de pedido recebido
   await order.update({ status: "confirmed" });

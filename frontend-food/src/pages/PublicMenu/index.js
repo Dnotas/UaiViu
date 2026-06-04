@@ -64,6 +64,7 @@ const PublicMenu = () => {
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
+  const [customerFound, setCustomerFound] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
@@ -162,6 +163,30 @@ const PublicMenu = () => {
   };
 
   const getQtyByItemId = (itemId) => cart.filter(c => c.menuItemId === itemId).reduce((s, c) => s + c.quantity, 0);
+
+  const handlePhoneChange = async (value) => {
+    setForm(f => ({ ...f, customerPhone: value }));
+    setCustomerFound(false);
+    const digits = value.replace(/\D/g, "");
+    if (digits.length >= 11) {
+      try {
+        const { data } = await axios.get(`${FOOD_API}/api/food/public/${slug}/customer/${digits}`);
+        if (data) {
+          setForm(f => ({
+            ...f,
+            customerPhone: value,
+            customerName: data.customerName || f.customerName,
+            cep: data.cep || f.cep,
+            customerAddress: data.customerAddress || f.customerAddress,
+            customerAddressNumber: data.customerAddressNumber || f.customerAddressNumber,
+            customerAddressComplement: data.customerAddressComplement || f.customerAddressComplement,
+            customerNeighborhood: data.customerNeighborhood || f.customerNeighborhood,
+          }));
+          setCustomerFound(true);
+        }
+      } catch { }
+    }
+  };
 
   const handleCepChange = async (value) => {
     const cep = value.replace(/\D/g, "");
@@ -414,7 +439,14 @@ const PublicMenu = () => {
           )}
 
           <TextField fullWidth size="small" margin="dense" label="Seu nome" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
-          <TextField fullWidth size="small" margin="dense" label="Telefone (WhatsApp)" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
+          <TextField
+            fullWidth size="small" margin="dense"
+            label="Telefone (WhatsApp) com DDD"
+            value={form.customerPhone}
+            onChange={e => handlePhoneChange(e.target.value)}
+            helperText={customerFound ? "✓ Dados preenchidos automaticamente" : ""}
+            FormHelperTextProps={{ style: { color: "green" } }}
+          />
 
           {orderType === "delivery" && (
             <>
