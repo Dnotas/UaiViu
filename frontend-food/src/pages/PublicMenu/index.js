@@ -60,6 +60,8 @@ const PublicMenu = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [orderType, setOrderType] = useState("delivery");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [cashSubMethod, setCashSubMethod] = useState("cash_money"); // cash_money | cash_pix | cash_card
+  const [trocoAmount, setTrocoAmount] = useState("");
   const [form, setForm] = useState({ customerName: "", customerPhone: "", cep: "", customerAddress: "", customerAddressNumber: "", customerAddressComplement: "", customerNeighborhood: "", notes: "" });
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
@@ -214,12 +216,23 @@ const PublicMenu = () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
+
+    // Resolve método de pagamento final
+    const finalPayment = paymentMethod === "cash" ? cashSubMethod : paymentMethod;
+    // Monta nota de troco se necessário
+    let notesWithTroco = form.notes || "";
+    if (paymentMethod === "cash" && cashSubMethod === "cash_money" && trocoAmount) {
+      const trocoNote = `Troco para R$ ${trocoAmount}`;
+      notesWithTroco = notesWithTroco ? `${notesWithTroco} | ${trocoNote}` : trocoNote;
+    }
+
     setOrdering(true);
     try {
       const { data } = await axios.post(`${FOOD_API}/api/food/public/${slug}/orders`, {
         ...form,
+        notes: notesWithTroco,
         customerPhone: form.customerPhone.replace(/\D/g, ""),
-        paymentMethod,
+        paymentMethod: finalPayment,
         orderType,
         items: cart.map(i => ({
           menuItemId: i.menuItemId,
@@ -495,6 +508,29 @@ const PublicMenu = () => {
                 control={<Radio color="primary" size="small" />} label={m.label} />
             ))}
           </RadioGroup>
+
+          {/* Sub-opções quando selecionar "Pagar na entrega" */}
+          {paymentMethod === "cash" && (
+            <Box style={{ background: "#f9f9f9", borderRadius: 8, padding: "8px 12px", marginTop: 4 }}>
+              <Typography variant="caption" color="textSecondary">Como vai pagar na entrega?</Typography>
+              <RadioGroup value={cashSubMethod} onChange={e => { setCashSubMethod(e.target.value); setTrocoAmount(""); }}>
+                <FormControlLabel value="cash_money" control={<Radio color="primary" size="small" />} label="Dinheiro" />
+                <FormControlLabel value="cash_pix"   control={<Radio color="primary" size="small" />} label="PIX na entrega" />
+                <FormControlLabel value="cash_card"  control={<Radio color="primary" size="small" />} label="Cartão na entrega" />
+              </RadioGroup>
+              {cashSubMethod === "cash_money" && (
+                <TextField
+                  size="small" fullWidth
+                  label="Troco para quanto? (deixe vazio se não precisar)"
+                  type="number"
+                  value={trocoAmount}
+                  onChange={e => setTrocoAmount(e.target.value)}
+                  style={{ marginTop: 4 }}
+                  inputProps={{ min: 0, step: "0.50" }}
+                />
+              )}
+            </Box>
+          )}
 
           <TextField fullWidth size="small" margin="dense" label="Observacoes (opcional)" multiline rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
 

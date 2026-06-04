@@ -175,7 +175,11 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
   const order = await FoodOrder.findOne({ where: { id, companyId } });
   if (!order) throw new AppError("Pedido não encontrado", 404);
 
-  await order.update({ status });
+  const updateData: any = { status };
+  if (status === "cancelled" && req.body.reason) {
+    updateData.cancelReason = req.body.reason;
+  }
+  await order.update(updateData);
 
   // Envia mensagem WhatsApp automática
   const config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -186,7 +190,15 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
       on_the_way: config.msgOrderOnTheWay,
       delivered: config.msgOrderDelivered,
     };
-    if (msgMap[status]) {
+
+    if (status === "cancelled") {
+      const reason = req.body.reason?.trim();
+      const cancelMsg = reason
+        ? `❌ Seu pedido #${order.id} foi cancelado.\n\nMotivo: ${reason}\n\nPedimos desculpas pelo transtorno. Entre em contato se tiver dúvidas.`
+        : `❌ Seu pedido #${order.id} foi cancelado.\n\nPedimos desculpas pelo transtorno.`;
+      console.log(`[Order] Pedido #${order.id} cancelado, enviando mensagem WhatsApp`);
+      await sendWhatsAppStatusMessage(order, cancelMsg);
+    } else if (msgMap[status]) {
       console.log(`[Order] Status do pedido #${order.id} → '${status}', enviando mensagem WhatsApp`);
       await sendWhatsAppStatusMessage(order, msgMap[status]);
     } else {

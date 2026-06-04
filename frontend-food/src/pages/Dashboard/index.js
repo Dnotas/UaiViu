@@ -59,7 +59,11 @@ const PRESETS = [
   { label: "Este mês",   days: -1 }, // especial
 ];
 
-const PAYMENT_LABEL = { cash: "Dinheiro", pix: "PIX", credit: "Crédito", debit: "Débito" };
+const PAYMENT_LABEL = {
+  cash: "Dinheiro (entrega)", cash_money: "Dinheiro (entrega)",
+  cash_pix: "PIX (entrega)", cash_card: "Cartão (entrega)",
+  pix: "PIX", credit: "Crédito", debit: "Débito",
+};
 const STATUS_LABEL   = { confirmed: "Confirmados", preparing: "Em Preparo", on_the_way: "Saiu p/ Entrega", delivered: "Entregues", cancelled: "Cancelados" };
 const STATUS_COLOR   = { confirmed: "#1976d2", preparing: "#f57c00", on_the_way: "#7b1fa2", delivered: "#388e3c", cancelled: "#d32f2f" };
 

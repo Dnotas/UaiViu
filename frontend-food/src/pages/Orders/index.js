@@ -15,6 +15,7 @@ import Divider from "@material-ui/core/Divider";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import PrintIcon from "@material-ui/icons/Print";
+import CancelIcon from "@material-ui/icons/Cancel";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import io from "socket.io-client";
@@ -39,7 +40,11 @@ const NEXT_LABEL = {
   on_the_way: "Marcar Entregue",
 };
 
-const PAYMENT_LABEL = { cash: "Pagar na entrega", pix: "PIX", credit: "Cartão Crédito", debit: "Cartão Débito" };
+const PAYMENT_LABEL = {
+  cash: "Pagar na entrega", cash_money: "Dinheiro na entrega",
+  cash_pix: "PIX na entrega", cash_card: "Cartão na entrega",
+  pix: "PIX", credit: "Cartão Crédito", debit: "Cartão Débito",
+};
 
 const useStyles = makeStyles((theme) => ({
   column: { minHeight: 200 },
@@ -123,6 +128,7 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addressDialog, setAddressDialog] = useState({ open: false, order: null });
+  const [cancelDialog, setCancelDialog] = useState({ open: false, order: null, reason: "" });
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -177,11 +183,14 @@ const OrdersPage = () => {
     }
   };
 
-  const cancel = async (order) => {
-    if (!window.confirm("Cancelar este pedido?")) return;
+  const cancel = async () => {
+    const { order, reason } = cancelDialog;
+    if (!reason.trim()) { toast.error("Informe o motivo do cancelamento"); return; }
     try {
-      await api.patch(`/api/food/orders/${order.id}/status`, { status: "cancelled" });
+      await api.patch(`/api/food/orders/${order.id}/status`, { status: "cancelled", reason: reason.trim() });
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: "cancelled" } : o));
+      setCancelDialog({ open: false, order: null, reason: "" });
+      toast.success("Pedido cancelado — cliente notificado pelo WhatsApp");
     } catch {
       toast.error("Erro ao cancelar pedido");
     }
@@ -234,7 +243,8 @@ const OrdersPage = () => {
                         <Button size="small" variant="contained" color="primary" onClick={() => advance(order)}>
                           {NEXT_LABEL[order.status]}
                         </Button>
-                        <Button size="small" variant="outlined" color="secondary" onClick={() => cancel(order)}>
+                        <Button size="small" variant="outlined" color="secondary"
+                          onClick={() => setCancelDialog({ open: true, order, reason: "" })}>
                           Cancelar
                         </Button>
                       </Box>
@@ -251,6 +261,36 @@ const OrdersPage = () => {
           );
         })}
       </Grid>
+      {/* Dialog cancelamento */}
+      <Dialog open={cancelDialog.open} onClose={() => setCancelDialog({ open: false, order: null, reason: "" })} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" style={{ gap: 8 }}>
+            <CancelIcon style={{ color: "#d32f2f" }} />
+            Cancelar Pedido #{cancelDialog.order?.id}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" gutterBottom>
+            Informe o motivo do cancelamento. O cliente sera notificado pelo WhatsApp.
+          </Typography>
+          <TextField
+            autoFocus fullWidth multiline rows={3}
+            label="Motivo do cancelamento"
+            placeholder="Ex: Produto esgotado, fora da area de entrega..."
+            value={cancelDialog.reason}
+            onChange={e => setCancelDialog(d => ({ ...d, reason: e.target.value }))}
+            variant="outlined"
+            style={{ marginTop: 8 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelDialog({ open: false, order: null, reason: "" })}>Voltar</Button>
+          <Button onClick={cancel} variant="contained" style={{ backgroundColor: "#d32f2f", color: "white" }}>
+            Confirmar cancelamento
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Dialog endereço */}
       <Dialog open={addressDialog.open} onClose={() => setAddressDialog({ open: false, order: null })} maxWidth="xs" fullWidth>
         <DialogTitle>Endereço — Pedido #{addressDialog.order?.id}</DialogTitle>
