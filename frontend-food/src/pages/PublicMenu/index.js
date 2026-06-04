@@ -65,6 +65,7 @@ const PublicMenu = () => {
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
+  const [countdown, setCountdown] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
@@ -232,6 +233,20 @@ const PublicMenu = () => {
       setOrderDone(data);
       setCart([]);
       setCartOpen(false);
+      // Contagem regressiva para fechar e voltar ao WhatsApp
+      setCountdown(3);
+      let count = 3;
+      const timer = setInterval(() => {
+        count -= 1;
+        setCountdown(count);
+        if (count <= 0) {
+          clearInterval(timer);
+          // Tenta fechar a aba (funciona quando aberta pelo WhatsApp)
+          window.close();
+          // Fallback: abre o WhatsApp caso window.close() seja bloqueado
+          setTimeout(() => { window.location.href = "whatsapp://"; }, 300);
+        }
+      }, 1000);
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao realizar pedido");
     } finally {
@@ -242,17 +257,27 @@ const PublicMenu = () => {
   if (loading) return <Box display="flex" justifyContent="center" mt={8}><CircularProgress /></Box>;
 
   if (orderDone) return (
-    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh" p={3}>
-      <Typography variant="h4" style={{ marginBottom: 16 }}>🎉</Typography>
-      <Typography variant="h5" gutterBottom>Pedido realizado!</Typography>
+    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh" p={3} style={{ textAlign: "center" }}>
+      <Typography variant="h3" style={{ marginBottom: 8 }}>🎉</Typography>
+      <Typography variant="h5" gutterBottom style={{ fontWeight: "bold" }}>Pedido realizado!</Typography>
       <Typography variant="body1">Pedido #{orderDone.orderId}</Typography>
       <Typography variant="body1">Total: <strong>R$ {parseFloat(orderDone.total).toFixed(2)}</strong></Typography>
       <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
         Tempo estimado: {orderDone.estimatedMinutes} minutos
       </Typography>
-      <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+      <Typography variant="body2" color="textSecondary" style={{ marginTop: 16 }}>
         Voce recebera atualizacoes pelo WhatsApp.
       </Typography>
+      {countdown !== null && (
+        <Box mt={3} p={2} style={{ background: "#f0f0f0", borderRadius: 12, minWidth: 220 }}>
+          <Typography variant="body2" color="textSecondary">
+            Voltando ao WhatsApp em...
+          </Typography>
+          <Typography variant="h4" style={{ fontWeight: "bold", color: primaryColor, marginTop: 4 }}>
+            {countdown}
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 
