@@ -13,9 +13,6 @@ import { getIO } from "../../libs/socket";
  * Persiste todas as mensagens recebidas no banco para o módulo de Conversas.
  */
 
-// Cache simples em memória para evitar enviar boas-vindas múltiplas vezes
-const greetedNumbers = new Map<number, Set<string>>();
-
 // Mapa de sessionToken → { jid, whatsappId, phone } para envio de confirmações
 // Expira em 24h para não crescer indefinidamente
 export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; phone: string; expiresAt: number }>();
@@ -124,14 +121,8 @@ export const handleFoodMessage = async (
       });
     } catch { /* socket pode não estar pronto */ }
 
-    // ── Boas-vindas (apenas primeira vez) ────────────────────────────────────
-    if (!greetedNumbers.has(whatsapp.id)) {
-      greetedNumbers.set(whatsapp.id, new Set());
-    }
-    const greeted = greetedNumbers.get(whatsapp.id)!;
-
-    if (greeted.has(jid)) return;
-    greeted.add(jid);
+    // ── Boas-vindas (apenas na PRIMEIRA mensagem — conversa recém criada) ───────
+    if (!created) return;
 
     // Gera token de sessão vinculado ao JID real do cliente
     const sessionToken = uuidv4();

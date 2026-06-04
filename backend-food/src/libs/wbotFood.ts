@@ -83,7 +83,7 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
   wbot.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
     for (const msg of messages) {
-      if (!msg.key.fromMe && msg.key.remoteJid) {
+      if (msg.key.fromMe === false && msg.key.remoteJid) {
         await handleFoodMessage(msg, wbot, whatsapp);
       }
     }

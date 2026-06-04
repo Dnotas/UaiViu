@@ -43,67 +43,57 @@ const resolveJid = async (wbot: ReturnType<typeof getWbot>, rawPhone: string): P
 };
 
 const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
-  // Monta lista de IDs a tentar: whatsappId salvo primeiro, depois todos da empresa
+  const whatsapps = await FoodWhatsapp.findAll({ where: { companyId: order.companyId } });
   const tryIds: number[] = [];
   if (order.whatsappId) tryIds.push(order.whatsappId);
-
-  const whatsapps = await FoodWhatsapp.findAll({ where: { companyId: order.companyId } });
   for (const w of whatsapps) {
     if (!tryIds.includes(w.id)) tryIds.push(w.id);
   }
 
   if (tryIds.length === 0) {
-    console.error(`[WA-Send] ❌ Pedido #${order.id}: nenhum whatsapp encontrado para empresa ${order.companyId}`);
+    console.error(`[WA-Send] ❌ Pedido #${order.id}: nenhum whatsapp encontrado`);
     return;
   }
 
-  console.log(`[WA-Send] Pedido #${order.id} → tentando via whatsapps: [${tryIds.join(", ")}]`);
+  // Busca a conversa primeiro para garantir o JID correto (evita JID errado via onWhatsApp)
+  let conversation: FoodConversation | null = null;
+  let targetJid: string | null = order.customerJid || null;
+
+  if (targetJid) {
+    conversation = await FoodConversation.findOne({
+      where: { companyId: order.companyId, customerJid: targetJid }
+    });
+  }
+
+  if (!conversation && order.customerPhone) {
+    const phone = order.customerPhone.replace(/\D/g, "").replace(/^55/, "");
+    conversation = await FoodConversation.findOne({
+      where: { companyId: order.companyId, customerPhone: phone }
+    });
+    if (conversation) {
+      targetJid = conversation.customerJid; // Usa sempre o JID salvo na conversa
+      console.log(`[WA-Send] Conversa encontrada via telefone, JID: ${targetJid}`);
+    }
+  }
+
+  console.log(`[WA-Send] Pedido #${order.id} → JID: ${targetJid || "não resolvido"}, conversa: ${conversation?.id || "não encontrada"}`);
 
   for (const wbotId of tryIds) {
     try {
       const wbot = getWbot(wbotId);
 
-      // Determina o JID: usa o JID salvo (LID/session) ou resolve via onWhatsApp
-      let jid: string;
-      if (order.customerJid) {
-        jid = order.customerJid;
-        console.log(`[WA-Send] Pedido #${order.id} → JID salvo: ${jid}`);
-      } else {
+      let jid = targetJid;
+      if (!jid) {
+        // Último recurso: resolve via onWhatsApp (pode ter variação do 9)
         jid = await resolveJid(wbot, order.customerPhone);
-        console.log(`[WA-Send] Pedido #${order.id} → JID resolvido: ${jid}`);
+        console.log(`[WA-Send] JID resolvido via onWhatsApp: ${jid}`);
       }
 
       await wbot.sendMessage(jid, { text: message });
       console.log(`[WA-Send] ✅ Pedido #${order.id} → mensagem enviada via whatsapp ${wbotId}`);
 
-      // Persiste a mensagem enviada na conversa (para aparecer no painel de Conversas)
-      try {
-        let conversation = await FoodConversation.findOne({
-          where: { companyId: order.companyId, customerJid: jid }
-        });
-
-        // Fallback 1: JID alternativo (com/sem o 9 extra brasileiro)
-        if (!conversation) {
-          const altJid = /^55\d{2}9\d{8}@/.test(jid)
-            ? jid.replace(/^(55\d{2})9(\d{8}@)/, "$1$2")
-            : jid.replace(/^(55\d{2})(\d{8}@)/, "$19$2");
-          conversation = await FoodConversation.findOne({
-            where: { companyId: order.companyId, customerJid: altJid }
-          });
-          if (conversation) console.log(`[WA-Send] Conversa encontrada via JID alternativo: ${altJid}`);
-        }
-
-        // Fallback 2: busca por telefone
-        if (!conversation && order.customerPhone) {
-          const phone = order.customerPhone.replace(/\D/g, "").replace(/^55/, "");
-          conversation = await FoodConversation.findOne({
-            where: { companyId: order.companyId, customerPhone: phone }
-          });
-          if (conversation) console.log(`[WA-Send] Conversa encontrada via telefone: ${phone}`);
-        }
-
-        console.log(`[WA-Send] Conversa para JID ${jid}: ${conversation ? `id=${conversation.id}` : "não encontrada"}`);
-        if (conversation) {
+      if (conversation) {
+        try {
           const now = new Date();
           const saved = await FoodMessage.create({
             conversationId: conversation.id,
@@ -118,10 +108,10 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
               conversationId: conversation.id,
               message: saved,
             });
-          } catch { /* socket pode não estar pronto */ }
+          } catch { }
+        } catch (e) {
+          console.warn("[WA-Send] Erro ao salvar mensagem na conversa:", e);
         }
-      } catch (e) {
-        console.warn("[WA-Send] Não foi possível salvar mensagem na conversa:", e);
       }
 
       return;
