@@ -235,6 +235,18 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
     console.warn(`[Order] Config não encontrada para empresa ${companyId}, mensagem WhatsApp não enviada`);
   }
 
+  // Fecha conversa automaticamente ao entregar
+  if (status === "delivered" && order.customerJid) {
+    const conv = await FoodConversation.findOne({
+      where: { companyId, customerJid: order.customerJid }
+    });
+    if (conv) {
+      await conv.destroy();
+      const io = getIO();
+      io.to(`food-company-${companyId}`).emit("food:conversation:closed", { conversationId: conv.id });
+    }
+  }
+
   // Notifica via socket o painel
   const io = getIO();
   io.to(`food-company-${companyId}`).emit("food-order-update", {

@@ -173,6 +173,18 @@ const ConversationsPage = () => {
     socketRef.current = socket;
     socket.emit("joinCompany", companyId);
 
+    socket.on("food:conversation:closed", ({ conversationId }) => {
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      setSelectedId((currentId) => {
+        if (currentId === conversationId) {
+          setMessages([]);
+          setActiveConv(null);
+          return null;
+        }
+        return currentId;
+      });
+    });
+
     socket.on("food:conversation:message", ({ conversationId, message, conversation }) => {
       // Som quando mensagem do cliente chega
       if (message && !message.fromMe) playNotificationSound();
