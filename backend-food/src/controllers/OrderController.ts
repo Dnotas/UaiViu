@@ -331,7 +331,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito",
     };
     const itemLines = items
-      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${parseFloat(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
+      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
       .join("\n");
     const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
     const trocoLine = notes && notes.includes("Troco para") ? `\n💵 ${notes.match(/Troco para[^|]*/)?.[0]?.trim()}` : "";
