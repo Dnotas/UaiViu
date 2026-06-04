@@ -68,7 +68,6 @@ const PublicMenu = () => {
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
-  const [countdown, setCountdown] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
@@ -247,18 +246,6 @@ const PublicMenu = () => {
       setOrderDone(data);
       setCart([]);
       setCartOpen(false);
-      // Contagem regressiva para fechar e voltar ao WhatsApp
-      setCountdown(3);
-      let count = 3;
-      const timer = setInterval(() => {
-        count -= 1;
-        setCountdown(count);
-        if (count <= 0) {
-          clearInterval(timer);
-          // Redireciona para o WhatsApp sem deixar tela branca
-          window.location.href = "whatsapp://";
-        }
-      }, 1000);
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao realizar pedido");
     } finally {
@@ -277,26 +264,20 @@ const PublicMenu = () => {
       <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
         Tempo estimado: {orderDone.estimatedMinutes} minutos
       </Typography>
-      <Typography variant="body2" color="textSecondary" style={{ marginTop: 16 }}>
+      <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
         Voce recebera atualizacoes pelo WhatsApp.
       </Typography>
-      {countdown !== null && (
-        <Box mt={3} p={2} style={{ background: "#f0f0f0", borderRadius: 12, minWidth: 240, textAlign: "center" }}>
-          <Typography variant="body2" color="textSecondary">
-            Voltando ao WhatsApp em...
-          </Typography>
-          <Typography variant="h4" style={{ fontWeight: "bold", color: primaryColor, marginTop: 4 }}>
-            {countdown}
-          </Typography>
-        </Box>
-      )}
-      <Button
-        variant="contained"
-        style={{ marginTop: 16, backgroundColor: "#25D366", color: "white", borderRadius: 24, padding: "10px 28px" }}
-        onClick={() => { window.location.href = "whatsapp://"; }}
-      >
-        Abrir WhatsApp
-      </Button>
+      <Box mt={3}>
+        <Button
+          variant="contained"
+          size="large"
+          style={{ backgroundColor: "#25D366", color: "white", borderRadius: 24, padding: "12px 32px", fontSize: 16 }}
+          component="a"
+          href="whatsapp://"
+        >
+          ← Voltar ao WhatsApp
+        </Button>
+      </Box>
     </Box>
   );
 
