@@ -6,8 +6,9 @@ import FoodMenuGroup from "../models/FoodMenuGroup";
 import AppError from "../errors/AppError";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY_FALLBACK = process.env.GEMINI_API_KEY_FALLBACK || "";
 const GEMINI_VISION_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 /**
  * POST /api/food/menu/ai-import
@@ -49,20 +50,27 @@ Exemplo: [{"name":"Açaí 300ml","description":"","price":14.90,"suggestedGroup"
       fs.unlinkSync(file.path);
     }
 
-    const response = await axios.post(
-      `${GEMINI_VISION_URL}?key=${GEMINI_API_KEY}`,
-      {
-        contents: [{ parts }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 4096,
+    const makeRequest = async (apiKey: string) =>
+      axios.post(
+        `${GEMINI_VISION_URL}?key=${apiKey}`,
+        {
+          contents: [{ parts }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
         },
-      },
-      {
-        headers: { "Content-Type": "application/json" },
-        timeout: 60000,
+        { headers: { "Content-Type": "application/json" }, timeout: 60000 }
+      );
+
+    let response: any;
+    try {
+      response = await makeRequest(GEMINI_API_KEY);
+    } catch (primaryErr: any) {
+      if (primaryErr.response?.status === 429 && GEMINI_API_KEY_FALLBACK) {
+        console.log("[AIImport] Rate limit na chave principal, tentando fallback...");
+        response = await makeRequest(GEMINI_API_KEY_FALLBACK);
+      } else {
+        throw primaryErr;
       }
-    );
+    }
 
     const rawText: string =
       response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
