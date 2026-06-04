@@ -11,7 +11,7 @@
  */
 
 // ─── CONFIGURAÇÃO ─────────────────────────────────────────────────────────────
-const FOOD_API = process.env.FOOD_URL || "http://localhost:3003";
+const FOOD_API = process.env.FOOD_URL || "http://localhost:3003/api/food";
 const TOKEN    = process.env.TOKEN    || "COLE_SEU_TOKEN_AQUI";
 // ──────────────────────────────────────────────────────────────────────────────
 
