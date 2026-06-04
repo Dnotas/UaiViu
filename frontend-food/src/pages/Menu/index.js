@@ -135,7 +135,7 @@ const MenuPage = () => {
         sortOrder: item.sortOrder,
         image: null,
         hasComplements: item.hasComplements || false,
-        complements: item.complements ? item.complements.map(c => ({ ...c })) : [],
+        complements: (item.food_item_complements || item.complements || []).map(c => ({ ...c })),
       });
     } else {
       setItemDialog({ open: true, groupId, id: null, ...emptyItem });
@@ -204,9 +204,8 @@ const MenuPage = () => {
   const openGroupCompDialog = (group) => {
     // Pega os complementos do primeiro item do grupo como template
     const firstItem = (group.items || [])[0];
-    const comps = firstItem?.complements
-      ? firstItem.complements.map(c => ({ name: c.name, price: String(c.price) }))
-      : [];
+    const rawComps = firstItem?.food_item_complements || firstItem?.complements || [];
+    const comps = rawComps.map(c => ({ name: c.name, price: String(c.price) }));
     setGroupCompDialog({ open: true, groupId: group.id, groupName: group.name, complements: comps });
   };
 
