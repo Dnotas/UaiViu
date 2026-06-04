@@ -7,6 +7,7 @@ import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
+import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import Avatar from "@material-ui/core/Avatar";
 import Badge from "@material-ui/core/Badge";
 import TextField from "@material-ui/core/TextField";
@@ -305,11 +306,6 @@ const ConversationsPage = () => {
                 <ListItem
                   className={`${classes.conversationItem} ${selectedId === conv.id ? classes.activeConversation : ""}`}
                   onClick={() => openConversation(conv)}
-                  secondaryAction={
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleClose(conv.id); }}>
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  }
                 >
                   <ListItemAvatar>
                     <Badge
@@ -339,6 +335,11 @@ const ConversationsPage = () => {
                       </Typography>
                     }
                   />
+                  <ListItemSecondaryAction>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleClose(conv.id); }} title="Fechar conversa">
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </ListItemSecondaryAction>
                 </ListItem>
                 <Divider component="li" />
               </React.Fragment>
