@@ -13,6 +13,13 @@ import { getIO } from "../../libs/socket";
  * Persiste todas as mensagens recebidas no banco para o módulo de Conversas.
  */
 
+// Deduplicação por ID de mensagem — evita processar a mesma mensagem 2x
+// (ocorre quando há 2 instâncias wbot ativas temporariamente)
+const processedMessageIds = new Set<string>();
+
+// Boas-vindas por sessão — reseta no restart (comportamento esperado: cliente recebe link de novo)
+const greetedNumbers = new Map<number, Set<string>>();
+
 // Mapa de sessionToken → { jid, whatsappId, phone } para envio de confirmações
 // Expira em 24h para não crescer indefinidamente
 export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; phone: string; expiresAt: number }>();
@@ -53,6 +60,16 @@ export const handleFoodMessage = async (
   try {
     // Ignora mensagens enviadas por nós (echo do Baileys)
     if (msg.key.fromMe) return;
+
+    // Deduplicação: ignora se essa mensagem já foi processada
+    const msgId = msg.key.id || "";
+    if (msgId && processedMessageIds.has(msgId)) return;
+    if (msgId) {
+      processedMessageIds.add(msgId);
+      if (processedMessageIds.size > 2000) {
+        processedMessageIds.delete(processedMessageIds.values().next().value!);
+      }
+    }
 
     const jid = msg.key.remoteJid!;
 
@@ -121,8 +138,11 @@ export const handleFoodMessage = async (
       });
     } catch { /* socket pode não estar pronto */ }
 
-    // ── Boas-vindas (apenas na PRIMEIRA mensagem — conversa recém criada) ───────
-    if (!created) return;
+    // ── Boas-vindas (uma vez por sessão — reseta no restart) ────────────────────
+    if (!greetedNumbers.has(whatsapp.id)) greetedNumbers.set(whatsapp.id, new Set());
+    const greeted = greetedNumbers.get(whatsapp.id)!;
+    if (greeted.has(jid)) return;
+    greeted.add(jid);
 
     // Gera token de sessão vinculado ao JID real do cliente
     const sessionToken = uuidv4();

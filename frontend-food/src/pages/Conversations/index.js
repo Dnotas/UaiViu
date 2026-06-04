@@ -15,8 +15,25 @@ import SendIcon from "@material-ui/icons/Send";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Divider from "@material-ui/core/Divider";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
+import CloseIcon from "@material-ui/icons/Close";
 import io from "socket.io-client";
 import api from "../../services/api";
+
+const playNotificationSound = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 660;
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch (e) {}
+};
 
 const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
 
@@ -156,6 +173,9 @@ const ConversationsPage = () => {
     socket.emit("joinCompany", companyId);
 
     socket.on("food:conversation:message", ({ conversationId, message, conversation }) => {
+      // Som quando mensagem do cliente chega
+      if (message && !message.fromMe) playNotificationSound();
+
       // Atualiza lista de conversas
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === conversationId);
@@ -241,6 +261,21 @@ const ConversationsPage = () => {
     }
   };
 
+  const handleClose = async (convId) => {
+    if (!window.confirm("Fechar esta conversa? As mensagens serão removidas.")) return;
+    try {
+      await api.delete(`/api/food/conversations/${convId}`);
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      if (selectedId === convId) {
+        setSelectedId(null);
+        setMessages([]);
+        setActiveConv(null);
+      }
+    } catch {
+      alert("Erro ao fechar conversa");
+    }
+  };
+
   const totalUnread = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   return (
@@ -270,6 +305,11 @@ const ConversationsPage = () => {
                 <ListItem
                   className={`${classes.conversationItem} ${selectedId === conv.id ? classes.activeConversation : ""}`}
                   onClick={() => openConversation(conv)}
+                  secondaryAction={
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleClose(conv.id); }}>
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  }
                 >
                   <ListItemAvatar>
                     <Badge

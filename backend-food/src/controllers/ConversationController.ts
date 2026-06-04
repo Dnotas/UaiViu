@@ -101,6 +101,19 @@ export const sendMessage = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteConversation = async (req: Request, res: Response) => {
+  try {
+    const companyId = (req as any).user?.companyId;
+    const id = parseInt(req.params.id, 10);
+    const conversation = await FoodConversation.findOne({ where: { id, companyId } });
+    if (!conversation) return res.status(404).json({ error: "Conversa não encontrada" });
+    await conversation.destroy();
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Erro ao fechar conversa" });
+  }
+};
+
 export const markRead = async (req: Request, res: Response) => {
   try {
     const companyId = (req as any).user?.companyId;

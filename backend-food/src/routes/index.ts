@@ -43,6 +43,7 @@ router.get("/conversations", isAuth, ConversationController.listConversations);
 router.get("/conversations/:id/messages", isAuth, ConversationController.getMessages);
 router.post("/conversations/:id/messages", isAuth, ConversationController.sendMessage);
 router.patch("/conversations/:id/read", isAuth, ConversationController.markRead);
+router.delete("/conversations/:id", isAuth, ConversationController.deleteConversation);
 
 // ─── WhatsApp (autenticado) ───────────────────────────────────────────────────
 router.get("/whatsapp", isAuth, WhatsappFoodController.list);
