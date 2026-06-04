@@ -13,11 +13,18 @@ import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel";
 import FormControl from "@material-ui/core/FormControl";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import DeleteIcon from "@material-ui/icons/Delete";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 
 const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
+
+const toDateInput = (d) => d.toISOString().slice(0, 10);
 
 const useStyles = makeStyles((theme) => ({
   section: { padding: theme.spacing(3), marginBottom: theme.spacing(3) },
@@ -37,6 +44,12 @@ const SettingsPage = () => {
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  const today = toDateInput(new Date());
+  const [clearDateFrom, setClearDateFrom] = useState(today);
+  const [clearDateTo, setClearDateTo]   = useState(today);
+  const [clearDialog, setClearDialog]   = useState(false);
+  const [clearing, setClearing]         = useState(false);
 
   const [payment, setPayment] = useState({
     cashEnabled: true, pixEnabled: false, pixKey: "", pixKeyType: "random",
@@ -84,6 +97,19 @@ const SettingsPage = () => {
       toast.success("Configurações de pagamento salvas!");
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao salvar");
+    }
+  };
+
+  const clearOrders = async () => {
+    setClearing(true);
+    try {
+      const { data } = await api.delete(`/api/food/orders?dateFrom=${clearDateFrom}&dateTo=${clearDateTo}`);
+      setClearDialog(false);
+      toast.success(`${data.deleted} pedido(s) apagado(s) com sucesso!`);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao limpar pedidos");
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -249,6 +275,77 @@ const SettingsPage = () => {
         </Grid>
         <Box mt={2}><Button variant="contained" color="primary" onClick={savePayment}>Salvar Pagamentos</Button></Box>
       </Paper>
+
+      {/* ── Limpar histórico de pedidos ── */}
+      <Paper className={classes.section} style={{ borderLeft: "4px solid #d32f2f" }}>
+        <Typography variant="h6" className={classes.title} style={{ color: "#d32f2f" }}>
+          Limpar Histórico de Pedidos
+        </Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+          Apaga permanentemente todos os pedidos do período selecionado. Esta ação não pode ser desfeita.
+        </Typography>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item>
+            <TextField
+              type="date" size="small" label="De" variant="outlined"
+              InputLabelProps={{ shrink: true }}
+              value={clearDateFrom}
+              onChange={e => setClearDateFrom(e.target.value)}
+              style={{ width: 160 }}
+            />
+          </Grid>
+          <Grid item>
+            <TextField
+              type="date" size="small" label="Até" variant="outlined"
+              InputLabelProps={{ shrink: true }}
+              value={clearDateTo}
+              onChange={e => setClearDateTo(e.target.value)}
+              style={{ width: 160 }}
+            />
+          </Grid>
+          <Grid item>
+            <Button size="small" variant="outlined" onClick={() => { setClearDateFrom(today); setClearDateTo(today); }}>
+              Hoje
+            </Button>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="contained"
+              style={{ backgroundColor: "#d32f2f", color: "white" }}
+              startIcon={<DeleteIcon />}
+              onClick={() => setClearDialog(true)}
+              disabled={!clearDateFrom || !clearDateTo}
+            >
+              Limpar pedidos
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Dialog confirmação */}
+      <Dialog open={clearDialog} onClose={() => setClearDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle style={{ color: "#d32f2f" }}>Confirmar limpeza</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Tem certeza que deseja apagar <strong>todos os pedidos</strong> de{" "}
+            <strong>{clearDateFrom}</strong> até <strong>{clearDateTo}</strong>?
+          </Typography>
+          <Typography variant="body2" color="error" style={{ marginTop: 8 }}>
+            Esta ação é irreversível. O dashboard ficará zerado para este período.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearDialog(false)} disabled={clearing}>Cancelar</Button>
+          <Button
+            onClick={clearOrders}
+            variant="contained"
+            style={{ backgroundColor: "#d32f2f", color: "white" }}
+            disabled={clearing}
+          >
+            {clearing ? <CircularProgress size={18} style={{ color: "white" }} /> : "Confirmar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -152,6 +152,32 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   return res.json(orders);
 };
 
+// DELETE /api/food/orders  ?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+export const deleteByPeriod = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { dateFrom, dateTo } = req.query as Record<string, string>;
+
+  if (!dateFrom || !dateTo) throw new AppError("Informe dateFrom e dateTo", 400);
+
+  const from = new Date(dateFrom + "T00:00:00");
+  const to   = new Date(dateTo   + "T23:59:59.999");
+
+  // Busca IDs dos pedidos no período
+  const orders = await FoodOrder.findAll({
+    where: { companyId, createdAt: { [Op.between]: [from, to] } },
+    attributes: ["id"],
+  });
+
+  const ids = orders.map(o => o.id);
+  if (ids.length === 0) return res.json({ deleted: 0 });
+
+  // Deleta itens e pedidos
+  await FoodOrderItem.destroy({ where: { orderId: { [Op.in]: ids } } });
+  await FoodOrder.destroy({ where: { id: { [Op.in]: ids } } });
+
+  return res.json({ deleted: ids.length });
+};
+
 // GET /api/food/orders/:id
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;

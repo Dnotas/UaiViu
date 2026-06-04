@@ -44,6 +44,7 @@ router.post("/menu/ai-import/save", isAuth, AIImportController.saveImportedItems
 
 // ─── Pedidos — painel do restaurante (autenticado) ────────────────────────────
 router.get("/orders", isAuth, OrderController.list);
+router.delete("/orders", isAuth, OrderController.deleteByPeriod);
 router.get("/orders/:id", isAuth, OrderController.show);
 router.patch("/orders/:id/status", isAuth, OrderController.updateStatus);
 
