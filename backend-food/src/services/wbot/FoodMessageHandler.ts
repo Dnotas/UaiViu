@@ -139,6 +139,23 @@ export const handleFoodMessage = async (
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
     await wbot.sendMessage(jid, { text: fullMessage });
+
+    // Salva a mensagem de boas-vindas na conversa (lado enviado)
+    try {
+      const now = new Date();
+      const savedWelcome = await FoodMessage.create({
+        conversationId: conversation.id,
+        fromMe: true,
+        body: fullMessage,
+        timestamp: now,
+      });
+      await conversation.update({ lastMessage: fullMessage, lastMessageAt: now });
+      const io = getIO();
+      io.to(`food-company-${whatsapp.companyId}`).emit("food:conversation:message", {
+        conversationId: conversation.id,
+        message: savedWelcome,
+      });
+    } catch { /* não bloqueia se falhar */ }
   } catch (err) {
     console.error("[FoodMessageHandler] Erro ao processar mensagem:", err);
   }
