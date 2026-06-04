@@ -463,7 +463,6 @@ const PublicMenu = () => {
             </RadioGroup>
           )}
 
-          <TextField fullWidth size="small" margin="dense" label="Seu nome" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
           <TextField
             fullWidth size="small" margin="dense"
             label="Telefone (WhatsApp) com DDD"
@@ -472,6 +471,7 @@ const PublicMenu = () => {
             helperText={customerFound ? "✓ Dados preenchidos automaticamente" : ""}
             FormHelperTextProps={{ style: { color: "green" } }}
           />
+          <TextField fullWidth size="small" margin="dense" label="Seu nome" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
 
           {orderType === "delivery" && (
             <>
