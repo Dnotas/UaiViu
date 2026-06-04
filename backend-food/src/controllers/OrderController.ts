@@ -81,14 +81,27 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
         let conversation = await FoodConversation.findOne({
           where: { companyId: order.companyId, customerJid: jid }
         });
-        // Fallback: busca por telefone caso JID não bata exatamente
+
+        // Fallback 1: JID alternativo (com/sem o 9 extra brasileiro)
+        if (!conversation) {
+          const altJid = /^55\d{2}9\d{8}@/.test(jid)
+            ? jid.replace(/^(55\d{2})9(\d{8}@)/, "$1$2")
+            : jid.replace(/^(55\d{2})(\d{8}@)/, "$19$2");
+          conversation = await FoodConversation.findOne({
+            where: { companyId: order.companyId, customerJid: altJid }
+          });
+          if (conversation) console.log(`[WA-Send] Conversa encontrada via JID alternativo: ${altJid}`);
+        }
+
+        // Fallback 2: busca por telefone
         if (!conversation && order.customerPhone) {
           const phone = order.customerPhone.replace(/\D/g, "").replace(/^55/, "");
           conversation = await FoodConversation.findOne({
             where: { companyId: order.companyId, customerPhone: phone }
           });
-          if (conversation) console.log(`[WA-Send] Conversa encontrada via telefone (fallback): ${phone}`);
+          if (conversation) console.log(`[WA-Send] Conversa encontrada via telefone: ${phone}`);
         }
+
         console.log(`[WA-Send] Conversa para JID ${jid}: ${conversation ? `id=${conversation.id}` : "não encontrada"}`);
         if (conversation) {
           const now = new Date();
