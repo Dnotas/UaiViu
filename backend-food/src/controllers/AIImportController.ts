@@ -7,8 +7,9 @@ import AppError from "../errors/AppError";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_API_KEY_FALLBACK = process.env.GEMINI_API_KEY_FALLBACK || "";
+// Usa gemini-1.5-flash para não competir com o backend principal (que usa gemini-2.5-flash-lite)
 const GEMINI_VISION_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 /**
  * POST /api/food/menu/ai-import
@@ -91,7 +92,11 @@ Exemplo: [{"name":"Açaí 300ml","description":"","price":14.90,"suggestedGroup"
       try { fs.unlinkSync(f.path); } catch { }
     }
     if (err instanceof AppError) throw err;
+    const status = err?.response?.status;
     console.error("[AIImport] Erro:", err?.response?.data || err.message);
+    if (status === 429) {
+      throw new AppError("Limite de requisicoes da IA atingido. Aguarde 1 minuto e tente novamente.", 429);
+    }
     throw new AppError("Erro ao processar imagem com IA: " + (err.message || ""), 500);
   }
 };
