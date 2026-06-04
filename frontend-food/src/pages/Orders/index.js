@@ -5,7 +5,16 @@ import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
 import Chip from "@material-ui/core/Chip";
 import Button from "@material-ui/core/Button";
+import IconButton from "@material-ui/core/IconButton";
+import Tooltip from "@material-ui/core/Tooltip";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import Divider from "@material-ui/core/Divider";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import VisibilityIcon from "@material-ui/icons/Visibility";
+import PrintIcon from "@material-ui/icons/Print";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import io from "socket.io-client";
@@ -39,10 +48,81 @@ const useStyles = makeStyles((theme) => ({
   orderId: { fontWeight: "bold", fontSize: 12, color: theme.palette.text.secondary },
 }));
 
+const PAYMENT_LABEL_FULL = { cash: "Dinheiro / Pagar na entrega", pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito" };
+
+const printOrder = (order) => {
+  const address = order.orderType === "pickup"
+    ? "Retirada no local"
+    : [
+        order.customerAddress,
+        order.customerAddressNumber && `Nº ${order.customerAddressNumber}`,
+        order.customerAddressComplement,
+        order.customerNeighborhood,
+      ].filter(Boolean).join(", ");
+
+  const itemsHtml = (order.items || []).map(i =>
+    `<tr>
+      <td style="padding:4px 8px">${i.quantity}x ${i.name}</td>
+      <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
+      <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
+    </tr>`
+  ).join("");
+
+  const deliveryFee = parseFloat(order.deliveryFee || 0);
+  const subtotal = parseFloat(order.subtotal || order.total - deliveryFee);
+
+  const win = window.open("", "_blank", "width=400,height=600");
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Pedido #${order.id}</title>
+    <style>
+      body { font-family: monospace; font-size: 13px; margin: 16px; color: #000; }
+      h2 { text-align: center; margin: 4px 0; }
+      .center { text-align: center; }
+      .divider { border-top: 1px dashed #000; margin: 8px 0; }
+      table { width: 100%; border-collapse: collapse; }
+      td { vertical-align: top; }
+      .total-row td { font-size: 15px; font-weight: bold; padding-top: 8px; }
+    </style>
+  </head><body>
+    <h2>Na Chapa Lanches & Acai</h2>
+    <p class="center">Pedido #${order.id} — ${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
+    <div class="divider"></div>
+    <p><strong>Cliente:</strong> ${order.customerName || "—"}</p>
+    <p><strong>Telefone:</strong> ${order.customerPhone || "—"}</p>
+    <p><strong>Endereco:</strong> ${address || "—"}</p>
+    <p><strong>Pagamento:</strong> ${PAYMENT_LABEL_FULL[order.paymentMethod] || order.paymentMethod}</p>
+    <div class="divider"></div>
+    <table>
+      <thead>
+        <tr>
+          <td><strong>Item</strong></td>
+          <td style="text-align:right"><strong>Unit.</strong></td>
+          <td style="text-align:right"><strong>Total</strong></td>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <div class="divider"></div>
+    <table>
+      <tr><td>Subtotal</td><td style="text-align:right">R$ ${subtotal.toFixed(2)}</td></tr>
+      ${deliveryFee > 0 ? `<tr><td>Taxa de entrega</td><td style="text-align:right">R$ ${deliveryFee.toFixed(2)}</td></tr>` : ""}
+      <tr class="total-row"><td>TOTAL</td><td style="text-align:right">R$ ${parseFloat(order.total).toFixed(2)}</td></tr>
+    </table>
+    ${order.notes ? `<div class="divider"></div><p><strong>Obs:</strong> ${order.notes}</p>` : ""}
+    <div class="divider"></div>
+    <p class="center">Obrigado pela preferencia!</p>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+};
+
 const OrdersPage = () => {
   const classes = useStyles();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addressDialog, setAddressDialog] = useState({ open: false, order: null });
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -137,6 +217,18 @@ const OrdersPage = () => {
                         ))}
                       </Box>
                     )}
+                    <Box mt={1} display="flex" alignItems="center" style={{ gap: 4 }}>
+                      <Tooltip title="Ver endereço">
+                        <IconButton size="small" onClick={() => setAddressDialog({ open: true, order })}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Imprimir pedido">
+                        <IconButton size="small" onClick={() => printOrder(order)}>
+                          <PrintIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                     {NEXT_STATUS[order.status] && (
                       <Box mt={1} display="flex" style={{ gap: 4 }}>
                         <Button size="small" variant="contained" color="primary" onClick={() => advance(order)}>
@@ -159,6 +251,30 @@ const OrdersPage = () => {
           );
         })}
       </Grid>
+      {/* Dialog endereço */}
+      <Dialog open={addressDialog.open} onClose={() => setAddressDialog({ open: false, order: null })} maxWidth="xs" fullWidth>
+        <DialogTitle>Endereço — Pedido #{addressDialog.order?.id}</DialogTitle>
+        <DialogContent>
+          {addressDialog.order?.orderType === "pickup" ? (
+            <Typography variant="body1"><strong>Retirada no local</strong></Typography>
+          ) : (
+            <Box>
+              <Typography variant="body2"><strong>Cliente:</strong> {addressDialog.order?.customerName || "—"}</Typography>
+              <Typography variant="body2"><strong>Telefone:</strong> {addressDialog.order?.customerPhone || "—"}</Typography>
+              <Divider style={{ margin: "8px 0" }} />
+              <Typography variant="body2"><strong>Rua:</strong> {addressDialog.order?.customerAddress || "—"}</Typography>
+              <Typography variant="body2"><strong>Número:</strong> {addressDialog.order?.customerAddressNumber || "—"}</Typography>
+              {addressDialog.order?.customerAddressComplement && (
+                <Typography variant="body2"><strong>Complemento:</strong> {addressDialog.order.customerAddressComplement}</Typography>
+              )}
+              <Typography variant="body2"><strong>Bairro:</strong> {addressDialog.order?.customerNeighborhood || "—"}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddressDialog({ open: false, order: null })} color="primary">Fechar</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
