@@ -33,15 +33,19 @@ export const getJidBySession = (token: string) => {
 const extractTextFromMessage = (msg: proto.IWebMessageInfo): string => {
   const m = msg.message;
   if (!m) return "";
-  return (
-    m.conversation ||
-    m.extendedTextMessage?.text ||
-    m.imageMessage?.caption ||
-    m.videoMessage?.caption ||
-    m.buttonsResponseMessage?.selectedDisplayText ||
-    m.listResponseMessage?.title ||
-    ""
-  );
+  if (m.conversation) return m.conversation;
+  if (m.extendedTextMessage?.text) return m.extendedTextMessage.text;
+  if (m.imageMessage) return m.imageMessage.caption || "📷 Imagem";
+  if (m.videoMessage) return m.videoMessage.caption || "🎬 Vídeo";
+  if (m.audioMessage) return m.audioMessage.ptt ? "🎤 Áudio" : "🎵 Áudio";
+  if (m.documentMessage) return `📄 ${m.documentMessage.fileName || "Documento"}`;
+  if (m.stickerMessage) return "🙂 Figurinha";
+  if (m.reactionMessage) return `${m.reactionMessage.text || "👍"} (reação)`;
+  if (m.buttonsResponseMessage?.selectedDisplayText) return m.buttonsResponseMessage.selectedDisplayText;
+  if (m.listResponseMessage?.title) return m.listResponseMessage.title;
+  if (m.locationMessage) return "📍 Localização";
+  if (m.contactMessage) return `👤 ${m.contactMessage.displayName || "Contato"}`;
+  return "📎 Mídia";
 };
 
 export const handleFoodMessage = async (
