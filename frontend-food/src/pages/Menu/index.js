@@ -35,6 +35,7 @@ import EditIcon from "@material-ui/icons/Edit";
 import DeleteIcon from "@material-ui/icons/Delete";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
+import PlaylistAddIcon from "@material-ui/icons/PlaylistAdd";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import api from "../../services/api";
@@ -68,6 +69,10 @@ const MenuPage = () => {
 
   // Dialogo grupo
   const [groupDialog, setGroupDialog] = useState({ open: false, id: null, name: "", sortOrder: 0, image: null, imageUrl: null });
+
+  // Dialogo complementos do grupo
+  const [groupCompDialog, setGroupCompDialog] = useState({ open: false, groupId: null, groupName: "", complements: [] });
+  const [savingGroupComps, setSavingGroupComps] = useState(false);
 
   // Dialogo item
   const [itemDialog, setItemDialog] = useState({ open: false, groupId: null, id: null, ...emptyItem });
@@ -195,6 +200,49 @@ const MenuPage = () => {
     setItemDialog(d => ({ ...d, complements: d.complements.filter((_, i) => i !== idx) }));
   };
 
+  // ── Complementos do grupo ──
+  const openGroupCompDialog = (group) => {
+    // Pega os complementos do primeiro item do grupo como template
+    const firstItem = (group.items || [])[0];
+    const comps = firstItem?.complements
+      ? firstItem.complements.map(c => ({ name: c.name, price: String(c.price) }))
+      : [];
+    setGroupCompDialog({ open: true, groupId: group.id, groupName: group.name, complements: comps });
+  };
+
+  const saveGroupComplements = async () => {
+    setSavingGroupComps(true);
+    try {
+      const { updated } = (await api.post(
+        `/api/food/menu/groups/${groupCompDialog.groupId}/bulk-complements`,
+        { complements: groupCompDialog.complements }
+      )).data;
+      toast.success(`Complementos aplicados em ${updated} item(s)!`);
+      setGroupCompDialog({ open: false, groupId: null, groupName: "", complements: [] });
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao salvar complementos");
+    } finally {
+      setSavingGroupComps(false);
+    }
+  };
+
+  const addGroupComplement = () => {
+    setGroupCompDialog(d => ({ ...d, complements: [...d.complements, { name: "", price: "0" }] }));
+  };
+
+  const updateGroupComplement = (idx, field, value) => {
+    setGroupCompDialog(d => {
+      const updated = [...d.complements];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...d, complements: updated };
+    });
+  };
+
+  const removeGroupComplement = (idx) => {
+    setGroupCompDialog(d => ({ ...d, complements: d.complements.filter((_, i) => i !== idx) }));
+  };
+
   // ── AI Import ──
   const runAiAnalysis = async () => {
     if (!aiFiles.length) { toast.error("Selecione pelo menos uma imagem ou PDF"); return; }
@@ -266,6 +314,9 @@ const MenuPage = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
               <Typography className={classes.groupHeader}>{group.name}</Typography>
               <Box onClick={e => e.stopPropagation()}>
+                <IconButton size="small" title="Complementos do grupo" onClick={() => openGroupCompDialog(group)}>
+                  <PlaylistAddIcon fontSize="small" />
+                </IconButton>
                 <IconButton size="small" onClick={() => setGroupDialog({ open: true, id: group.id, name: group.name, sortOrder: group.sortOrder, image: null, imageUrl: group.imageUrl })}>
                   <EditIcon fontSize="small" />
                 </IconButton>
@@ -399,6 +450,60 @@ const MenuPage = () => {
           <Button onClick={() => setItemDialog(i => ({ ...i, open: false }))} disabled={savingItem}>Cancelar</Button>
           <Button onClick={saveItem} color="primary" variant="contained" disabled={savingItem}>
             {savingItem ? <CircularProgress size={20} /> : "Salvar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog complementos do grupo */}
+      <Dialog
+        open={groupCompDialog.open}
+        onClose={() => !savingGroupComps && setGroupCompDialog(d => ({ ...d, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Complementos do grupo: {groupCompDialog.groupName}
+          <Typography variant="caption" display="block" color="textSecondary">
+            Ao salvar, esses complementos serao aplicados em TODOS os itens deste grupo.
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="caption" color="textSecondary" gutterBottom display="block">
+            Deixe o preco em 0 para itens inclusos no preco do produto.
+          </Typography>
+          {groupCompDialog.complements.map((c, idx) => (
+            <div key={idx} className={classes.complementRow}>
+              <TextField
+                size="small"
+                label="Nome do complemento"
+                value={c.name}
+                onChange={e => updateGroupComplement(idx, "name", e.target.value)}
+                style={{ flex: 2 }}
+              />
+              <TextField
+                size="small"
+                label="Preco (R$)"
+                type="number"
+                value={c.price}
+                onChange={e => updateGroupComplement(idx, "price", e.target.value)}
+                style={{ flex: 1 }}
+                inputProps={{ step: "0.50", min: "0" }}
+              />
+              <IconButton size="small" onClick={() => removeGroupComplement(idx)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </div>
+          ))}
+          <Button size="small" startIcon={<AddIcon />} onClick={addGroupComplement} style={{ marginTop: 8 }}>
+            Adicionar complemento
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGroupCompDialog(d => ({ ...d, open: false }))} disabled={savingGroupComps}>
+            Cancelar
+          </Button>
+          <Button onClick={saveGroupComplements} color="primary" variant="contained" disabled={savingGroupComps}>
+            {savingGroupComps ? <CircularProgress size={20} /> : "Salvar em todos os itens"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import FoodItemComplement from "../models/FoodItemComplement";
 import FoodMenuItem from "../models/FoodMenuItem";
+import FoodMenuGroup from "../models/FoodMenuGroup";
 import AppError from "../errors/AppError";
 
 export const listComplements = async (req: Request, res: Response): Promise<Response> => {
@@ -50,4 +51,40 @@ export const saveComplements = async (req: Request, res: Response): Promise<Resp
     include: [FoodItemComplement],
   });
   return res.json(updated);
+};
+
+// Aplica a mesma lista de complementos em TODOS os itens do grupo
+export const saveGroupComplements = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { groupId } = req.params;
+  const { complements } = req.body; // [{ name, price }]
+
+  const group = await FoodMenuGroup.findOne({ where: { id: groupId, companyId } });
+  if (!group) throw new AppError("Grupo não encontrado", 404);
+
+  const items = await FoodMenuItem.findAll({ where: { groupId, companyId } });
+  if (!items.length) return res.json({ updated: 0 });
+
+  const hasComps = Array.isArray(complements) && complements.some(c => c.name?.trim());
+
+  for (const item of items) {
+    await item.update({ hasComplements: hasComps });
+    await FoodItemComplement.destroy({ where: { menuItemId: item.id } });
+    if (Array.isArray(complements)) {
+      for (let i = 0; i < complements.length; i++) {
+        const c = complements[i];
+        if (c.name && c.name.trim()) {
+          await FoodItemComplement.create({
+            menuItemId: item.id,
+            name: c.name.trim(),
+            price: parseFloat(c.price) || 0,
+            sortOrder: i,
+            active: true,
+          });
+        }
+      }
+    }
+  }
+
+  return res.json({ updated: items.length });
 };

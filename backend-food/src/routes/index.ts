@@ -35,6 +35,9 @@ router.delete("/menu/items/:id", isAuth, MenuController.deleteItem);
 router.get("/menu/items/:itemId/complements", isAuth, ComplementController.listComplements);
 router.post("/menu/items/:itemId/complements", isAuth, ComplementController.saveComplements);
 
+// ─── Complementos em massa por grupo (aplica em todos os itens do grupo) ──────
+router.post("/menu/groups/:groupId/bulk-complements", isAuth, ComplementController.saveGroupComplements);
+
 // ─── Importação IA (autenticado) ─────────────────────────────────────────────
 router.post("/menu/ai-import", isAuth, uploadAI.array("files", 10), AIImportController.analyzeMenu);
 router.post("/menu/ai-import/save", isAuth, AIImportController.saveImportedItems);
