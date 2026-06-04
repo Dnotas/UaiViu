@@ -325,7 +325,21 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   await order.update({ status: "confirmed" });
   console.log(`[Order] Pedido #${order.id} criado e confirmado para empresa ${config.companyId}`);
   if (config.msgOrderConfirmed) {
-    await sendWhatsAppStatusMessage(order, config.msgOrderConfirmed);
+    const PAYMENT_LABEL: Record<string, string> = {
+      cash: "Dinheiro na entrega", cash_money: "Dinheiro na entrega",
+      cash_pix: "PIX na entrega", cash_card: "Cartão na entrega",
+      pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito",
+    };
+    const itemLines = items
+      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${parseFloat(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
+      .join("\n");
+    const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
+    const trocoLine = notes && notes.includes("Troco para") ? `\n💵 ${notes.match(/Troco para[^|]*/)?.[0]?.trim()}` : "";
+    const orderSummary =
+      `\n\n📋 *Resumo do pedido #${order.id}:*\n${itemLines}${feeLine}` +
+      `\n\n💰 *Total: R$ ${total.toFixed(2).replace(".", ",")}*` +
+      `\n💳 Pagamento: ${PAYMENT_LABEL[paymentMethod] || paymentMethod}${trocoLine}`;
+    await sendWhatsAppStatusMessage(order, config.msgOrderConfirmed + orderSummary);
   } else {
     console.warn(`[Order] msgOrderConfirmed não configurado — mensagem de confirmação não enviada`);
   }

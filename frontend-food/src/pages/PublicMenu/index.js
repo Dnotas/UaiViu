@@ -254,10 +254,8 @@ const PublicMenu = () => {
         setCountdown(count);
         if (count <= 0) {
           clearInterval(timer);
-          // Tenta fechar a aba (funciona quando aberta pelo WhatsApp)
-          window.close();
-          // Fallback: abre o WhatsApp caso window.close() seja bloqueado
-          setTimeout(() => { window.location.href = "whatsapp://"; }, 300);
+          // Redireciona para o WhatsApp sem deixar tela branca
+          window.location.href = "whatsapp://";
         }
       }, 1000);
     } catch (err) {
@@ -282,7 +280,7 @@ const PublicMenu = () => {
         Voce recebera atualizacoes pelo WhatsApp.
       </Typography>
       {countdown !== null && (
-        <Box mt={3} p={2} style={{ background: "#f0f0f0", borderRadius: 12, minWidth: 220 }}>
+        <Box mt={3} p={2} style={{ background: "#f0f0f0", borderRadius: 12, minWidth: 240, textAlign: "center" }}>
           <Typography variant="body2" color="textSecondary">
             Voltando ao WhatsApp em...
           </Typography>
@@ -291,6 +289,13 @@ const PublicMenu = () => {
           </Typography>
         </Box>
       )}
+      <Button
+        variant="contained"
+        style={{ marginTop: 16, backgroundColor: "#25D366", color: "white", borderRadius: 24, padding: "10px 28px" }}
+        onClick={() => { window.location.href = "whatsapp://"; }}
+      >
+        Abrir WhatsApp
+      </Button>
     </Box>
   );
 
