@@ -136,9 +136,10 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   if (status) where.status = status;
 
   if (dateFrom || dateTo) {
-    const from = dateFrom ? new Date(dateFrom) : new Date("2000-01-01");
-    const to = dateTo ? new Date(dateTo) : new Date();
-    to.setHours(23, 59, 59, 999);
+    // Sem sufixo "Z" → JS interpreta como horário local do servidor (UTC no AWS)
+    // Adicionamos +3h para cobrir o fuso do Brasil (UTC-3) com margem
+    const from = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date("2000-01-01");
+    const to   = dateTo   ? new Date(dateTo   + "T23:59:59.999") : new Date();
     where.createdAt = { [Op.between]: [from, to] };
   }
 
