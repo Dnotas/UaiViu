@@ -24,4 +24,10 @@ const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterC
   else cb(new Error("Apenas imagens são permitidas"));
 };
 
+const fileFilterAI = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") cb(null, true);
+  else cb(new Error("Apenas imagens ou PDF são permitidos"));
+};
+
 export const uploadMenu = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+export const uploadAI = multer({ storage, fileFilter: fileFilterAI, limits: { fileSize: 20 * 1024 * 1024 } });

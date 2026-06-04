@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import FoodMenuGroup from "../models/FoodMenuGroup";
 import FoodMenuItem from "../models/FoodMenuItem";
+import FoodItemComplement from "../models/FoodItemComplement";
 import AppError from "../errors/AppError";
 
 // ─── GRUPOS ───────────────────────────────────────────────────────────────────
@@ -11,7 +12,12 @@ export const listGroups = async (req: Request, res: Response): Promise<Response>
   const { companyId } = req.user;
   const groups = await FoodMenuGroup.findAll({
     where: { companyId },
-    include: [{ model: FoodMenuItem, where: { active: true }, required: false }],
+    include: [{
+      model: FoodMenuItem,
+      where: { active: true },
+      required: false,
+      include: [{ model: FoodItemComplement, required: false }],
+    }],
     order: [["sortOrder", "ASC"], [{ model: FoodMenuItem, as: "items" }, "sortOrder", "ASC"]]
   });
   return res.json(groups);

@@ -18,10 +18,23 @@ import Accordion from "@material-ui/core/Accordion";
 import AccordionSummary from "@material-ui/core/AccordionSummary";
 import AccordionDetails from "@material-ui/core/AccordionDetails";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Switch from "@material-ui/core/Switch";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import InputLabel from "@material-ui/core/InputLabel";
+import FormControl from "@material-ui/core/FormControl";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import Chip from "@material-ui/core/Chip";
 import AddIcon from "@material-ui/icons/Add";
 import EditIcon from "@material-ui/icons/Edit";
 import DeleteIcon from "@material-ui/icons/Delete";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import api from "../../services/api";
@@ -33,26 +46,44 @@ const useStyles = makeStyles((theme) => ({
   card: { maxWidth: 200 },
   media: { height: 120 },
   addBtn: { marginBottom: theme.spacing(2) },
+  complementRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+  },
+  aiChip: {
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "white",
+    fontWeight: "bold",
+  },
 }));
 
-const emptyItem = { name: "", description: "", price: "", sortOrder: 0, image: null };
+const emptyItem = { name: "", description: "", price: "", sortOrder: 0, image: null, hasComplements: false, complements: [] };
 
 const MenuPage = () => {
   const classes = useStyles();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Diálogo grupo
+  // Dialogo grupo
   const [groupDialog, setGroupDialog] = useState({ open: false, id: null, name: "", sortOrder: 0, image: null, imageUrl: null });
 
-  // Diálogo item
+  // Dialogo item
   const [itemDialog, setItemDialog] = useState({ open: false, groupId: null, id: null, ...emptyItem });
+  const [savingItem, setSavingItem] = useState(false);
+
+  // AI Import
+  const [aiDialog, setAiDialog] = useState({ open: false });
+  const [aiFiles, setAiFiles] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiItems, setAiItems] = useState(null); // null = not analyzed yet
 
   const load = async () => {
     try {
       const { data } = await api.get("/api/food/menu/groups");
       setGroups(data);
-    } catch { toast.error("Erro ao carregar cardápio"); }
+    } catch { toast.error("Erro ao carregar cardapio"); }
     finally { setLoading(false); }
   };
 
@@ -87,24 +118,55 @@ const MenuPage = () => {
   };
 
   // ── Itens ──
+  const openItemDialog = (groupId, item = null) => {
+    if (item) {
+      setItemDialog({
+        open: true,
+        groupId,
+        id: item.id,
+        name: item.name,
+        description: item.description || "",
+        price: item.price,
+        sortOrder: item.sortOrder,
+        image: null,
+        hasComplements: item.hasComplements || false,
+        complements: item.complements ? item.complements.map(c => ({ ...c })) : [],
+      });
+    } else {
+      setItemDialog({ open: true, groupId, id: null, ...emptyItem });
+    }
+  };
+
   const saveItem = async () => {
+    setSavingItem(true);
     try {
       const form = new FormData();
       form.append("name", itemDialog.name);
       form.append("description", itemDialog.description);
       form.append("price", itemDialog.price);
       form.append("sortOrder", itemDialog.sortOrder);
+      form.append("hasComplements", itemDialog.hasComplements ? "true" : "false");
       if (itemDialog.image) form.append("image", itemDialog.image);
 
+      let savedItemId = itemDialog.id;
       if (itemDialog.id) {
         await api.put(`/api/food/menu/items/${itemDialog.id}`, form, { headers: { "Content-Type": "multipart/form-data" } });
       } else {
-        await api.post(`/api/food/menu/groups/${itemDialog.groupId}/items`, form, { headers: { "Content-Type": "multipart/form-data" } });
+        const { data } = await api.post(`/api/food/menu/groups/${itemDialog.groupId}/items`, form, { headers: { "Content-Type": "multipart/form-data" } });
+        savedItemId = data.id;
       }
+
+      // Save complements
+      await api.post(`/api/food/menu/items/${savedItemId}/complements`, {
+        hasComplements: itemDialog.hasComplements,
+        complements: itemDialog.complements,
+      });
+
       toast.success("Item salvo!");
       setItemDialog({ open: false, groupId: null, id: null, ...emptyItem });
       load();
     } catch (err) { toast.error(err?.response?.data?.error || "Erro"); }
+    finally { setSavingItem(false); }
   };
 
   const deleteItem = async (id) => {
@@ -116,16 +178,82 @@ const MenuPage = () => {
     } catch { toast.error("Erro ao remover item"); }
   };
 
+  // ── Complementos (dentro do dialog de item) ──
+  const addComplement = () => {
+    setItemDialog(d => ({ ...d, complements: [...d.complements, { name: "", price: "0" }] }));
+  };
+
+  const updateComplement = (idx, field, value) => {
+    setItemDialog(d => {
+      const updated = [...d.complements];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...d, complements: updated };
+    });
+  };
+
+  const removeComplement = (idx) => {
+    setItemDialog(d => ({ ...d, complements: d.complements.filter((_, i) => i !== idx) }));
+  };
+
+  // ── AI Import ──
+  const runAiAnalysis = async () => {
+    if (!aiFiles.length) { toast.error("Selecione pelo menos uma imagem ou PDF"); return; }
+    setAiLoading(true);
+    setAiItems(null);
+    try {
+      const form = new FormData();
+      for (const f of aiFiles) form.append("files", f);
+      const { data } = await api.post("/api/food/menu/ai-import", form, { headers: { "Content-Type": "multipart/form-data" } });
+      const withGroups = data.items.map(item => ({ ...item, groupName: item.suggestedGroup || "", groupId: "" }));
+      setAiItems(withGroups);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao analisar com IA");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const saveAiItems = async () => {
+    try {
+      const toSave = aiItems.filter(i => i.name && i.name.trim() && (i.groupId || i.groupName));
+      if (!toSave.length) { toast.error("Nenhum item com grupo selecionado"); return; }
+      const { data } = await api.post("/api/food/menu/ai-import/save", { items: toSave });
+      toast.success(`${data.created} itens importados com sucesso!`);
+      setAiDialog({ open: false });
+      setAiFiles([]);
+      setAiItems(null);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao salvar itens");
+    }
+  };
+
+  const updateAiItem = (idx, field, value) => {
+    setAiItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+
+  const removeAiItem = (idx) => {
+    setAiItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
   if (loading) return <Box display="flex" justifyContent="center" mt={4}><CircularProgress /></Box>;
 
   return (
     <div>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Cardápio</Typography>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />}
-          onClick={() => setGroupDialog({ open: true, id: null, name: "", sortOrder: 0 })}>
-          Novo Grupo
-        </Button>
+        <Typography variant="h5">Cardapio</Typography>
+        <Box display="flex" gap={1}>
+          <Button variant="outlined" startIcon={<CloudUploadIcon />}
+            className={classes.aiChip}
+            style={{ marginRight: 8 }}
+            onClick={() => { setAiDialog({ open: true }); setAiFiles([]); setAiItems(null); }}>
+            Importar com IA
+          </Button>
+          <Button variant="contained" color="primary" startIcon={<AddIcon />}
+            onClick={() => setGroupDialog({ open: true, id: null, name: "", sortOrder: 0 })}>
+            Novo Grupo
+          </Button>
+        </Box>
       </Box>
 
       {groups.length === 0 && (
@@ -149,7 +277,7 @@ const MenuPage = () => {
           </AccordionSummary>
           <AccordionDetails>
             <Box width="100%">
-              <Button size="small" startIcon={<AddIcon />} onClick={() => setItemDialog({ open: true, groupId: group.id, id: null, ...emptyItem })}>
+              <Button size="small" startIcon={<AddIcon />} onClick={() => openItemDialog(group.id, null)}>
                 Adicionar item
               </Button>
               <Grid container spacing={2} style={{ marginTop: 8 }}>
@@ -163,9 +291,12 @@ const MenuPage = () => {
                         <Typography variant="subtitle2">{item.name}</Typography>
                         <Typography variant="caption" color="textSecondary">{item.description}</Typography>
                         <Typography variant="body2" color="primary">R$ {parseFloat(item.price).toFixed(2)}</Typography>
+                        {item.hasComplements && (
+                          <Chip label="Com complementos" size="small" style={{ marginTop: 4, fontSize: 10 }} />
+                        )}
                       </CardContent>
                       <CardActions>
-                        <IconButton size="small" onClick={() => setItemDialog({ open: true, groupId: group.id, id: item.id, name: item.name, description: item.description || "", price: item.price, sortOrder: item.sortOrder, image: null })}>
+                        <IconButton size="small" onClick={() => openItemDialog(group.id, item)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton size="small" onClick={() => deleteItem(item.id)}>
@@ -204,23 +335,215 @@ const MenuPage = () => {
       </Dialog>
 
       {/* Dialog item */}
-      <Dialog open={itemDialog.open} onClose={() => setItemDialog(i => ({ ...i, open: false }))} maxWidth="sm" fullWidth>
+      <Dialog open={itemDialog.open} onClose={() => !savingItem && setItemDialog(i => ({ ...i, open: false }))} maxWidth="sm" fullWidth>
         <DialogTitle>{itemDialog.id ? "Editar Item" : "Novo Item"}</DialogTitle>
         <DialogContent>
           <TextField autoFocus fullWidth label="Nome" value={itemDialog.name}
             onChange={e => setItemDialog(i => ({ ...i, name: e.target.value }))} margin="normal" />
-          <TextField fullWidth multiline rows={2} label="Descrição" value={itemDialog.description}
+          <TextField fullWidth multiline rows={2} label="Descricao" value={itemDialog.description}
             onChange={e => setItemDialog(i => ({ ...i, description: e.target.value }))} margin="normal" />
-          <TextField fullWidth label="Preço (R$)" type="number" value={itemDialog.price}
+          <TextField fullWidth label="Preco (R$)" type="number" value={itemDialog.price}
             onChange={e => setItemDialog(i => ({ ...i, price: e.target.value }))} margin="normal" />
           <Button variant="outlined" component="label" style={{ marginTop: 8 }}>
             {itemDialog.image ? "Foto selecionada ✓" : "Selecionar foto"}
             <input type="file" accept="image/*" hidden onChange={e => setItemDialog(i => ({ ...i, image: e.target.files[0] }))} />
           </Button>
+
+          {/* Complementos */}
+          <Box mt={2}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={itemDialog.hasComplements}
+                  onChange={e => setItemDialog(i => ({ ...i, hasComplements: e.target.checked }))}
+                  color="primary"
+                />
+              }
+              label="Este item tem complementos (ex: coberturas do acai)"
+            />
+            {itemDialog.hasComplements && (
+              <Box mt={1}>
+                <Typography variant="caption" color="textSecondary">
+                  Adicione os complementos disponíveis e seus precos:
+                </Typography>
+                {itemDialog.complements.map((c, idx) => (
+                  <div key={idx} className={classes.complementRow}>
+                    <TextField
+                      size="small"
+                      label="Nome do complemento"
+                      value={c.name}
+                      onChange={e => updateComplement(idx, "name", e.target.value)}
+                      style={{ flex: 2 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Preco"
+                      type="number"
+                      value={c.price}
+                      onChange={e => updateComplement(idx, "price", e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <IconButton size="small" onClick={() => removeComplement(idx)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </div>
+                ))}
+                <Button size="small" startIcon={<AddIcon />} onClick={addComplement} style={{ marginTop: 4 }}>
+                  Adicionar complemento
+                </Button>
+              </Box>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setItemDialog(i => ({ ...i, open: false }))}>Cancelar</Button>
-          <Button onClick={saveItem} color="primary" variant="contained">Salvar</Button>
+          <Button onClick={() => setItemDialog(i => ({ ...i, open: false }))} disabled={savingItem}>Cancelar</Button>
+          <Button onClick={saveItem} color="primary" variant="contained" disabled={savingItem}>
+            {savingItem ? <CircularProgress size={20} /> : "Salvar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog IA Import */}
+      <Dialog open={aiDialog.open} onClose={() => !aiLoading && setAiDialog({ open: false })} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Importar Cardapio com IA
+        </DialogTitle>
+        <DialogContent>
+          {!aiItems ? (
+            <Box>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Envie fotos do cardapio ou um PDF. A IA ira extrair os produtos automaticamente.
+                Voce podera revisar e editar antes de salvar.
+              </Typography>
+              <Button variant="outlined" component="label" style={{ marginTop: 8 }}>
+                {aiFiles.length ? `${aiFiles.length} arquivo(s) selecionado(s) ✓` : "Selecionar imagens / PDF"}
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  hidden
+                  onChange={e => setAiFiles(Array.from(e.target.files))}
+                />
+              </Button>
+              {aiFiles.length > 0 && (
+                <Box mt={1}>
+                  {aiFiles.map((f, i) => (
+                    <Typography key={i} variant="caption" display="block" color="textSecondary">
+                      {f.name}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                A IA encontrou <strong>{aiItems.length}</strong> produto(s). Revise os dados abaixo e selecione o grupo de cada item:
+              </Typography>
+              <Box style={{ overflowX: "auto" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Nome</TableCell>
+                      <TableCell>Descricao</TableCell>
+                      <TableCell>Preco</TableCell>
+                      <TableCell>Grupo</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {aiItems.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={item.name}
+                            onChange={e => updateAiItem(idx, "name", e.target.value)}
+                            style={{ minWidth: 140 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={item.description || ""}
+                            onChange={e => updateAiItem(idx, "description", e.target.value)}
+                            style={{ minWidth: 120 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={item.price}
+                            onChange={e => updateAiItem(idx, "price", e.target.value)}
+                            style={{ width: 80 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl size="small" style={{ minWidth: 140 }}>
+                            <Select
+                              value={item.groupId || "__new__"}
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === "__new__") {
+                                  updateAiItem(idx, "groupId", "");
+                                } else {
+                                  const g = groups.find(g => g.id === val);
+                                  updateAiItem(idx, "groupId", val);
+                                  updateAiItem(idx, "groupName", g ? g.name : "");
+                                }
+                              }}
+                              displayEmpty
+                            >
+                              <MenuItem value="__new__">
+                                <em>{item.groupName || "Novo: " + (item.suggestedGroup || "")}</em>
+                              </MenuItem>
+                              {groups.map(g => (
+                                <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          {!item.groupId && (
+                            <TextField
+                              size="small"
+                              placeholder="Nome do novo grupo"
+                              value={item.groupName || ""}
+                              onChange={e => updateAiItem(idx, "groupName", e.target.value)}
+                              style={{ marginTop: 4, width: "100%" }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <IconButton size="small" onClick={() => removeAiItem(idx)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setAiDialog({ open: false }); setAiFiles([]); setAiItems(null); }} disabled={aiLoading}>
+            Cancelar
+          </Button>
+          {!aiItems ? (
+            <Button onClick={runAiAnalysis} color="primary" variant="contained" disabled={aiLoading || !aiFiles.length}>
+              {aiLoading ? <><CircularProgress size={16} style={{ marginRight: 8 }} />Analisando...</> : "Analisar com IA"}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => setAiItems(null)} disabled={aiLoading}>
+                Voltar
+              </Button>
+              <Button onClick={saveAiItems} color="primary" variant="contained">
+                Salvar {aiItems.length} Itens
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
     </div>

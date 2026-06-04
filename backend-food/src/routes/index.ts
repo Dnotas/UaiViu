@@ -1,6 +1,6 @@
 import { Router } from "express";
 import isAuth from "../middleware/isAuth";
-import { uploadMenu } from "../middleware/uploadMenu";
+import { uploadMenu, uploadAI } from "../middleware/uploadMenu";
 
 import * as RestaurantConfigController from "../controllers/RestaurantConfigController";
 import * as MenuController from "../controllers/MenuController";
@@ -8,6 +8,8 @@ import * as OrderController from "../controllers/OrderController";
 import * as PaymentConfigController from "../controllers/PaymentConfigController";
 import * as WhatsappFoodController from "../controllers/WhatsappFoodController";
 import * as ConversationController from "../controllers/ConversationController";
+import * as ComplementController from "../controllers/ComplementController";
+import * as AIImportController from "../controllers/AIImportController";
 
 const router = Router();
 
@@ -28,6 +30,14 @@ router.get("/menu/groups/:groupId/items", isAuth, MenuController.listItems);
 router.post("/menu/groups/:groupId/items", isAuth, uploadMenu.single("image"), MenuController.createItem);
 router.put("/menu/items/:id", isAuth, uploadMenu.single("image"), MenuController.updateItem);
 router.delete("/menu/items/:id", isAuth, MenuController.deleteItem);
+
+// ─── Complementos de item (autenticado) ──────────────────────────────────────
+router.get("/menu/items/:itemId/complements", isAuth, ComplementController.listComplements);
+router.post("/menu/items/:itemId/complements", isAuth, ComplementController.saveComplements);
+
+// ─── Importação IA (autenticado) ─────────────────────────────────────────────
+router.post("/menu/ai-import", isAuth, uploadAI.array("files", 10), AIImportController.analyzeMenu);
+router.post("/menu/ai-import/save", isAuth, AIImportController.saveImportedItems);
 
 // ─── Pedidos — painel do restaurante (autenticado) ────────────────────────────
 router.get("/orders", isAuth, OrderController.list);
@@ -58,13 +68,19 @@ router.get("/public/:slug/menu", async (req, res) => {
   const FoodMenuGroup = require("../models/FoodMenuGroup").default;
   const FoodMenuItem = require("../models/FoodMenuItem").default;
   const FoodRestaurantConfig = require("../models/FoodRestaurantConfig").default;
+  const FoodItemComplement = require("../models/FoodItemComplement").default;
 
   const config = await FoodRestaurantConfig.findOne({ where: { slug: req.params.slug } });
   if (!config) return res.status(404).json({ error: "Restaurante não encontrado" });
 
   const groups = await FoodMenuGroup.findAll({
     where: { companyId: config.companyId, active: true },
-    include: [{ model: FoodMenuItem, where: { active: true }, required: false }],
+    include: [{
+      model: FoodMenuItem,
+      where: { active: true },
+      required: false,
+      include: [{ model: FoodItemComplement, where: { active: true }, required: false }],
+    }],
     order: [["sortOrder", "ASC"], [{ model: FoodMenuItem, as: "items" }, "sortOrder", "ASC"]]
   });
 

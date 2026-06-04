@@ -5,9 +5,7 @@ import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import Grid from "@material-ui/core/Grid";
 import Card from "@material-ui/core/Card";
-import CardMedia from "@material-ui/core/CardMedia";
 import CardContent from "@material-ui/core/CardContent";
-import CardActions from "@material-ui/core/CardActions";
 import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
 import Badge from "@material-ui/core/Badge";
@@ -18,6 +16,11 @@ import RadioGroup from "@material-ui/core/RadioGroup";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Radio from "@material-ui/core/Radio";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import Checkbox from "@material-ui/core/Checkbox";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
@@ -36,6 +39,13 @@ const useStyles = makeStyles((theme) => ({
   payOption: { border: "1px solid #ddd", borderRadius: 8, marginBottom: 4, padding: "4px 12px" },
   itemCard: { display: "flex", marginBottom: theme.spacing(1), borderRadius: 12, overflow: "hidden" },
   itemImg: { width: 90, height: 90, objectFit: "cover", flexShrink: 0 },
+  complementRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "4px 0",
+    borderBottom: "1px solid #f0f0f0",
+  },
 }));
 
 const PublicMenu = () => {
@@ -57,6 +67,9 @@ const PublicMenu = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
+  // Complement picker dialog
+  const [complementDialog, setComplementDialog] = useState({ open: false, item: null, selected: [] });
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -69,17 +82,15 @@ const PublicMenu = () => {
         setPaymentMethods(payRes.data.methods || []);
         if (payRes.data.methods?.length) setPaymentMethod(payRes.data.methods[0].type);
         if (!menuRes.data.restaurant.deliveryEnabled && menuRes.data.restaurant.pickupEnabled) setOrderType("pickup");
-      } catch { toast.error("Restaurante não encontrado"); }
+      } catch { toast.error("Restaurante nao encontrado"); }
       finally { setLoading(false); }
     };
     load();
 
     const params = new URLSearchParams(window.location.search);
-    // Sessão gerada pelo FoodMessageHandler — permite envio de mensagem de volta pelo JID real
     const session = params.get("session");
     if (session) {
       setSessionToken(session);
-      // Consulta telefone associado à sessão para preencher automaticamente
       axios.get(`${FOOD_API}/api/food/public/session/${session}`)
         .then(({ data }) => {
           if (data.phone) setForm(f => ({ ...f, customerPhone: data.phone }));
@@ -87,7 +98,6 @@ const PublicMenu = () => {
         .catch(() => {});
     }
 
-    // Fallback: preenche telefone se vier como parâmetro (apenas números reais, ignora LID)
     const phone = params.get("phone");
     if (phone) {
       const digits = phone.replace(/\D/g, "");
@@ -97,23 +107,61 @@ const PublicMenu = () => {
     }
   }, [slug]);
 
-  const addToCart = (item) => {
+  // Opens complement picker or adds directly
+  const handleAddItem = (item) => {
+    const complements = item.food_item_complements || item.complements || [];
+    const activeComplements = complements.filter(c => c.active !== false);
+    if (item.hasComplements && activeComplements.length > 0) {
+      setComplementDialog({ open: true, item, selected: [] });
+    } else {
+      addToCart(item, []);
+    }
+  };
+
+  const addToCart = (item, selectedComplements) => {
+    const complementsExtra = selectedComplements.reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+    const unitPrice = parseFloat(item.price) + complementsExtra;
+    const cartKey = item.id + (selectedComplements.length ? "_" + selectedComplements.map(c => c.id).sort().join("-") : "");
+
     setCart(prev => {
-      const existing = prev.find(c => c.menuItemId === item.id);
-      if (existing) return prev.map(c => c.menuItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c);
-      return [...prev, { menuItemId: item.id, name: item.name, unitPrice: parseFloat(item.price), quantity: 1, notes: "" }];
+      const existing = prev.find(c => c.cartKey === cartKey);
+      if (existing) return prev.map(c => c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c);
+      return [...prev, {
+        cartKey,
+        menuItemId: item.id,
+        name: item.name,
+        unitPrice,
+        quantity: 1,
+        notes: "",
+        complements: selectedComplements,
+      }];
     });
   };
 
-  const removeFromCart = (itemId) => {
-    setCart(prev => {
-      const existing = prev.find(c => c.menuItemId === itemId);
-      if (existing?.quantity === 1) return prev.filter(c => c.menuItemId !== itemId);
-      return prev.map(c => c.menuItemId === itemId ? { ...c, quantity: c.quantity - 1 } : c);
+  const confirmComplements = () => {
+    addToCart(complementDialog.item, complementDialog.selected);
+    setComplementDialog({ open: false, item: null, selected: [] });
+  };
+
+  const toggleComplement = (complement) => {
+    setComplementDialog(d => {
+      const already = d.selected.find(c => c.id === complement.id);
+      if (already) {
+        return { ...d, selected: d.selected.filter(c => c.id !== complement.id) };
+      }
+      return { ...d, selected: [...d.selected, complement] };
     });
   };
 
-  const getQty = (itemId) => cart.find(c => c.menuItemId === itemId)?.quantity || 0;
+  const removeFromCart = (cartKey) => {
+    setCart(prev => {
+      const existing = prev.find(c => c.cartKey === cartKey);
+      if (existing?.quantity === 1) return prev.filter(c => c.cartKey !== cartKey);
+      return prev.map(c => c.cartKey === cartKey ? { ...c, quantity: c.quantity - 1 } : c);
+    });
+  };
+
+  const getQtyByItemId = (itemId) => cart.filter(c => c.menuItemId === itemId).reduce((s, c) => s + c.quantity, 0);
 
   const handleCepChange = async (value) => {
     const cep = value.replace(/\D/g, "");
@@ -125,7 +173,7 @@ const PublicMenu = () => {
         if (!res.data.erro) {
           setForm(f => ({ ...f, cep: value, customerAddress: res.data.logradouro || "", customerNeighborhood: res.data.bairro || "" }));
         } else {
-          toast.error("CEP não encontrado");
+          toast.error("CEP nao encontrado");
         }
       } catch { toast.error("Erro ao buscar CEP"); }
       finally { setCepLoading(false); }
@@ -139,7 +187,7 @@ const PublicMenu = () => {
   const submitOrder = async () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
-    if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereço");
+    if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
     setOrdering(true);
     try {
       const { data } = await axios.post(`${FOOD_API}/api/food/public/${slug}/orders`, {
@@ -147,7 +195,13 @@ const PublicMenu = () => {
         customerPhone: form.customerPhone.replace(/\D/g, ""),
         paymentMethod,
         orderType,
-        items: cart,
+        items: cart.map(i => ({
+          menuItemId: i.menuItemId,
+          name: i.name + (i.complements?.length ? " (" + i.complements.map(c => c.name).join(", ") + ")" : ""),
+          unitPrice: i.unitPrice,
+          quantity: i.quantity,
+          notes: i.notes,
+        })),
         session: sessionToken || undefined,
       });
       setOrderDone(data);
@@ -172,7 +226,7 @@ const PublicMenu = () => {
         Tempo estimado: {orderDone.estimatedMinutes} minutos
       </Typography>
       <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
-        Você receberá atualizações pelo WhatsApp.
+        Voce recebera atualizacoes pelo WhatsApp.
       </Typography>
     </Box>
   );
@@ -180,43 +234,54 @@ const PublicMenu = () => {
   const primaryColor = restaurant?.primaryColor || "#FF5722";
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
-  const ItemCard = ({ item }) => (
-    <Card className={classes.itemCard} elevation={1}>
-      <CardContent style={{ flex: 1, padding: "12px 12px 8px" }}>
-        <Typography variant="subtitle2" style={{ fontWeight: 600 }}>{item.name}</Typography>
-        {item.description && (
-          <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 4 }}>
-            {item.description}
-          </Typography>
-        )}
-        <Typography variant="body2" style={{ fontWeight: "bold", color: primaryColor }}>
-          R$ {parseFloat(item.price).toFixed(2)}
-        </Typography>
-        <div className={classes.qty} style={{ marginTop: 6 }}>
-          {getQty(item.id) > 0 ? (
-            <>
-              <IconButton size="small" onClick={() => removeFromCart(item.id)}><RemoveIcon fontSize="small" /></IconButton>
-              <Typography style={{ minWidth: 20, textAlign: "center" }}>{getQty(item.id)}</Typography>
-              <IconButton size="small" onClick={() => addToCart(item)} style={{ color: primaryColor }}><AddIcon fontSize="small" /></IconButton>
-            </>
-          ) : (
-            <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addToCart(item)}
-              style={{ borderColor: primaryColor, color: primaryColor, borderRadius: 20 }}>
-              Adicionar
-            </Button>
+  const ItemCard = ({ item }) => {
+    const qty = getQtyByItemId(item.id);
+    return (
+      <Card className={classes.itemCard} elevation={1}>
+        <CardContent style={{ flex: 1, padding: "12px 12px 8px" }}>
+          <Typography variant="subtitle2" style={{ fontWeight: 600 }}>{item.name}</Typography>
+          {item.description && (
+            <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 4 }}>
+              {item.description}
+            </Typography>
           )}
-        </div>
-      </CardContent>
-      {item.imageUrl && (
-        <img src={`${FOOD_API}${item.imageUrl}`} alt={item.name} className={classes.itemImg} />
-      )}
-    </Card>
-  );
+          <Typography variant="body2" style={{ fontWeight: "bold", color: primaryColor }}>
+            R$ {parseFloat(item.price).toFixed(2)}
+          </Typography>
+          {item.hasComplements && (
+            <Typography variant="caption" color="textSecondary" display="block">
+              + complementos
+            </Typography>
+          )}
+          <div className={classes.qty} style={{ marginTop: 6 }}>
+            {qty > 0 && !item.hasComplements ? (
+              <>
+                <IconButton size="small" onClick={() => {
+                  const cartEntry = cart.find(c => c.menuItemId === item.id);
+                  if (cartEntry) removeFromCart(cartEntry.cartKey);
+                }}><RemoveIcon fontSize="small" /></IconButton>
+                <Typography style={{ minWidth: 20, textAlign: "center" }}>{qty}</Typography>
+                <IconButton size="small" onClick={() => handleAddItem(item)} style={{ color: primaryColor }}><AddIcon fontSize="small" /></IconButton>
+              </>
+            ) : (
+              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => handleAddItem(item)}
+                style={{ borderColor: primaryColor, color: primaryColor, borderRadius: 20 }}>
+                {qty > 0 ? `Adicionar (${qty})` : "Adicionar"}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+        {item.imageUrl && (
+          <img src={`${FOOD_API}${item.imageUrl}`} alt={item.name} className={classes.itemImg} />
+        )}
+      </Card>
+    );
+  };
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f8f8f8" }}>
 
-      {/* ── Banner / Header ── */}
+      {/* Banner / Header */}
       <div style={{
         position: "relative", height: 170, overflow: "hidden",
         background: restaurant?.bannerImageUrl
@@ -231,7 +296,7 @@ const PublicMenu = () => {
           )}
           <div>
             <Typography variant="h6" style={{ color: "white", fontWeight: "bold", lineHeight: 1.2, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
-              {restaurant?.restaurantName || "Cardápio"}
+              {restaurant?.restaurantName || "Cardapio"}
             </Typography>
             {parseFloat(restaurant?.deliveryFee || 0) > 0 && (
               <Typography variant="caption" style={{ color: "rgba(255,255,255,0.9)" }}>
@@ -248,10 +313,8 @@ const PublicMenu = () => {
         </IconButton>
       </div>
 
-      {/* ── Conteúdo ── */}
+      {/* Conteudo */}
       <Box px={2} pb={12} pt={2}>
-
-        {/* Vista de grupo selecionado */}
         {selectedGroup ? (
           <>
             <Box display="flex" alignItems="center" mb={2}>
@@ -267,7 +330,6 @@ const PublicMenu = () => {
             )}
           </>
         ) : (
-          /* Vista de categorias (grid de quadrados) */
           <>
             <Typography variant="subtitle1" style={{ fontWeight: "bold", marginBottom: 12 }}>Categorias</Typography>
             <Grid container spacing={2}>
@@ -288,7 +350,6 @@ const PublicMenu = () => {
                           🍽️
                         </div>
                       )}
-                      {/* overlay escuro na parte inferior */}
                       {group.imageUrl && (
                         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 40%, rgba(0,0,0,0.45))" }} />
                       )}
@@ -304,7 +365,7 @@ const PublicMenu = () => {
         )}
       </Box>
 
-      {/* Botão flutuante do carrinho */}
+      {/* Botao flutuante */}
       {cartCount > 0 && !cartOpen && (
         <Box position="fixed" bottom={16} left={0} right={0} display="flex" justifyContent="center" zIndex={200}>
           <Button variant="contained" startIcon={<ShoppingCartIcon />}
@@ -315,28 +376,36 @@ const PublicMenu = () => {
         </Box>
       )}
 
-      {/* Drawer do carrinho / checkout */}
+      {/* Drawer carrinho */}
       <Drawer anchor="right" open={cartOpen} onClose={() => setCartOpen(false)}>
         <div className={classes.cartDrawer}>
           <Typography variant="h6" gutterBottom>Seu Pedido</Typography>
 
           {cart.map(item => (
-            <div key={item.menuItemId} className={classes.cartItem}>
+            <div key={item.cartKey} className={classes.cartItem}>
               <div>
                 <Typography variant="body2">{item.name}</Typography>
-                <Typography variant="caption">{item.quantity}x R$ {item.unitPrice.toFixed(2)}</Typography>
+                {item.complements?.length > 0 && (
+                  <Typography variant="caption" color="textSecondary">
+                    + {item.complements.map(c => c.name).join(", ")}
+                  </Typography>
+                )}
+                <Typography variant="caption" display="block">{item.quantity}x R$ {item.unitPrice.toFixed(2)}</Typography>
               </div>
               <div className={classes.qty}>
-                <IconButton size="small" onClick={() => removeFromCart(item.menuItemId)}><RemoveIcon fontSize="small" /></IconButton>
+                <IconButton size="small" onClick={() => removeFromCart(item.cartKey)}><RemoveIcon fontSize="small" /></IconButton>
                 <Typography>{item.quantity}</Typography>
-                <IconButton size="small" color="primary" onClick={() => addToCart({ id: item.menuItemId, price: item.unitPrice, name: item.name })}><AddIcon fontSize="small" /></IconButton>
+                <IconButton size="small" color="primary" onClick={() => {
+                  const origItem = (selectedGroup?.items || groups.flatMap(g => g.items || [])).find(i => i.id === item.menuItemId);
+                  if (origItem) handleAddItem(origItem);
+                  else setCart(prev => prev.map(c => c.cartKey === item.cartKey ? { ...c, quantity: c.quantity + 1 } : c));
+                }}><AddIcon fontSize="small" /></IconButton>
               </div>
             </div>
           ))}
 
           <Divider style={{ margin: "8px 0" }} />
 
-          {/* Tipo de pedido */}
           {restaurant?.deliveryEnabled && restaurant?.pickupEnabled && (
             <RadioGroup row value={orderType} onChange={e => setOrderType(e.target.value)}>
               <FormControlLabel value="delivery" control={<Radio color="primary" size="small" />} label="Entrega" />
@@ -344,7 +413,6 @@ const PublicMenu = () => {
             </RadioGroup>
           )}
 
-          {/* Dados do cliente */}
           <TextField fullWidth size="small" margin="dense" label="Seu nome" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
           <TextField fullWidth size="small" margin="dense" label="Telefone (WhatsApp)" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} />
 
@@ -354,16 +422,15 @@ const PublicMenu = () => {
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
                 <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Endereço" value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
               <Grid container spacing={1}>
-                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Número" value={form.customerAddressNumber} onChange={e => setForm(f => ({ ...f, customerAddressNumber: e.target.value }))} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => setForm(f => ({ ...f, customerAddressNumber: e.target.value }))} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} />
             </>
           )}
 
-          {/* Forma de pagamento */}
           <Typography variant="subtitle2" style={{ marginTop: 8 }}>Forma de pagamento</Typography>
           <RadioGroup value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
             {paymentMethods.map(m => (
@@ -372,7 +439,7 @@ const PublicMenu = () => {
             ))}
           </RadioGroup>
 
-          <TextField fullWidth size="small" margin="dense" label="Observações (opcional)" multiline rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          <TextField fullWidth size="small" margin="dense" label="Observacoes (opcional)" multiline rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
 
           <Divider style={{ margin: "8px 0" }} />
 
@@ -393,6 +460,67 @@ const PublicMenu = () => {
           </Button>
         </div>
       </Drawer>
+
+      {/* Complement picker dialog */}
+      <Dialog
+        open={complementDialog.open}
+        onClose={() => setComplementDialog({ open: false, item: null, selected: [] })}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {complementDialog.item?.name}
+          <Typography variant="caption" display="block" color="textSecondary">
+            Selecione os complementos desejados
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {(complementDialog.item?.food_item_complements || complementDialog.item?.complements || [])
+            .filter(c => c.active !== false)
+            .map(c => {
+              const checked = !!complementDialog.selected.find(s => s.id === c.id);
+              return (
+                <div key={c.id} className={classes.complementRow}>
+                  <Box display="flex" alignItems="center">
+                    <Checkbox
+                      checked={checked}
+                      onChange={() => toggleComplement(c)}
+                      color="primary"
+                      size="small"
+                    />
+                    <Typography variant="body2">{c.name}</Typography>
+                  </Box>
+                  <Typography variant="body2" style={{ fontWeight: "bold" }}>
+                    {parseFloat(c.price) > 0 ? `+ R$ ${parseFloat(c.price).toFixed(2)}` : "Gratis"}
+                  </Typography>
+                </div>
+              );
+            })}
+          {complementDialog.selected.length > 0 && (
+            <Box mt={1}>
+              <Typography variant="caption" color="textSecondary">
+                Total com complementos: R$ {(
+                  parseFloat(complementDialog.item?.price || 0) +
+                  complementDialog.selected.reduce((s, c) => s + parseFloat(c.price || 0), 0)
+                ).toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setComplementDialog({ open: false, item: null, selected: [] })}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={confirmComplements}
+            variant="contained"
+            color="primary"
+            style={{ backgroundColor: restaurant?.primaryColor }}
+          >
+            Adicionar ao carrinho
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

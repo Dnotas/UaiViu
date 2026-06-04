@@ -1,8 +1,9 @@
 import {
   Table, Column, Model, PrimaryKey, AutoIncrement,
-  CreatedAt, UpdatedAt, ForeignKey, BelongsTo, DataType
+  CreatedAt, UpdatedAt, ForeignKey, BelongsTo, HasMany, DataType
 } from "sequelize-typescript";
 import FoodMenuGroup from "./FoodMenuGroup";
+import FoodItemComplement from "./FoodItemComplement";
 
 @Table({ tableName: "food_menu_items" })
 class FoodMenuItem extends Model<FoodMenuItem> {
@@ -38,6 +39,12 @@ class FoodMenuItem extends Model<FoodMenuItem> {
 
   @Column({ defaultValue: 0 })
   sortOrder: number;
+
+  @Column({ defaultValue: false })
+  hasComplements: boolean;
+
+  @HasMany(() => FoodItemComplement, { onDelete: "CASCADE", hooks: true })
+  complements: FoodItemComplement[];
 
   @CreatedAt
   createdAt: Date;
