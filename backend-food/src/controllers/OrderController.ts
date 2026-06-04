@@ -78,9 +78,18 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
 
       // Persiste a mensagem enviada na conversa (para aparecer no painel de Conversas)
       try {
-        const conversation = await FoodConversation.findOne({
+        let conversation = await FoodConversation.findOne({
           where: { companyId: order.companyId, customerJid: jid }
         });
+        // Fallback: busca por telefone caso JID não bata exatamente
+        if (!conversation && order.customerPhone) {
+          const phone = order.customerPhone.replace(/\D/g, "").replace(/^55/, "");
+          conversation = await FoodConversation.findOne({
+            where: { companyId: order.companyId, customerPhone: phone }
+          });
+          if (conversation) console.log(`[WA-Send] Conversa encontrada via telefone (fallback): ${phone}`);
+        }
+        console.log(`[WA-Send] Conversa para JID ${jid}: ${conversation ? `id=${conversation.id}` : "não encontrada"}`);
         if (conversation) {
           const now = new Date();
           const saved = await FoodMessage.create({
