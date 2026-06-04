@@ -54,6 +54,9 @@ export const handleFoodMessage = async (
   whatsapp: FoodWhatsapp
 ) => {
   try {
+    // Ignora mensagens enviadas por nós (echo do Baileys)
+    if (msg.key.fromMe) return;
+
     const jid = msg.key.remoteJid!;
 
     // Ignora grupos
