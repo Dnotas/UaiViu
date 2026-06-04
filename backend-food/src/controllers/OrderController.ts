@@ -4,6 +4,8 @@ import FoodOrder from "../models/FoodOrder";
 import FoodOrderItem from "../models/FoodOrderItem";
 import FoodRestaurantConfig from "../models/FoodRestaurantConfig";
 import FoodWhatsapp from "../models/FoodWhatsapp";
+import FoodConversation from "../models/FoodConversation";
+import FoodMessage from "../models/FoodMessage";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
@@ -73,6 +75,33 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
 
       await wbot.sendMessage(jid, { text: message });
       console.log(`[WA-Send] ✅ Pedido #${order.id} → mensagem enviada via whatsapp ${wbotId}`);
+
+      // Persiste a mensagem enviada na conversa (para aparecer no painel de Conversas)
+      try {
+        const conversation = await FoodConversation.findOne({
+          where: { companyId: order.companyId, customerJid: jid }
+        });
+        if (conversation) {
+          const now = new Date();
+          const saved = await FoodMessage.create({
+            conversationId: conversation.id,
+            fromMe: true,
+            body: message,
+            timestamp: now,
+          });
+          await conversation.update({ lastMessage: message, lastMessageAt: now });
+          try {
+            const io = getIO();
+            io.to(`food-company-${order.companyId}`).emit("food:conversation:message", {
+              conversationId: conversation.id,
+              message: saved,
+            });
+          } catch { /* socket pode não estar pronto */ }
+        }
+      } catch (e) {
+        console.warn("[WA-Send] Não foi possível salvar mensagem na conversa:", e);
+      }
+
       return;
     } catch (err: any) {
       console.error(`[WA-Send] ❌ Pedido #${order.id} → falha via whatsapp ${wbotId}: ${err?.message}`);
