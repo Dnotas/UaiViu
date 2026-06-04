@@ -54,7 +54,7 @@ const useStyles = makeStyles((theme) => ({
   orderId: { fontWeight: "bold", fontSize: 12, color: theme.palette.text.secondary },
 }));
 
-const PAYMENT_LABEL_FULL = { cash: "Dinheiro / Pagar na entrega", pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito" };
+const PAYMENT_LABEL_FULL = { cash: "Dinheiro / Pagar na entrega", cash_money: "Dinheiro na entrega", cash_pix: "PIX na entrega", cash_card: "Cartão na entrega", pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito" };
 
 const printOrder = (order) => {
   const address = order.orderType === "pickup"

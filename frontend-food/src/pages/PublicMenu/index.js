@@ -25,6 +25,7 @@ import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
+import InputAdornment from "@material-ui/core/InputAdornment";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -525,12 +526,16 @@ const PublicMenu = () => {
               </RadioGroup>
               {cashSubMethod === "cash_money" && (
                 <TextField
-                  size="small" fullWidth
-                  label="Troco para quanto? (deixe vazio se não precisar)"
+                  size="small" fullWidth variant="outlined"
+                  label="Troco para quanto? (vazio = sem troco)"
                   type="number"
                   value={trocoAmount}
                   onChange={e => setTrocoAmount(e.target.value)}
                   style={{ marginTop: 4 }}
+                  InputLabelProps={{ shrink: true }}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                  }}
                   inputProps={{ min: 0, step: "0.50" }}
                 />
               )}
