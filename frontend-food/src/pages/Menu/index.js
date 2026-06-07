@@ -36,6 +36,8 @@ import DeleteIcon from "@material-ui/icons/Delete";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import PlaylistAddIcon from "@material-ui/icons/PlaylistAdd";
+import BlockIcon from "@material-ui/icons/Block";
+import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import api from "../../services/api";
@@ -60,7 +62,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const emptyItem = { name: "", description: "", price: "", sortOrder: 0, image: null, hasComplements: false, complements: [] };
+const emptyItem = { name: "", description: "", price: "", sortOrder: 0, image: null, hasComplements: false, complements: [], freeComplementsLimit: "" };
 
 const MenuPage = () => {
   const classes = useStyles();
@@ -136,6 +138,7 @@ const MenuPage = () => {
         image: null,
         hasComplements: item.hasComplements || false,
         complements: (item.food_item_complements || item.complements || []).map(c => ({ ...c })),
+        freeComplementsLimit: item.freeComplementsLimit != null ? String(item.freeComplementsLimit) : "",
       });
     } else {
       setItemDialog({ open: true, groupId, id: null, ...emptyItem });
@@ -151,6 +154,8 @@ const MenuPage = () => {
       form.append("price", itemDialog.price);
       form.append("sortOrder", itemDialog.sortOrder);
       form.append("hasComplements", itemDialog.hasComplements ? "true" : "false");
+      if (itemDialog.freeComplementsLimit !== "" && itemDialog.freeComplementsLimit != null)
+        form.append("freeComplementsLimit", itemDialog.freeComplementsLimit);
       if (itemDialog.image) form.append("image", itemDialog.image);
 
       let savedItemId = itemDialog.id;
@@ -181,6 +186,13 @@ const MenuPage = () => {
       toast.success("Item removido");
       load();
     } catch { toast.error("Erro ao remover item"); }
+  };
+
+  const toggleAvailable = async (item) => {
+    try {
+      await api.patch(`/api/food/menu/items/${item.id}/available`);
+      load();
+    } catch { toast.error("Erro ao alterar disponibilidade"); }
   };
 
   // ── Complementos (dentro do dialog de item) ──
@@ -333,7 +345,7 @@ const MenuPage = () => {
               <Grid container spacing={2} style={{ marginTop: 8 }}>
                 {(group.items || []).map(item => (
                   <Grid item key={item.id}>
-                    <Card className={classes.card}>
+                    <Card className={classes.card} style={{ opacity: item.available === false ? 0.65 : 1 }}>
                       {item.imageUrl && (
                         <CardMedia className={classes.media} image={`${FOOD_API}${item.imageUrl}`} title={item.name} />
                       )}
@@ -341,11 +353,28 @@ const MenuPage = () => {
                         <Typography variant="subtitle2">{item.name}</Typography>
                         <Typography variant="caption" color="textSecondary">{item.description}</Typography>
                         <Typography variant="body2" color="primary">R$ {parseFloat(item.price).toFixed(2)}</Typography>
+                        {item.available === false && (
+                          <Chip label="Indisponível" size="small" style={{ marginTop: 4, fontSize: 10, backgroundColor: "#f44336", color: "white" }} />
+                        )}
                         {item.hasComplements && (
                           <Chip label="Com complementos" size="small" style={{ marginTop: 4, fontSize: 10 }} />
                         )}
+                        {item.hasComplements && item.freeComplementsLimit > 0 && (
+                          <Chip label={`${item.freeComplementsLimit} grátis`} size="small" style={{ marginTop: 4, fontSize: 10, marginLeft: 2, backgroundColor: "#4caf50", color: "white" }} />
+                        )}
                       </CardContent>
                       <CardActions>
+                        <IconButton
+                          size="small"
+                          title={item.available === false ? "Marcar como disponível" : "Marcar como indisponível"}
+                          onClick={() => toggleAvailable(item)}
+                          style={{ color: item.available === false ? "#4caf50" : "#f44336" }}
+                        >
+                          {item.available === false
+                            ? <CheckCircleOutlineIcon fontSize="small" />
+                            : <BlockIcon fontSize="small" />
+                          }
+                        </IconButton>
                         <IconButton size="small" onClick={() => openItemDialog(group.id, item)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -411,6 +440,18 @@ const MenuPage = () => {
               }
               label="Este item tem complementos (ex: coberturas do acai)"
             />
+            {itemDialog.hasComplements && (
+              <TextField
+                size="small"
+                type="number"
+                label="Adicionais grátis (deixe vazio = todos pagos)"
+                value={itemDialog.freeComplementsLimit}
+                onChange={e => setItemDialog(i => ({ ...i, freeComplementsLimit: e.target.value }))}
+                inputProps={{ min: 0, step: 1 }}
+                style={{ marginTop: 8, width: "100%" }}
+                helperText="Ex: 3 = cliente escolhe 3 grátis, extras são cobrados"
+              />
+            )}
             {itemDialog.hasComplements && (
               <Box mt={1}>
                 <Typography variant="caption" color="textSecondary">

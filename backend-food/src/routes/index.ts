@@ -29,6 +29,7 @@ router.delete("/menu/groups/:id", isAuth, MenuController.deleteGroup);
 router.get("/menu/groups/:groupId/items", isAuth, MenuController.listItems);
 router.post("/menu/groups/:groupId/items", isAuth, uploadMenu.single("image"), MenuController.createItem);
 router.put("/menu/items/:id", isAuth, uploadMenu.single("image"), MenuController.updateItem);
+router.patch("/menu/items/:id/available", isAuth, MenuController.toggleAvailable);
 router.delete("/menu/items/:id", isAuth, MenuController.deleteItem);
 
 // ─── Complementos de item (autenticado) ──────────────────────────────────────
@@ -99,6 +100,10 @@ router.get("/public/:slug/menu", async (req, res) => {
       primaryColor: config.primaryColor || "#FF5722",
       logoUrl: config.logoUrl,
       bannerImageUrl: config.bannerImageUrl,
+      deliveryByDistance: config.deliveryByDistance || false,
+      restaurantLat: config.restaurantLat || null,
+      restaurantLng: config.restaurantLng || null,
+      deliveryRates: config.deliveryRates || [],
     },
     groups
   });

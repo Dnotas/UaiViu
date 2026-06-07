@@ -49,6 +49,23 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ defaultValue: 30 })
   estimatedDeliveryMinutes: number;
 
+  // Endereço e taxa por distância
+  @Column({ type: DataType.TEXT, allowNull: true })
+  restaurantAddress: string;
+
+  @Column({ type: DataType.DECIMAL(10, 7), allowNull: true })
+  restaurantLat: number;
+
+  @Column({ type: DataType.DECIMAL(10, 7), allowNull: true })
+  restaurantLng: number;
+
+  @Column({ defaultValue: false })
+  deliveryByDistance: boolean;
+
+  // [{ maxKm: number, fee: number, prepMinutes: number }] ordenado por maxKm asc
+  @Column({ type: DataType.JSONB, allowNull: true })
+  deliveryRates: Array<{ maxKm: number; fee: number; prepMinutes: number }>;
+
   // Personalização visual
   @Column({ allowNull: true })
   restaurantName: string;

@@ -71,6 +71,16 @@ const PublicMenu = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [sessionToken, setSessionToken] = useState("");
 
+  // Taxa por distância
+  const [calculatedFee, setCalculatedFee] = useState(null);   // null = ainda não calculou
+  const [calculatedPrepMinutes, setCalculatedPrepMinutes] = useState(null);
+  const [deliveryCalcLoading, setDeliveryCalcLoading] = useState(false);
+  const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
+  const [deliveryDistance, setDeliveryDistance] = useState(null);
+  // cidade/UF do CEP — usados na geocodificação do endereço do cliente
+  const [addressCity, setAddressCity] = useState("");
+  const [addressUf, setAddressUf] = useState("");
+
   // Complement picker dialog
   const [complementDialog, setComplementDialog] = useState({ open: false, item: null, selected: [] });
 
@@ -122,8 +132,19 @@ const PublicMenu = () => {
     }
   };
 
+  // Calcula o extra dos complementos considerando limite de grátis
+  // Os N mais baratos são grátis, o restante paga o preço cheio
+  const calcComplementsExtra = (selectedComplements, freeLimit) => {
+    if (!freeLimit || freeLimit <= 0) {
+      return selectedComplements.reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+    }
+    const sorted = [...selectedComplements].sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
+    return sorted.slice(freeLimit).reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+  };
+
   const addToCart = (item, selectedComplements) => {
-    const complementsExtra = selectedComplements.reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+    const freeLimit = item.freeComplementsLimit || 0;
+    const complementsExtra = calcComplementsExtra(selectedComplements, freeLimit);
     const unitPrice = parseFloat(item.price) + complementsExtra;
     const cartKey = item.id + (selectedComplements.length ? "_" + selectedComplements.map(c => c.id).sort().join("-") : "");
 
@@ -199,7 +220,19 @@ const PublicMenu = () => {
       try {
         const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
         if (!res.data.erro) {
-          setForm(f => ({ ...f, cep: value, customerAddress: res.data.logradouro || "", customerNeighborhood: res.data.bairro || "" }));
+          const street = res.data.logradouro || "";
+          const city = res.data.localidade || "";
+          const uf = res.data.uf || "";
+          setForm(f => ({ ...f, cep: value, customerAddress: street, customerNeighborhood: res.data.bairro || "" }));
+          setAddressCity(city);
+          setAddressUf(uf);
+          setCalculatedFee(null);
+          setDeliveryOutOfRange(false);
+          setDeliveryDistance(null);
+          // Auto-calcula frete assim que o CEP preenche o endereço
+          if (street) {
+            calculateDeliveryFee(street, city, uf);
+          }
         } else {
           toast.error("CEP nao encontrado");
         }
@@ -208,14 +241,83 @@ const PublicMenu = () => {
     }
   };
 
+  // Haversine em km
+  const haversineKm = (lat1, lng1, lat2, lng2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // Aceita overrides para quando chamado diretamente do CEP (setState ainda não atualizou)
+  const calculateDeliveryFee = async (overrideStreet = null, overrideCity = null, overrideUf = null) => {
+    if (!restaurant?.deliveryByDistance) return;
+    if (!restaurant.restaurantLat || !restaurant.restaurantLng) return;
+
+    const street = overrideStreet ?? form.customerAddress;
+    const city = overrideCity ?? addressCity;
+    const uf = overrideUf ?? addressUf;
+
+    if (!street) return;
+
+    const addressLine = [street, form.customerAddressNumber, form.customerNeighborhood, city, uf, "Brasil"]
+      .filter(Boolean).join(", ");
+
+    setDeliveryCalcLoading(true);
+    try {
+      const q = encodeURIComponent(addressLine);
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+        { headers: { "Accept-Language": "pt-BR" } }
+      );
+      if (!res.data || !res.data.length) {
+        setDeliveryCalcLoading(false);
+        return;
+      }
+      const { lat, lon } = res.data[0];
+      const distKm = haversineKm(
+        parseFloat(lat), parseFloat(lon),
+        parseFloat(restaurant.restaurantLat), parseFloat(restaurant.restaurantLng)
+      );
+      setDeliveryDistance(distKm);
+
+      const rates = [...(restaurant.deliveryRates || [])].sort((a, b) => a.maxKm - b.maxKm);
+      const rate = rates.find(r => distKm <= parseFloat(r.maxKm));
+      if (!rate) {
+        setDeliveryOutOfRange(true);
+        setCalculatedFee(null);
+        setCalculatedPrepMinutes(null);
+        toast.error(`Seu endereço (${distKm.toFixed(1)} km) está fora da área de entrega.`);
+      } else {
+        setDeliveryOutOfRange(false);
+        setCalculatedFee(parseFloat(rate.fee));
+        setCalculatedPrepMinutes(parseInt(rate.prepMinutes, 10));
+      }
+    } catch {
+      toast.error("Erro ao calcular frete. Tente novamente.");
+    } finally {
+      setDeliveryCalcLoading(false);
+    }
+  };
+
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const deliveryFee = orderType === "delivery" ? parseFloat(restaurant?.deliveryFee || 0) : 0;
+  const deliveryFee = orderType === "delivery"
+    ? (restaurant?.deliveryByDistance ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
+    : 0;
   const total = subtotal + deliveryFee;
 
   const submitOrder = async () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
+    if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
+      return toast.error("Calcule o frete antes de confirmar o pedido.");
+    }
+    if (orderType === "delivery" && restaurant?.deliveryByDistance && deliveryOutOfRange) {
+      return toast.error("Seu endereço está fora da área de entrega.");
+    }
 
     // Resolve método de pagamento final
     const finalPayment = paymentMethod === "cash" ? cashSubMethod : paymentMethod;
@@ -242,6 +344,7 @@ const PublicMenu = () => {
           notes: i.notes,
         })),
         session: sessionToken || undefined,
+        deliveryFeeOverride: (orderType === "delivery" && restaurant?.deliveryByDistance) ? calculatedFee : undefined,
       });
       setOrderDone(data);
       setCart([]);
@@ -286,25 +389,38 @@ const PublicMenu = () => {
 
   const ItemCard = ({ item }) => {
     const qty = getQtyByItemId(item.id);
+    const unavailable = item.available === false;
     return (
-      <Card className={classes.itemCard} elevation={1}>
+      <Card className={classes.itemCard} elevation={1} style={{ opacity: unavailable ? 0.6 : 1 }}>
         <CardContent style={{ flex: 1, padding: "12px 12px 8px" }}>
           <Typography variant="subtitle2" style={{ fontWeight: 600 }}>{item.name}</Typography>
+          {unavailable && (
+            <Typography variant="caption" style={{ color: "#f44336", fontWeight: 600, display: "block" }}>
+              Indisponível no momento
+            </Typography>
+          )}
           {item.description && (
             <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 4 }}>
               {item.description}
             </Typography>
           )}
-          <Typography variant="body2" style={{ fontWeight: "bold", color: primaryColor }}>
+          <Typography variant="body2" style={{ fontWeight: "bold", color: unavailable ? "#aaa" : primaryColor }}>
             R$ {parseFloat(item.price).toFixed(2)}
           </Typography>
-          {item.hasComplements && (
+          {item.hasComplements && !unavailable && (
             <Typography variant="caption" color="textSecondary" display="block">
-              + complementos
+              {item.freeComplementsLimit > 0
+                ? `+ adicionais (${item.freeComplementsLimit} grátis)`
+                : "+ complementos"
+              }
             </Typography>
           )}
           <div className={classes.qty} style={{ marginTop: 6 }}>
-            {qty > 0 && !item.hasComplements ? (
+            {unavailable ? (
+              <Button size="small" variant="outlined" disabled style={{ borderRadius: 20 }}>
+                Indisponível
+              </Button>
+            ) : qty > 0 && !item.hasComplements ? (
               <>
                 <IconButton size="small" onClick={() => {
                   const cartEntry = cart.find(c => c.menuItemId === item.id);
@@ -348,10 +464,18 @@ const PublicMenu = () => {
             <Typography variant="h6" style={{ color: "white", fontWeight: "bold", lineHeight: 1.2, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
               {restaurant?.restaurantName || "Cardapio"}
             </Typography>
-            {parseFloat(restaurant?.deliveryFee || 0) > 0 && (
-              <Typography variant="caption" style={{ color: "rgba(255,255,255,0.9)" }}>
-                Taxa de entrega: R$ {parseFloat(restaurant.deliveryFee).toFixed(2)}
-              </Typography>
+            {restaurant?.deliveryByDistance ? (
+              (restaurant.deliveryRates || []).length > 0 && (
+                <Typography variant="caption" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  Frete a partir de R$ {Math.min(...restaurant.deliveryRates.map(r => parseFloat(r.fee))).toFixed(2)}
+                </Typography>
+              )
+            ) : (
+              parseFloat(restaurant?.deliveryFee || 0) > 0 && (
+                <Typography variant="caption" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  Taxa de entrega: R$ {parseFloat(restaurant.deliveryFee).toFixed(2)}
+                </Typography>
+              )
             )}
           </div>
         </div>
@@ -479,12 +603,33 @@ const PublicMenu = () => {
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
                 <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => setForm(f => ({ ...f, customerAddress: e.target.value }))} />
+              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} />
               <Grid container spacing={1}>
-                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => setForm(f => ({ ...f, customerAddressNumber: e.target.value }))} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} />
+
+              {restaurant?.deliveryByDistance && (
+                <Box mt={0.5} mb={0.5} minHeight={20}>
+                  {deliveryCalcLoading && (
+                    <Typography variant="caption" color="textSecondary">
+                      <CircularProgress size={10} style={{ marginRight: 4 }} />Calculando frete...
+                    </Typography>
+                  )}
+                  {!deliveryCalcLoading && deliveryOutOfRange && (
+                    <Typography variant="caption" color="error" display="block">
+                      Fora da área de entrega ({deliveryDistance?.toFixed(1)} km)
+                    </Typography>
+                  )}
+                  {!deliveryCalcLoading && calculatedFee !== null && !deliveryOutOfRange && (
+                    <Typography variant="caption" style={{ color: "green", display: "block" }}>
+                      {deliveryDistance?.toFixed(1)} km — Frete: R$ {calculatedFee.toFixed(2)}
+                      {calculatedPrepMinutes ? ` — aprox. ${calculatedPrepMinutes} min` : ""}
+                    </Typography>
+                  )}
+                </Box>
+              )}
             </>
           )}
 
@@ -554,38 +699,71 @@ const PublicMenu = () => {
       >
         <DialogTitle>
           {complementDialog.item?.name}
-          <Typography variant="caption" display="block" color="textSecondary">
-            Selecione os complementos desejados
-          </Typography>
+          {(() => {
+            const freeLimit = complementDialog.item?.freeComplementsLimit || 0;
+            const selected = complementDialog.selected.length;
+            if (freeLimit > 0) {
+              const freeUsed = Math.min(selected, freeLimit);
+              return (
+                <Typography variant="caption" display="block" style={{ color: "#4caf50", fontWeight: 600 }}>
+                  {selected === 0
+                    ? `Escolha até ${freeLimit} adicional${freeLimit > 1 ? "is" : ""} grátis`
+                    : selected <= freeLimit
+                      ? `${freeUsed} de ${freeLimit} grátis selecionado${freeUsed > 1 ? "s" : ""}`
+                      : `${freeLimit} grátis + ${selected - freeLimit} pago${selected - freeLimit > 1 ? "s" : ""}`
+                  }
+                </Typography>
+              );
+            }
+            return (
+              <Typography variant="caption" display="block" color="textSecondary">
+                Selecione os complementos desejados
+              </Typography>
+            );
+          })()}
         </DialogTitle>
         <DialogContent>
-          {(complementDialog.item?.food_item_complements || complementDialog.item?.complements || [])
-            .filter(c => c.active !== false)
-            .map(c => {
-              const checked = !!complementDialog.selected.find(s => s.id === c.id);
-              return (
-                <div key={c.id} className={classes.complementRow}>
-                  <Box display="flex" alignItems="center">
-                    <Checkbox
-                      checked={checked}
-                      onChange={() => toggleComplement(c)}
-                      color="primary"
-                      size="small"
-                    />
-                    <Typography variant="body2">{c.name}</Typography>
-                  </Box>
-                  <Typography variant="body2" style={{ fontWeight: "bold" }}>
-                    {parseFloat(c.price) > 0 ? `+ R$ ${parseFloat(c.price).toFixed(2)}` : "Gratis"}
-                  </Typography>
-                </div>
-              );
-            })}
+          {(() => {
+            const freeLimit = complementDialog.item?.freeComplementsLimit || 0;
+            // Determina quais complementos selecionados são grátis (os N mais baratos)
+            const selectedSorted = [...complementDialog.selected]
+              .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
+            const freeIds = new Set(selectedSorted.slice(0, freeLimit).map(c => c.id));
+
+            return (complementDialog.item?.food_item_complements || complementDialog.item?.complements || [])
+              .filter(c => c.active !== false)
+              .map(c => {
+                const checked = !!complementDialog.selected.find(s => s.id === c.id);
+                const isFreeByLimit = freeLimit > 0 && checked && freeIds.has(c.id);
+                const priceLabel = isFreeByLimit
+                  ? <span style={{ color: "#4caf50", fontWeight: "bold" }}>Grátis</span>
+                  : parseFloat(c.price) > 0
+                    ? `+ R$ ${parseFloat(c.price).toFixed(2)}`
+                    : "Grátis";
+                return (
+                  <div key={c.id} className={classes.complementRow}>
+                    <Box display="flex" alignItems="center">
+                      <Checkbox
+                        checked={checked}
+                        onChange={() => toggleComplement(c)}
+                        color="primary"
+                        size="small"
+                      />
+                      <Typography variant="body2">{c.name}</Typography>
+                    </Box>
+                    <Typography variant="body2" style={{ fontWeight: "bold" }}>
+                      {priceLabel}
+                    </Typography>
+                  </div>
+                );
+              });
+          })()}
           {complementDialog.selected.length > 0 && (
             <Box mt={1}>
               <Typography variant="caption" color="textSecondary">
                 Total com complementos: R$ {(
                   parseFloat(complementDialog.item?.price || 0) +
-                  complementDialog.selected.reduce((s, c) => s + parseFloat(c.price || 0), 0)
+                  calcComplementsExtra(complementDialog.selected, complementDialog.item?.freeComplementsLimit || 0)
                 ).toFixed(2)}
               </Typography>
             </Box>

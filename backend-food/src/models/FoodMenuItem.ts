@@ -37,6 +37,14 @@ class FoodMenuItem extends Model<FoodMenuItem> {
   @Column({ defaultValue: true })
   active: boolean;
 
+  // false = indisponível no momento (visível no cardápio mas bloqueado para pedidos)
+  @Column({ defaultValue: true })
+  available: boolean;
+
+  // Quantidade de adicionais gratuitos (null = todos pagos, 0 = nenhum grátis, N = primeiros N grátis)
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  freeComplementsLimit: number | null;
+
   @Column({ defaultValue: 0 })
   sortOrder: number;
 

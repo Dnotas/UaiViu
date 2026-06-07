@@ -22,6 +22,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
     slug, welcomeMessage, msgOrderConfirmed, msgOrderPreparing,
     msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled, pickupEnabled,
     deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
+    restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
   } = req.body;
 
   let config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -38,6 +39,8 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       companyId, slug: finalSlug, welcomeMessage, msgOrderConfirmed,
       msgOrderPreparing, msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled,
       pickupEnabled, deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
+      restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
+      deliveryRates: deliveryRates || [],
     });
   } else {
     if (slug && slug !== config.slug) {
@@ -50,6 +53,8 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       welcomeMessage, msgOrderConfirmed, msgOrderPreparing, msgOrderOnTheWay,
       msgOrderDelivered, deliveryEnabled, pickupEnabled, deliveryFee,
       estimatedDeliveryMinutes, restaurantName, primaryColor,
+      restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
+      deliveryRates: deliveryRates || config.deliveryRates || [],
     });
   }
 

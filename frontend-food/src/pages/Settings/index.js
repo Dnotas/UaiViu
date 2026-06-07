@@ -17,9 +17,18 @@ import Dialog from "@material-ui/core/Dialog";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogActions from "@material-ui/core/DialogActions";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import IconButton from "@material-ui/core/IconButton";
+import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
+import MyLocationIcon from "@material-ui/icons/MyLocation";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
+import axios from "axios";
 import api from "../../services/api";
 
 const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
@@ -29,6 +38,7 @@ const toDateInput = (d) => d.toISOString().slice(0, 10);
 const useStyles = makeStyles((theme) => ({
   section: { padding: theme.spacing(3), marginBottom: theme.spacing(3) },
   title: { marginBottom: theme.spacing(2) },
+  rateRow: { "& td": { padding: "4px 8px" } },
 }));
 
 const SettingsPage = () => {
@@ -41,9 +51,13 @@ const SettingsPage = () => {
     msgOrderOnTheWay: "", msgOrderDelivered: "", deliveryEnabled: true,
     pickupEnabled: false, deliveryFee: 0, estimatedDeliveryMinutes: 30,
     restaurantName: "", primaryColor: "#FF5722", logoUrl: "", bannerImageUrl: "",
+    // novos campos
+    restaurantAddress: "", restaurantLat: null, restaurantLng: null,
+    deliveryByDistance: false, deliveryRates: [],
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
 
   const today = toDateInput(new Date());
   const [clearDateFrom, setClearDateFrom] = useState(today);
@@ -59,7 +73,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     api.get("/api/food/restaurant-config").then(({ data }) => {
-      if (data) setConfig(c => ({ ...c, ...data }));
+      if (data) setConfig(c => ({ ...c, ...data, deliveryRates: data.deliveryRates || [] }));
       setLoadingConfig(false);
     }).catch(() => setLoadingConfig(false));
 
@@ -76,6 +90,52 @@ const SettingsPage = () => {
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao salvar");
     }
+  };
+
+  const geocodeAddress = async () => {
+    if (!config.restaurantAddress) {
+      toast.error("Informe o endereço do restaurante primeiro");
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const q = encodeURIComponent(config.restaurantAddress + ", Brasil");
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+        { headers: { "Accept-Language": "pt-BR" } }
+      );
+      if (res.data && res.data.length > 0) {
+        const { lat, lon } = res.data[0];
+        setConfig(c => ({ ...c, restaurantLat: parseFloat(lat), restaurantLng: parseFloat(lon) }));
+        toast.success(`Localização encontrada: ${parseFloat(lat).toFixed(5)}, ${parseFloat(lon).toFixed(5)}`);
+      } else {
+        toast.error("Endereço não encontrado. Tente ser mais específico (ex: Rua X, 100, Cidade, UF).");
+      }
+    } catch {
+      toast.error("Erro ao geocodificar endereço");
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  // ── Tabela de taxas por distância ──
+  const addRate = () => {
+    setConfig(c => ({
+      ...c,
+      deliveryRates: [...(c.deliveryRates || []), { maxKm: "", fee: "", prepMinutes: "" }],
+    }));
+  };
+
+  const updateRate = (idx, field, value) => {
+    setConfig(c => {
+      const updated = [...(c.deliveryRates || [])];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...c, deliveryRates: updated };
+    });
+  };
+
+  const removeRate = (idx) => {
+    setConfig(c => ({ ...c, deliveryRates: (c.deliveryRates || []).filter((_, i) => i !== idx) }));
   };
 
   const uploadImage = async (file, field, setLoading) => {
@@ -129,10 +189,6 @@ const SettingsPage = () => {
               helperText="Aparece na URL do cardápio. Só letras, números e hífen." />
           </Grid>
           <Grid item xs={12} sm={3}>
-            <TextField fullWidth label="Taxa de entrega (R$)" type="number" value={config.deliveryFee}
-              onChange={e => setConfig(c => ({ ...c, deliveryFee: e.target.value }))} variant="outlined" size="small" />
-          </Grid>
-          <Grid item xs={12} sm={3}>
             <TextField fullWidth label="Tempo estimado (min)" type="number" value={config.estimatedDeliveryMinutes}
               onChange={e => setConfig(c => ({ ...c, estimatedDeliveryMinutes: e.target.value }))} variant="outlined" size="small" />
           </Grid>
@@ -142,6 +198,121 @@ const SettingsPage = () => {
           <Grid item xs={12} sm={6}>
             <FormControlLabel control={<Switch checked={config.pickupEnabled} onChange={e => setConfig(c => ({ ...c, pickupEnabled: e.target.checked }))} color="primary" />} label="Retirada no local habilitada" />
           </Grid>
+
+          <Grid item xs={12}><Divider /></Grid>
+
+          {/* ── Taxa de entrega ── */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 4 }}>Taxa de Entrega</Typography>
+          </Grid>
+          <Grid item xs={12} sm={8}>
+            <TextField
+              fullWidth label="Endereço do restaurante"
+              value={config.restaurantAddress || ""}
+              onChange={e => setConfig(c => ({ ...c, restaurantAddress: e.target.value }))}
+              variant="outlined" size="small"
+              helperText="Ex: Rua das Flores, 100, Centro, Uberlândia, MG. Necessário para calcular distância."
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <Button
+              variant="outlined" size="small"
+              startIcon={geocoding ? <CircularProgress size={14} /> : <MyLocationIcon />}
+              onClick={geocodeAddress}
+              disabled={geocoding || !config.restaurantAddress}
+              style={{ marginTop: 4 }}
+            >
+              Geocodificar
+            </Button>
+            {config.restaurantLat && config.restaurantLng && (
+              <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, lineHeight: 1.3 }}>
+                {parseFloat(config.restaurantLat).toFixed(5)},<br />{parseFloat(config.restaurantLng).toFixed(5)}
+              </Typography>
+            )}
+          </Grid>
+
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.deliveryByDistance}
+                  onChange={e => setConfig(c => ({ ...c, deliveryByDistance: e.target.checked }))}
+                  color="primary"
+                />
+              }
+              label="Calcular taxa de entrega por distância (km)"
+            />
+          </Grid>
+
+          {!config.deliveryByDistance ? (
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label="Taxa de entrega fixa (R$)" type="number" value={config.deliveryFee}
+                onChange={e => setConfig(c => ({ ...c, deliveryFee: e.target.value }))} variant="outlined" size="small" />
+            </Grid>
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Tabela de frete por distância
+              </Typography>
+              <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+                Insira as faixas em ordem crescente de distância. O sistema usa a primeira faixa em que a distância do cliente for menor ou igual ao limite.
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Distância máx. (km)</TableCell>
+                    <TableCell>Tempo de preparo (min)</TableCell>
+                    <TableCell>Taxa (R$)</TableCell>
+                    <TableCell style={{ width: 40 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(config.deliveryRates || []).map((rate, idx) => (
+                    <TableRow key={idx} className={classes.rateRow}>
+                      <TableCell>
+                        <TextField
+                          size="small" type="number"
+                          value={rate.maxKm}
+                          onChange={e => updateRate(idx, "maxKm", e.target.value)}
+                          inputProps={{ min: 0, step: 1 }}
+                          style={{ width: 90 }}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          size="small" type="number"
+                          value={rate.prepMinutes}
+                          onChange={e => updateRate(idx, "prepMinutes", e.target.value)}
+                          inputProps={{ min: 0, step: 5 }}
+                          style={{ width: 90 }}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          size="small" type="number"
+                          value={rate.fee}
+                          onChange={e => updateRate(idx, "fee", e.target.value)}
+                          inputProps={{ min: 0, step: 0.5 }}
+                          style={{ width: 90 }}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={() => removeRate(idx)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Button size="small" startIcon={<AddIcon />} onClick={addRate} style={{ marginTop: 8 }}>
+                Adicionar faixa
+              </Button>
+            </Grid>
+          )}
         </Grid>
 
         <Divider style={{ margin: "16px 0" }} />

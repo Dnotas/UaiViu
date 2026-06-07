@@ -277,7 +277,8 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     orderType,
     notes,
     items,
-    session
+    session,
+    deliveryFeeOverride,
   } = req.body;
 
   if (!items || !items.length) throw new AppError("Carrinho vazio", 400);
@@ -286,7 +287,10 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
 
   // Calcula subtotal
   const subtotal: number = items.reduce((sum: number, i: any) => sum + (i.unitPrice * i.quantity), 0);
-  const deliveryFee = orderType === "delivery" ? Number(config.deliveryFee) : 0;
+  // Se o restaurante usa taxa por distância e o cliente enviou o valor calculado, usa ele
+  const deliveryFee = orderType === "delivery"
+    ? (config.deliveryByDistance && deliveryFeeOverride != null ? Number(deliveryFeeOverride) : Number(config.deliveryFee))
+    : 0;
   const total = subtotal + deliveryFee;
 
   // Resolve JID do cliente a partir da sessão (se veio pelo link do WhatsApp)

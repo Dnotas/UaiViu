@@ -23,6 +23,16 @@ export const listGroups = async (req: Request, res: Response): Promise<Response>
   return res.json(groups);
 };
 
+// PATCH /api/food/menu/items/:id/available
+export const toggleAvailable = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+  const item = await FoodMenuItem.findOne({ where: { id, companyId } });
+  if (!item) throw new AppError("Item não encontrado", 404);
+  await item.update({ available: !item.available });
+  return res.json({ id: item.id, available: item.available });
+};
+
 export const createGroup = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
   const { name, sortOrder } = req.body;
