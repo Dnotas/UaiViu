@@ -26,10 +26,12 @@ import IconButton from "@material-ui/core/IconButton";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
 import MyLocationIcon from "@material-ui/icons/MyLocation";
+import InputAdornment from "@material-ui/core/InputAdornment";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import axios from "axios";
 import api from "../../services/api";
+import LocationPicker from "../../components/LocationPicker";
 
 const FOOD_API = process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003";
 
@@ -58,6 +60,9 @@ const SettingsPage = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  // CEP helper (não salvo no BD — só para auto-preencher o endereço)
+  const [cepRest, setCepRest] = useState("");
+  const [cepRestLoading, setCepRestLoading] = useState(false);
 
   const today = toDateInput(new Date());
   const [clearDateFrom, setClearDateFrom] = useState(today);
@@ -92,14 +97,17 @@ const SettingsPage = () => {
     }
   };
 
-  const geocodeAddress = async () => {
-    if (!config.restaurantAddress) {
-      toast.error("Informe o endereço do restaurante primeiro");
+  // addressOverride: usado quando chamado logo após setConfig (estado ainda não atualizou)
+  // silent: não exibe toast de sucesso (ex: chamado automaticamente pelo CEP)
+  const geocodeAddress = async (addressOverride = null, silent = false) => {
+    const address = addressOverride != null ? addressOverride : config.restaurantAddress;
+    if (!address) {
+      if (!silent) toast.error("Informe o endereço do restaurante primeiro");
       return;
     }
     setGeocoding(true);
     try {
-      const q = encodeURIComponent(config.restaurantAddress + ", Brasil");
+      const q = encodeURIComponent(address + ", Brasil");
       const res = await axios.get(
         `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
         { headers: { "Accept-Language": "pt-BR" } }
@@ -107,14 +115,35 @@ const SettingsPage = () => {
       if (res.data && res.data.length > 0) {
         const { lat, lon } = res.data[0];
         setConfig(c => ({ ...c, restaurantLat: parseFloat(lat), restaurantLng: parseFloat(lon) }));
-        toast.success(`Localização encontrada: ${parseFloat(lat).toFixed(5)}, ${parseFloat(lon).toFixed(5)}`);
+        if (!silent) toast.success("Localização encontrada! Ajuste o pino no mapa se necessário.");
       } else {
-        toast.error("Endereço não encontrado. Tente ser mais específico (ex: Rua X, 100, Cidade, UF).");
+        if (!silent) toast.error("Endereço não encontrado. Tente incluir o número e a cidade.");
       }
     } catch {
-      toast.error("Erro ao geocodificar endereço");
+      if (!silent) toast.error("Erro ao geocodificar endereço");
     } finally {
       setGeocoding(false);
+    }
+  };
+
+  const handleCepRestaurante = async (value) => {
+    const cep = value.replace(/\D/g, "");
+    setCepRest(value);
+    if (cep.length === 8) {
+      setCepRestLoading(true);
+      try {
+        const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        if (!res.data.erro) {
+          const parts = [res.data.logradouro, res.data.bairro, res.data.localidade, res.data.uf].filter(Boolean);
+          const address = parts.join(", ");
+          setConfig(c => ({ ...c, restaurantAddress: address }));
+          // Auto-geocoda silenciosamente com o endereço retornado
+          if (address) geocodeAddress(address, true);
+        } else {
+          toast.error("CEP não encontrado");
+        }
+      } catch { toast.error("Erro ao buscar CEP"); }
+      finally { setCepRestLoading(false); }
     }
   };
 
@@ -205,31 +234,65 @@ const SettingsPage = () => {
           <Grid item xs={12}>
             <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 4 }}>Taxa de Entrega</Typography>
           </Grid>
+
+          {/* CEP helper */}
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth label="CEP do restaurante"
+              value={cepRest}
+              onChange={e => handleCepRestaurante(e.target.value)}
+              inputProps={{ maxLength: 9 }}
+              variant="outlined" size="small"
+              helperText="Preenche o endereço automaticamente"
+              InputProps={{
+                endAdornment: cepRestLoading
+                  ? <InputAdornment position="end"><CircularProgress size={16} /></InputAdornment>
+                  : null,
+              }}
+            />
+          </Grid>
+
+          {/* Endereço completo */}
           <Grid item xs={12} sm={8}>
             <TextField
-              fullWidth label="Endereço do restaurante"
+              fullWidth label="Endereço completo do restaurante"
               value={config.restaurantAddress || ""}
               onChange={e => setConfig(c => ({ ...c, restaurantAddress: e.target.value }))}
               variant="outlined" size="small"
-              helperText="Ex: Rua das Flores, 100, Centro, Uberlândia, MG. Necessário para calcular distância."
+              helperText="Inclua o número. Ex: Rua das Flores, 100, Centro, Bom Despacho, MG"
             />
           </Grid>
-          <Grid item xs={12} sm={4} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+
+          {/* Botão geocodificar */}
+          <Grid item xs={12}>
             <Button
               variant="outlined" size="small"
               startIcon={geocoding ? <CircularProgress size={14} /> : <MyLocationIcon />}
-              onClick={geocodeAddress}
+              onClick={() => geocodeAddress()}
               disabled={geocoding || !config.restaurantAddress}
-              style={{ marginTop: 4 }}
             >
-              Geocodificar
+              {geocoding ? "Localizando..." : "Geocodificar endereço"}
             </Button>
             {config.restaurantLat && config.restaurantLng && (
-              <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, lineHeight: 1.3 }}>
-                {parseFloat(config.restaurantLat).toFixed(5)},<br />{parseFloat(config.restaurantLng).toFixed(5)}
+              <Typography variant="caption" color="textSecondary" style={{ marginLeft: 12 }}>
+                {parseFloat(config.restaurantLat).toFixed(5)}, {parseFloat(config.restaurantLng).toFixed(5)}
               </Typography>
             )}
           </Grid>
+
+          {/* Mini mapa */}
+          {config.restaurantLat && config.restaurantLng && (
+            <Grid item xs={12}>
+              <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 4 }}>
+                Arraste o pino ou clique no mapa para ajustar a localização exata do restaurante
+              </Typography>
+              <LocationPicker
+                lat={parseFloat(config.restaurantLat)}
+                lng={parseFloat(config.restaurantLng)}
+                onChange={(lat, lng) => setConfig(c => ({ ...c, restaurantLat: lat, restaurantLng: lng }))}
+              />
+            </Grid>
+          )}
 
           <Grid item xs={12}>
             <FormControlLabel
