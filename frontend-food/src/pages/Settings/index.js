@@ -63,6 +63,10 @@ const SettingsPage = () => {
   // CEP helper (não salvo no BD — só para auto-preencher o endereço)
   const [cepRest, setCepRest] = useState("");
   const [cepRestLoading, setCepRestLoading] = useState(false);
+  // Separados para usar na busca estruturada do Nominatim
+  const [restStreet, setRestStreet] = useState("");
+  const [restCity, setRestCity] = useState("");
+  const [restUf, setRestUf] = useState("");
 
   const today = toDateInput(new Date());
   const [clearDateFrom, setClearDateFrom] = useState(today);
@@ -97,30 +101,64 @@ const SettingsPage = () => {
     }
   };
 
-  // addressOverride: usado quando chamado logo após setConfig (estado ainda não atualizou)
-  // silent: não exibe toast de sucesso (ex: chamado automaticamente pelo CEP)
-  const geocodeAddress = async (addressOverride = null, silent = false) => {
-    const address = addressOverride != null ? addressOverride : config.restaurantAddress;
-    if (!address) {
-      if (!silent) toast.error("Informe o endereço do restaurante primeiro");
+  const geocodeAddress = async () => {
+    if (!config.restaurantAddress) {
+      toast.error("Informe o endereço do restaurante primeiro");
       return;
     }
     setGeocoding(true);
     try {
-      const q = encodeURIComponent(address + ", Brasil");
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-        { headers: { "Accept-Language": "pt-BR" } }
-      );
-      if (res.data && res.data.length > 0) {
-        const { lat, lon } = res.data[0];
+      let result = null;
+
+      // Estratégia 1: busca estruturada (rua + cidade + estado) — mais precisa
+      if (restStreet && restCity && restUf) {
+        const params = new URLSearchParams({
+          street: config.restaurantAddress.split(",")[0], // só a rua do campo editado
+          city: restCity,
+          state: restUf,
+          country: "Brasil",
+          format: "json",
+          limit: "1",
+        });
+        const r1 = await axios.get(
+          `https://nominatim.openstreetmap.org/search?${params}`,
+          { headers: { "Accept-Language": "pt-BR" } }
+        );
+        if (r1.data?.length) result = r1.data[0];
+      }
+
+      // Estratégia 2: texto livre com o campo completo
+      if (!result) {
+        const q = encodeURIComponent(config.restaurantAddress + ", Brasil");
+        const r2 = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+          { headers: { "Accept-Language": "pt-BR" } }
+        );
+        if (r2.data?.length) result = r2.data[0];
+      }
+
+      // Estratégia 3: fallback — só cidade + estado (localização aproximada)
+      if (!result && restCity && restUf) {
+        const q = encodeURIComponent(`${restCity}, ${restUf}, Brasil`);
+        const r3 = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+          { headers: { "Accept-Language": "pt-BR" } }
+        );
+        if (r3.data?.length) {
+          result = r3.data[0];
+          toast.info("Rua não encontrada — pino posicionado no centro da cidade. Ajuste no mapa.");
+        }
+      }
+
+      if (result) {
+        const { lat, lon } = result;
         setConfig(c => ({ ...c, restaurantLat: parseFloat(lat), restaurantLng: parseFloat(lon) }));
-        if (!silent) toast.success("Localização encontrada! Ajuste o pino no mapa se necessário.");
+        toast.success("Localização encontrada! Ajuste o pino no mapa se necessário.");
       } else {
-        if (!silent) toast.error("Endereço não encontrado. Tente incluir o número e a cidade.");
+        toast.error("Não foi possível localizar o endereço. Verifique os dados.");
       }
     } catch {
-      if (!silent) toast.error("Erro ao geocodificar endereço");
+      toast.error("Erro ao geocodificar endereço");
     } finally {
       setGeocoding(false);
     }
@@ -134,11 +172,15 @@ const SettingsPage = () => {
       try {
         const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
         if (!res.data.erro) {
-          const parts = [res.data.logradouro, res.data.bairro, res.data.localidade, res.data.uf].filter(Boolean);
-          const address = parts.join(", ");
-          setConfig(c => ({ ...c, restaurantAddress: address }));
-          // Auto-geocoda silenciosamente com o endereço retornado
-          if (address) geocodeAddress(address, true);
+          const street = res.data.logradouro || "";
+          const city = res.data.localidade || "";
+          const uf = res.data.uf || "";
+          setRestStreet(street);
+          setRestCity(city);
+          setRestUf(uf);
+          const parts = [street, res.data.bairro, city, uf].filter(Boolean);
+          setConfig(c => ({ ...c, restaurantAddress: parts.join(", ") }));
+          // Não auto-geocoda aqui — o usuário ainda precisa adicionar o número
         } else {
           toast.error("CEP não encontrado");
         }
