@@ -44,6 +44,12 @@ class FoodOrder extends Model<FoodOrder> {
   @Column({ type: DataType.DECIMAL(10, 2), defaultValue: 0 })
   deliveryFee: number;
 
+  @Column({ type: DataType.DECIMAL(10, 2), defaultValue: 0, allowNull: true })
+  discountAmount: number;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  couponCode: string;
+
   @Column({ type: DataType.DECIMAL(10, 2) })
   total: number;
 

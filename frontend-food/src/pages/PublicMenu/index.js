@@ -81,6 +81,11 @@ const PublicMenu = () => {
   const [addressCity, setAddressCity] = useState("");
   const [addressUf, setAddressUf] = useState("");
 
+  // Cupom de desconto
+  const [couponInput, setCouponInput] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discountType, discountValue }
+
   // Complement picker dialog
   const [complementDialog, setComplementDialog] = useState({ open: false, item: null, selected: [] });
 
@@ -319,11 +324,39 @@ const PublicMenu = () => {
     }
   };
 
+  const applyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    const currentSubtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    setCouponLoading(true);
+    try {
+      const { data } = await axios.post(`${FOOD_API}/api/food/public/${slug}/coupons/validate`, {
+        code: couponInput.trim(),
+        orderValue: currentSubtotal,
+      });
+      if (data.valid) {
+        setAppliedCoupon(data);
+        toast.success(`Cupom ${data.code} aplicado!`);
+      } else {
+        setAppliedCoupon(null);
+        toast.error(data.message || "Cupom inválido");
+      }
+    } catch {
+      toast.error("Erro ao validar cupom");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const deliveryFee = orderType === "delivery"
     ? (restaurant?.deliveryByDistance ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
     : 0;
-  const total = subtotal + deliveryFee;
+  const discountAmount = appliedCoupon
+    ? (appliedCoupon.discountType === "percent"
+        ? Math.min(subtotal * (appliedCoupon.discountValue / 100), subtotal)
+        : Math.min(appliedCoupon.discountValue, subtotal))
+    : 0;
+  const total = subtotal + deliveryFee - discountAmount;
 
   const submitOrder = async () => {
     if (!cart.length) return toast.error("Carrinho vazio");
@@ -362,6 +395,7 @@ const PublicMenu = () => {
         })),
         session: sessionToken || undefined,
         deliveryFeeOverride: (orderType === "delivery" && restaurant?.deliveryByDistance) ? calculatedFee : undefined,
+        couponCode: appliedCoupon?.code || undefined,
       });
       setOrderDone(data);
       setCart([]);
@@ -689,10 +723,54 @@ const PublicMenu = () => {
 
           <Divider style={{ margin: "8px 0" }} />
 
+          {/* Campo de cupom */}
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <TextField
+              size="small"
+              label="Cupom de desconto"
+              value={couponInput}
+              onChange={e => { setCouponInput(e.target.value.toUpperCase()); setAppliedCoupon(null); }}
+              style={{ flex: 1 }}
+              disabled={!!appliedCoupon}
+            />
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={applyCoupon}
+              disabled={couponLoading || !couponInput.trim() || !!appliedCoupon}
+              style={{ whiteSpace: "nowrap", height: 38 }}
+            >
+              {couponLoading ? <CircularProgress size={14} /> : appliedCoupon ? "Aplicado" : "Aplicar"}
+            </Button>
+          </Box>
+          {appliedCoupon && (
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}
+              style={{ background: "#e8f5e9", borderRadius: 6, padding: "4px 8px" }}>
+              <Typography variant="caption" style={{ color: "green" }}>
+                Cupom <strong>{appliedCoupon.code}</strong>:{" "}
+                {appliedCoupon.discountType === "percent"
+                  ? `${appliedCoupon.discountValue}% de desconto`
+                  : `R$ ${appliedCoupon.discountValue.toFixed(2)} de desconto`}
+              </Typography>
+              <Button size="small" style={{ minWidth: 0, padding: "0 4px", color: "#888" }}
+                onClick={() => { setAppliedCoupon(null); setCouponInput(""); }}>
+                ✕
+              </Button>
+            </Box>
+          )}
+
+          <Divider style={{ margin: "8px 0" }} />
+
           {deliveryFee > 0 && (
             <Box display="flex" justifyContent="space-between">
               <Typography variant="body2">Taxa de entrega:</Typography>
               <Typography variant="body2">R$ {deliveryFee.toFixed(2)}</Typography>
+            </Box>
+          )}
+          {discountAmount > 0 && (
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" style={{ color: "green" }}>Desconto ({appliedCoupon?.code}):</Typography>
+              <Typography variant="body2" style={{ color: "green" }}>- R$ {discountAmount.toFixed(2)}</Typography>
             </Box>
           )}
           <Box display="flex" justifyContent="space-between" mb={2}>

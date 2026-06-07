@@ -10,6 +10,7 @@ import * as WhatsappFoodController from "../controllers/WhatsappFoodController";
 import * as ConversationController from "../controllers/ConversationController";
 import * as ComplementController from "../controllers/ComplementController";
 import * as AIImportController from "../controllers/AIImportController";
+import * as CouponController from "../controllers/CouponController";
 
 const router = Router();
 
@@ -42,6 +43,12 @@ router.post("/menu/groups/:groupId/bulk-complements", isAuth, ComplementControll
 // ─── Importação IA (autenticado) ─────────────────────────────────────────────
 router.post("/menu/ai-import", isAuth, uploadAI.array("files", 10), AIImportController.analyzeMenu);
 router.post("/menu/ai-import/save", isAuth, AIImportController.saveImportedItems);
+
+// ─── Cupons de desconto (autenticado) ────────────────────────────────────────
+router.get("/coupons", isAuth, CouponController.list);
+router.post("/coupons", isAuth, CouponController.create);
+router.put("/coupons/:id", isAuth, CouponController.update);
+router.delete("/coupons/:id", isAuth, CouponController.remove);
 
 // ─── Pedidos — painel do restaurante (autenticado) ────────────────────────────
 router.get("/orders", isAuth, OrderController.list);
@@ -140,6 +147,9 @@ router.get("/public/session/:token", (req, res) => {
   const session = getJidBySession(req.params.token);
   return res.json({ phone: session?.phone || "" });
 });
+
+// Validar cupom
+router.post("/public/:slug/coupons/validate", CouponController.validatePublic);
 
 // Criar pedido
 router.post("/public/:slug/orders", OrderController.createPublicOrder);

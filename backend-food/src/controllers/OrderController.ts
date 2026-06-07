@@ -12,6 +12,7 @@ import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
 import { getJidBySession } from "../services/wbot/FoodMessageHandler";
 import FoodCustomer from "../models/FoodCustomer";
+import FoodCoupon from "../models/FoodCoupon";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -279,6 +280,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     items,
     session,
     deliveryFeeOverride,
+    couponCode,
   } = req.body;
 
   if (!items || !items.length) throw new AppError("Carrinho vazio", 400);
@@ -291,7 +293,32 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   const deliveryFee = orderType === "delivery"
     ? (config.deliveryByDistance && deliveryFeeOverride != null ? Number(deliveryFeeOverride) : Number(config.deliveryFee))
     : 0;
-  const total = subtotal + deliveryFee;
+
+  // Valida e aplica cupom de desconto
+  let discountAmount = 0;
+  let appliedCouponCode: string | null = null;
+  if (couponCode) {
+    const coupon = await FoodCoupon.findOne({
+      where: { companyId: config.companyId, code: couponCode.toUpperCase().trim() },
+    });
+    if (coupon && coupon.active &&
+        (!coupon.expiresAt || new Date() <= new Date(coupon.expiresAt)) &&
+        (coupon.usageLimit === null || coupon.usageCount < coupon.usageLimit) &&
+        (!coupon.minOrderValue || subtotal >= Number(coupon.minOrderValue))
+    ) {
+      if (coupon.discountType === "percent") {
+        discountAmount = Math.min(subtotal * (Number(coupon.discountValue) / 100), subtotal);
+      } else {
+        discountAmount = Math.min(Number(coupon.discountValue), subtotal);
+      }
+      discountAmount = Math.round(discountAmount * 100) / 100;
+      appliedCouponCode = coupon.code;
+      // Incrementa uso do cupom
+      await coupon.increment("usageCount");
+    }
+  }
+
+  const total = subtotal + deliveryFee - discountAmount;
 
   // Resolve JID do cliente a partir da sessão (se veio pelo link do WhatsApp)
   let customerJid: string | null = null;
@@ -319,6 +346,8 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     customerNeighborhood,
     subtotal,
     deliveryFee,
+    discountAmount,
+    couponCode: appliedCouponCode,
     total,
     status: "pending",
     paymentMethod,
@@ -377,9 +406,10 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
       .join("\n");
     const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
+    const discountLine = discountAmount > 0 ? `\n  • Desconto (${appliedCouponCode}) — -R$ ${discountAmount.toFixed(2).replace(".", ",")}` : "";
     const trocoLine = notes && notes.includes("Troco para") ? `\n💵 ${notes.match(/Troco para[^|]*/)?.[0]?.trim()}` : "";
     const orderSummary =
-      `\n\n📋 *Resumo do pedido #${order.id}:*\n${itemLines}${feeLine}` +
+      `\n\n📋 *Resumo do pedido #${order.id}:*\n${itemLines}${feeLine}${discountLine}` +
       `\n\n💰 *Total: R$ ${total.toFixed(2).replace(".", ",")}*` +
       `\n💳 Pagamento: ${PAYMENT_LABEL[paymentMethod] || paymentMethod}${trocoLine}`;
     await sendWhatsAppStatusMessage(order, config.msgOrderConfirmed + orderSummary);

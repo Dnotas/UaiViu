@@ -48,6 +48,14 @@ const SettingsPage = () => {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [loadingPayment, setLoadingPayment] = useState(true);
 
+  // Cupons
+  const [coupons, setCoupons] = useState([]);
+  const [couponDialog, setCouponDialog] = useState(false);
+  const [savingCoupon, setSavingCoupon] = useState(false);
+  const [newCoupon, setNewCoupon] = useState({
+    code: "", discountType: "percent", discountValue: "", minOrderValue: "", usageLimit: "", expiresAt: "",
+  });
+
   const [config, setConfig] = useState({
     slug: "", welcomeMessage: "", msgOrderConfirmed: "", msgOrderPreparing: "",
     msgOrderOnTheWay: "", msgOrderDelivered: "", deliveryEnabled: true,
@@ -91,6 +99,8 @@ const SettingsPage = () => {
       if (data) setPayment(p => ({ ...p, ...data }));
       setLoadingPayment(false);
     }).catch(() => setLoadingPayment(false));
+
+    api.get("/api/food/coupons").then(({ data }) => setCoupons(data || [])).catch(() => {});
   }, []);
 
   const saveConfig = async () => {
@@ -256,6 +266,40 @@ const SettingsPage = () => {
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao salvar");
     }
+  };
+
+  const saveCoupon = async () => {
+    if (!newCoupon.code || !newCoupon.discountValue) {
+      toast.error("Informe o código e o valor do desconto");
+      return;
+    }
+    setSavingCoupon(true);
+    try {
+      const { data } = await api.post("/api/food/coupons", newCoupon);
+      setCoupons(c => [data, ...c]);
+      setCouponDialog(false);
+      setNewCoupon({ code: "", discountType: "percent", discountValue: "", minOrderValue: "", usageLimit: "", expiresAt: "" });
+      toast.success("Cupom criado!");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao criar cupom");
+    } finally {
+      setSavingCoupon(false);
+    }
+  };
+
+  const toggleCoupon = async (coupon) => {
+    try {
+      const { data } = await api.put(`/api/food/coupons/${coupon.id}`, { active: !coupon.active });
+      setCoupons(c => c.map(x => x.id === data.id ? data : x));
+    } catch { toast.error("Erro ao atualizar cupom"); }
+  };
+
+  const deleteCoupon = async (id) => {
+    try {
+      await api.delete(`/api/food/coupons/${id}`);
+      setCoupons(c => c.filter(x => x.id !== id));
+      toast.success("Cupom removido!");
+    } catch { toast.error("Erro ao remover cupom"); }
   };
 
   const clearOrders = async () => {
@@ -590,6 +634,108 @@ const SettingsPage = () => {
         </Grid>
         <Box mt={2}><Button variant="contained" color="primary" onClick={savePayment}>Salvar Pagamentos</Button></Box>
       </Paper>
+
+      {/* ── Cupons de desconto ── */}
+      <Paper className={classes.section}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Cupons de Desconto</Typography>
+          <Button variant="contained" color="primary" size="small" startIcon={<AddIcon />} onClick={() => setCouponDialog(true)}>
+            Novo Cupom
+          </Button>
+        </Box>
+        {coupons.length === 0 ? (
+          <Typography variant="body2" color="textSecondary">Nenhum cupom cadastrado.</Typography>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Código</TableCell>
+                <TableCell>Desconto</TableCell>
+                <TableCell>Pedido mín.</TableCell>
+                <TableCell>Usos</TableCell>
+                <TableCell>Validade</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {coupons.map(c => (
+                <TableRow key={c.id} className={classes.rateRow}>
+                  <TableCell><strong>{c.code}</strong></TableCell>
+                  <TableCell>
+                    {c.discountType === "percent"
+                      ? `${parseFloat(c.discountValue)}%`
+                      : `R$ ${parseFloat(c.discountValue).toFixed(2)}`}
+                  </TableCell>
+                  <TableCell>{c.minOrderValue ? `R$ ${parseFloat(c.minOrderValue).toFixed(2)}` : "—"}</TableCell>
+                  <TableCell>{c.usageCount}{c.usageLimit ? `/${c.usageLimit}` : ""}</TableCell>
+                  <TableCell>{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString("pt-BR") : "—"}</TableCell>
+                  <TableCell>
+                    <Button size="small" variant="outlined"
+                      style={{ color: c.active ? "green" : "#aaa", borderColor: c.active ? "green" : "#ccc" }}
+                      onClick={() => toggleCoupon(c)}>
+                      {c.active ? "Ativo" : "Inativo"}
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" onClick={() => deleteCoupon(c.id)}><DeleteIcon fontSize="small" /></IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Paper>
+
+      {/* Dialog novo cupom */}
+      <Dialog open={couponDialog} onClose={() => setCouponDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Novo Cupom de Desconto</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} style={{ marginTop: 4 }}>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label="Código do cupom" value={newCoupon.code}
+                onChange={e => setNewCoupon(n => ({ ...n, code: e.target.value.toUpperCase() }))}
+                helperText="Ex: PROMO10, BEMVINDO20" />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Tipo de desconto</InputLabel>
+                <Select value={newCoupon.discountType} onChange={e => setNewCoupon(n => ({ ...n, discountType: e.target.value }))}>
+                  <MenuItem value="percent">Porcentagem (%)</MenuItem>
+                  <MenuItem value="fixed">Valor fixo (R$)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" type="number" label={newCoupon.discountType === "percent" ? "Desconto (%)" : "Desconto (R$)"}
+                value={newCoupon.discountValue} onChange={e => setNewCoupon(n => ({ ...n, discountValue: e.target.value }))}
+                inputProps={{ min: 0, step: "0.01" }} />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" type="number" label="Pedido mínimo (R$)"
+                value={newCoupon.minOrderValue} onChange={e => setNewCoupon(n => ({ ...n, minOrderValue: e.target.value }))}
+                helperText="Opcional" inputProps={{ min: 0, step: "0.01" }} />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth size="small" type="number" label="Limite de usos"
+                value={newCoupon.usageLimit} onChange={e => setNewCoupon(n => ({ ...n, usageLimit: e.target.value }))}
+                helperText="Vazio = ilimitado" inputProps={{ min: 1 }} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" type="date" label="Validade"
+                InputLabelProps={{ shrink: true }}
+                value={newCoupon.expiresAt} onChange={e => setNewCoupon(n => ({ ...n, expiresAt: e.target.value }))}
+                helperText="Opcional" />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCouponDialog(false)} disabled={savingCoupon}>Cancelar</Button>
+          <Button onClick={saveCoupon} variant="contained" color="primary" disabled={savingCoupon}>
+            {savingCoupon ? <CircularProgress size={18} /> : "Criar Cupom"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Limpar histórico de pedidos ── */}
       <Paper className={classes.section} style={{ borderLeft: "4px solid #d32f2f" }}>
