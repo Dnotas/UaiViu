@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CssBaseline from "@material-ui/core/CssBaseline";
 
+import LandingPage from "./pages/Landing";
 import AuthPage from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import MenuPage from "./pages/Menu";
@@ -66,7 +67,8 @@ const App = () => {
           <PrivateRoute path="/conversas" component={ConversationsPage} />
           <PrivateRoute path="/configuracoes" component={SettingsPage} />
 
-          <Redirect from="/" to="/dashboard" />
+          {/* Landing page pública */}
+          <Route exact path="/" component={LandingPage} />
         </Switch>
       </BrowserRouter>
     </ThemeProvider>
