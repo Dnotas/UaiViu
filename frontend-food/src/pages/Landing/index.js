@@ -465,7 +465,7 @@ const LandingPage = () => {
 
                 <Button
                   fullWidth variant="outlined" size="large"
-                  href="https://wa.me/5537991470016"
+                  href="https://wa.me/5531915552222"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
