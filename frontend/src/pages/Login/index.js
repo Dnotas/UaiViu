@@ -15,6 +15,7 @@ import { i18n } from "../../translate/i18n";
 import { nomeEmpresa } from "../../../package.json";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import logo from "../../assets/logo.png";
+import logoFood from "../../assets/uaifood.jpg";
 import {LanguageOutlined} from "@material-ui/icons";
 import {IconButton, Menu, MenuItem} from "@material-ui/core";
 import LanguageControl from "../../components/LanguageControl";
@@ -146,8 +147,21 @@ const Login = () => {
 		<Container component="main" maxWidth="xs">
 			<CssBaseline/>
 			<div className={classes.paper}>
-				<div>
-					<img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="Whats" />
+				<div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 8 }}>
+					{/* Logo UaiViu */}
+					<div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+						<img style={{ width: "80%", maxWidth: 130 }} src={logo} alt="UaiViu" />
+						<span style={{ fontSize: 10, color: "#aaa", marginTop: 4, letterSpacing: 1 }}>ATENDIMENTO</span>
+					</div>
+
+					{/* Divisor */}
+					<div style={{ width: 1, height: 60, background: "#e0e0e0", flexShrink: 0, margin: "0 8px" }} />
+
+					{/* Logo UaiViu Food */}
+					<div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+						<img style={{ width: "80%", maxWidth: 130, borderRadius: 8 }} src={logoFood} alt="UaiViu Food" />
+						<span style={{ fontSize: 10, color: "#aaa", marginTop: 4, letterSpacing: 1 }}>FOOD</span>
+					</div>
 				</div>
 				{/*<Typography component="h1" variant="h5">
 					{i18n.t("login.title")}
