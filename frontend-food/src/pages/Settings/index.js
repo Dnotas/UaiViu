@@ -67,6 +67,7 @@ const SettingsPage = () => {
   const [restStreet, setRestStreet] = useState("");
   const [restCity, setRestCity] = useState("");
   const [restUf, setRestUf] = useState("");
+  const [reverseGeocoding, setReverseGeocoding] = useState(false);
 
   const today = toDateInput(new Date());
   const [clearDateFrom, setClearDateFrom] = useState(today);
@@ -162,6 +163,31 @@ const SettingsPage = () => {
     } finally {
       setGeocoding(false);
     }
+  };
+
+  // Chamado quando o usuário arrasta/clica no mapa para mover o pino
+  const handleMapPinChange = async (lat, lng) => {
+    setConfig(c => ({ ...c, restaurantLat: lat, restaurantLng: lng }));
+    // Reverse geocoding: atualiza o campo de endereço com o nome da rua
+    setReverseGeocoding(true);
+    try {
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { "Accept-Language": "pt-BR" } }
+      );
+      if (res.data?.address) {
+        const a = res.data.address;
+        const parts = [
+          a.road || a.pedestrian || a.path || a.street,
+          a.house_number,
+          a.suburb || a.neighbourhood || a.quarter || a.city_district,
+          a.city || a.town || a.village || a.municipality,
+          a.state,
+        ].filter(Boolean);
+        if (parts.length) setConfig(c => ({ ...c, restaurantAddress: parts.join(", ") }));
+      }
+    } catch { }
+    finally { setReverseGeocoding(false); }
   };
 
   const handleCepRestaurante = async (value) => {
@@ -315,11 +341,6 @@ const SettingsPage = () => {
             >
               {geocoding ? "Localizando..." : "Geocodificar endereço"}
             </Button>
-            {config.restaurantLat && config.restaurantLng && (
-              <Typography variant="caption" color="textSecondary" style={{ marginLeft: 12 }}>
-                {parseFloat(config.restaurantLat).toFixed(5)}, {parseFloat(config.restaurantLng).toFixed(5)}
-              </Typography>
-            )}
           </Grid>
 
           {/* Mini mapa */}
@@ -331,8 +352,25 @@ const SettingsPage = () => {
               <LocationPicker
                 lat={parseFloat(config.restaurantLat)}
                 lng={parseFloat(config.restaurantLng)}
-                onChange={(lat, lng) => setConfig(c => ({ ...c, restaurantLat: lat, restaurantLng: lng }))}
+                onChange={handleMapPinChange}
               />
+              {/* Info abaixo do mapa */}
+              <Box display="flex" alignItems="center" justifyContent="space-between" mt={1} flexWrap="wrap" style={{ gap: 8 }}>
+                <Box>
+                  {reverseGeocoding ? (
+                    <Typography variant="caption" color="textSecondary">
+                      <CircularProgress size={10} style={{ marginRight: 4 }} />Identificando endereco...
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" color="textSecondary">
+                      Coordenadas: {parseFloat(config.restaurantLat).toFixed(5)}, {parseFloat(config.restaurantLng).toFixed(5)}
+                    </Typography>
+                  )}
+                </Box>
+                <Button variant="contained" color="primary" size="small" onClick={saveConfig}>
+                  Salvar localização
+                </Button>
+              </Box>
             </Grid>
           )}
 
