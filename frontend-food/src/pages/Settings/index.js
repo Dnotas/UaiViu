@@ -185,6 +185,7 @@ const SettingsPage = () => {
           a.state,
         ].filter(Boolean);
         if (parts.length) setConfig(c => ({ ...c, restaurantAddress: parts.join(", ") }));
+        if (a.postcode) setCepRest(a.postcode.replace(/\D/g, ""));
       }
     } catch { }
     finally { setReverseGeocoding(false); }
