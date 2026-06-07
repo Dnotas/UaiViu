@@ -207,6 +207,23 @@ const PublicMenu = () => {
             customerNeighborhood: data.customerNeighborhood || f.customerNeighborhood,
           }));
           setCustomerFound(true);
+          // Calcula frete automaticamente quando endereço é preenchido via cache
+          if (data.cep) {
+            const cepDigits = data.cep.replace(/\D/g, "");
+            if (cepDigits.length === 8) {
+              try {
+                const cepRes = await axios.get(`https://viacep.com.br/ws/${cepDigits}/json/`);
+                if (!cepRes.data.erro) {
+                  const city = cepRes.data.localidade || "";
+                  const uf = cepRes.data.uf || "";
+                  setAddressCity(city);
+                  setAddressUf(uf);
+                  const street = data.customerAddress || cepRes.data.logradouro || "";
+                  if (street) calculateDeliveryFee(street, city, uf);
+                }
+              } catch {}
+            }
+          }
         }
       } catch { }
     }
