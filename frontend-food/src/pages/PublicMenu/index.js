@@ -137,21 +137,22 @@ const PublicMenu = () => {
     }
   };
 
-  // Calcula o extra dos complementos considerando limite de grátis
-  // Os N mais baratos são grátis, o restante paga o preço cheio
+  // Calcula o extra dos complementos considerando limite de grátis e quantidade
+  // Os N mais baratos (expandindo por qty) são grátis, o restante paga o preço cheio
   const calcComplementsExtra = (selectedComplements, freeLimit) => {
+    const flat = selectedComplements.flatMap(c => Array(c.qty || 1).fill(parseFloat(c.price || 0)));
     if (!freeLimit || freeLimit <= 0) {
-      return selectedComplements.reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+      return flat.reduce((sum, p) => sum + p, 0);
     }
-    const sorted = [...selectedComplements].sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
-    return sorted.slice(freeLimit).reduce((sum, c) => sum + parseFloat(c.price || 0), 0);
+    const sorted = [...flat].sort((a, b) => a - b);
+    return sorted.slice(freeLimit).reduce((sum, p) => sum + p, 0);
   };
 
   const addToCart = (item, selectedComplements) => {
     const freeLimit = item.freeComplementsLimit || 0;
     const complementsExtra = calcComplementsExtra(selectedComplements, freeLimit);
     const unitPrice = parseFloat(item.price) + complementsExtra;
-    const cartKey = item.id + (selectedComplements.length ? "_" + selectedComplements.map(c => c.id).sort().join("-") : "");
+    const cartKey = item.id + (selectedComplements.length ? "_" + selectedComplements.map(c => `${c.id}x${c.qty || 1}`).sort().join("-") : "");
 
     setCart(prev => {
       const existing = prev.find(c => c.cartKey === cartKey);
@@ -173,13 +174,24 @@ const PublicMenu = () => {
     setComplementDialog({ open: false, item: null, selected: [] });
   };
 
-  const toggleComplement = (complement) => {
+  const addComplement = (complement) => {
     setComplementDialog(d => {
-      const already = d.selected.find(c => c.id === complement.id);
-      if (already) {
+      const existing = d.selected.find(c => c.id === complement.id);
+      if (existing) {
+        return { ...d, selected: d.selected.map(c => c.id === complement.id ? { ...c, qty: (c.qty || 1) + 1 } : c) };
+      }
+      return { ...d, selected: [...d.selected, { ...complement, qty: 1 }] };
+    });
+  };
+
+  const removeComplement = (complement) => {
+    setComplementDialog(d => {
+      const existing = d.selected.find(c => c.id === complement.id);
+      if (!existing) return d;
+      if ((existing.qty || 1) === 1) {
         return { ...d, selected: d.selected.filter(c => c.id !== complement.id) };
       }
-      return { ...d, selected: [...d.selected, complement] };
+      return { ...d, selected: d.selected.map(c => c.id === complement.id ? { ...c, qty: c.qty - 1 } : c) };
     });
   };
 
@@ -392,7 +404,7 @@ const PublicMenu = () => {
         orderType,
         items: cart.map(i => ({
           menuItemId: i.menuItemId,
-          name: i.name + (i.complements?.length ? " (" + i.complements.map(c => c.name).join(", ") + ")" : ""),
+          name: i.name + (i.complements?.length ? " (" + i.complements.map(c => (c.qty || 1) > 1 ? `${c.qty}x ${c.name}` : c.name).join(", ") + ")" : ""),
           unitPrice: i.unitPrice,
           quantity: i.quantity,
           notes: i.notes,
@@ -616,7 +628,7 @@ const PublicMenu = () => {
                 <Typography variant="body2">{item.name}</Typography>
                 {item.complements?.length > 0 && (
                   <Typography variant="caption" color="textSecondary">
-                    + {item.complements.map(c => c.name).join(", ")}
+                    + {item.complements.map(c => (c.qty || 1) > 1 ? `${c.qty}x ${c.name}` : c.name).join(", ")}
                   </Typography>
                 )}
                 <Typography variant="caption" display="block">{item.quantity}x R$ {item.unitPrice.toFixed(2)}</Typography>
@@ -800,16 +812,16 @@ const PublicMenu = () => {
           {complementDialog.item?.name}
           {(() => {
             const freeLimit = complementDialog.item?.freeComplementsLimit || 0;
-            const selected = complementDialog.selected.length;
+            const totalUnits = complementDialog.selected.reduce((sum, c) => sum + (c.qty || 1), 0);
             if (freeLimit > 0) {
-              const freeUsed = Math.min(selected, freeLimit);
+              const freeUsed = Math.min(totalUnits, freeLimit);
               return (
                 <Typography variant="caption" display="block" style={{ color: "#4caf50", fontWeight: 600 }}>
-                  {selected === 0
+                  {totalUnits === 0
                     ? `Escolha até ${freeLimit} adicional${freeLimit > 1 ? "is" : ""} grátis`
-                    : selected <= freeLimit
+                    : totalUnits <= freeLimit
                       ? `${freeUsed} de ${freeLimit} grátis selecionado${freeUsed > 1 ? "s" : ""}`
-                      : `${freeLimit} grátis + ${selected - freeLimit} pago${selected - freeLimit > 1 ? "s" : ""}`
+                      : `${freeLimit} grátis + ${totalUnits - freeLimit} pago${totalUnits - freeLimit > 1 ? "s" : ""}`
                   }
                 </Typography>
               );
@@ -824,35 +836,67 @@ const PublicMenu = () => {
         <DialogContent>
           {(() => {
             const freeLimit = complementDialog.item?.freeComplementsLimit || 0;
-            // Determina quais complementos selecionados são grátis (os N mais baratos)
-            const selectedSorted = [...complementDialog.selected]
+            const selected = complementDialog.selected;
+            // Expande todos selecionados por qty, ordena por preço para calcular quais são grátis
+            const flatSorted = selected
+              .flatMap(c => Array(c.qty || 1).fill(c))
               .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
-            const freeIds = new Set(selectedSorted.slice(0, freeLimit).map(c => c.id));
+            const freeCountPer = {};
+            flatSorted.slice(0, freeLimit).forEach(c => {
+              freeCountPer[c.id] = (freeCountPer[c.id] || 0) + 1;
+            });
 
             return (complementDialog.item?.food_item_complements || complementDialog.item?.complements || [])
               .filter(c => c.active !== false)
               .map(c => {
-                const checked = !!complementDialog.selected.find(s => s.id === c.id);
-                const isFreeByLimit = freeLimit > 0 && checked && freeIds.has(c.id);
-                const priceLabel = isFreeByLimit
-                  ? <span style={{ color: "#4caf50", fontWeight: "bold" }}>Grátis</span>
-                  : parseFloat(c.price) > 0
-                    ? `+ R$ ${parseFloat(c.price).toFixed(2)}`
-                    : "Grátis";
+                const sel = selected.find(s => s.id === c.id);
+                const qty = sel?.qty || 0;
+                const freeQty = freeCountPer[c.id] || 0;
+                const paidQty = Math.max(0, qty - freeQty);
+                const unitPrice = parseFloat(c.price || 0);
+
+                let priceLabel;
+                if (qty === 0) {
+                  priceLabel = unitPrice > 0
+                    ? <span>+ R$ {unitPrice.toFixed(2)}</span>
+                    : <span>Grátis</span>;
+                } else if (freeLimit > 0 && freeQty > 0 && paidQty === 0) {
+                  priceLabel = <span style={{ color: "#4caf50", fontWeight: "bold" }}>Grátis</span>;
+                } else if (freeLimit > 0 && freeQty > 0 && paidQty > 0) {
+                  priceLabel = (
+                    <span>
+                      <span style={{ color: "#4caf50", fontWeight: "bold" }}>{freeQty}x grátis</span>
+                      {" + "}
+                      <span>{paidQty}x R$ {unitPrice.toFixed(2)}</span>
+                    </span>
+                  );
+                } else {
+                  priceLabel = unitPrice > 0
+                    ? <span>+ R$ {unitPrice.toFixed(2)}</span>
+                    : <span>Grátis</span>;
+                }
+
                 return (
                   <div key={c.id} className={classes.complementRow}>
-                    <Box display="flex" alignItems="center">
-                      <Checkbox
-                        checked={checked}
-                        onChange={() => toggleComplement(c)}
-                        color="primary"
-                        size="small"
-                      />
-                      <Typography variant="body2">{c.name}</Typography>
+                    <Typography variant="body2">{c.name}</Typography>
+                    <Box display="flex" alignItems="center" style={{ gap: 6 }}>
+                      <Typography variant="body2" style={{ fontWeight: "bold" }}>
+                        {priceLabel}
+                      </Typography>
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        {qty > 0 && (
+                          <IconButton size="small" onClick={() => removeComplement(c)}>
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                        {qty > 0 && (
+                          <Typography variant="body2" style={{ minWidth: 18, textAlign: "center" }}>{qty}</Typography>
+                        )}
+                        <IconButton size="small" onClick={() => addComplement(c)} style={{ color: primaryColor }}>
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </div>
                     </Box>
-                    <Typography variant="body2" style={{ fontWeight: "bold" }}>
-                      {priceLabel}
-                    </Typography>
                   </div>
                 );
               });
