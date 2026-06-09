@@ -327,11 +327,14 @@ const PublicMenu = () => {
   const applyCoupon = async () => {
     if (!couponInput.trim()) return;
     const currentSubtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    const currentDeliveryFee = orderType === "delivery"
+      ? (restaurant?.deliveryByDistance ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
+      : 0;
     setCouponLoading(true);
     try {
       const { data } = await axios.post(`${FOOD_API}/api/food/public/${slug}/coupons/validate`, {
         code: couponInput.trim(),
-        orderValue: currentSubtotal,
+        orderValue: currentSubtotal + currentDeliveryFee,
       });
       if (data.valid) {
         setAppliedCoupon(data);
@@ -363,7 +366,8 @@ const PublicMenu = () => {
     if (!form.customerPhone) return toast.error("Informe seu telefone");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
     if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
-      return toast.error("Calcule o frete antes de confirmar o pedido.");
+      await calculateDeliveryFee();
+      return toast.error("Aguarde o cálculo do frete e tente novamente.");
     }
     if (orderType === "delivery" && restaurant?.deliveryByDistance && deliveryOutOfRange) {
       return toast.error("Seu endereço está fora da área de entrega.");
@@ -654,12 +658,12 @@ const PublicMenu = () => {
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
                 <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} />
+              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} onBlur={() => calculateDeliveryFee()} />
               <Grid container spacing={1}>
-                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} />
+              <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
 
               {restaurant?.deliveryByDistance && (
                 <Box mt={0.5} mb={0.5} minHeight={20}>
