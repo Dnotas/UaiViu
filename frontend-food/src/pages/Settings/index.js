@@ -64,6 +64,7 @@ const SettingsPage = () => {
     // novos campos
     restaurantAddress: "", restaurantLat: null, restaurantLng: null,
     deliveryByDistance: false, deliveryRates: [],
+    busyMode: false,
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -339,6 +340,12 @@ const SettingsPage = () => {
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControlLabel control={<Switch checked={config.pickupEnabled} onChange={e => setConfig(c => ({ ...c, pickupEnabled: e.target.checked }))} color="primary" />} label="Retirada no local habilitada" />
+          </Grid>
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={<Switch checked={config.busyMode} onChange={e => setConfig(c => ({ ...c, busyMode: e.target.checked }))} color="secondary" />}
+              label="Modo alta demanda — exibe aviso de demora no cardápio"
+            />
           </Grid>
 
           <Grid item xs={12}><Divider /></Grid>

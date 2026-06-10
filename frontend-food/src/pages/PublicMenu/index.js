@@ -77,6 +77,8 @@ const PublicMenu = () => {
   const [deliveryCalcLoading, setDeliveryCalcLoading] = useState(false);
   const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
   const [deliveryDistance, setDeliveryDistance] = useState(null);
+  // Coordenadas geocodificadas do cliente (enviadas ao backend para cálculo de frete server-side)
+  const [customerCoords, setCustomerCoords] = useState(null); // { lat, lng }
   // cidade/UF do CEP — usados na geocodificação do endereço do cliente
   const [addressCity, setAddressCity] = useState("");
   const [addressUf, setAddressUf] = useState("");
@@ -85,6 +87,9 @@ const PublicMenu = () => {
   const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discountType, discountValue }
+
+  // Idempotency key — gerado uma vez por checkout, evita pedido duplicado em retry/duplo clique
+  const [checkoutKey, setCheckoutKey] = useState(() => (crypto.randomUUID ? crypto.randomUUID() : null));
 
   // Complement picker dialog
   const [complementDialog, setComplementDialog] = useState({ open: false, item: null, selected: [] });
@@ -316,6 +321,7 @@ const PublicMenu = () => {
         parseFloat(restaurant.restaurantLat), parseFloat(restaurant.restaurantLng)
       );
       setDeliveryDistance(distKm);
+      setCustomerCoords({ lat: parseFloat(lat), lng: parseFloat(lon) });
 
       const rates = [...(restaurant.deliveryRates || [])].sort((a, b) => a.maxKm - b.maxKm);
       const rate = rates.find(r => distKm <= parseFloat(r.maxKm));
@@ -323,6 +329,7 @@ const PublicMenu = () => {
         setDeliveryOutOfRange(true);
         setCalculatedFee(null);
         setCalculatedPrepMinutes(null);
+        setCustomerCoords(null);
         toast.error(`Seu endereço (${distKm.toFixed(1)} km) está fora da área de entrega.`);
       } else {
         setDeliveryOutOfRange(false);
@@ -410,12 +417,18 @@ const PublicMenu = () => {
           notes: i.notes,
         })),
         session: sessionToken || undefined,
-        deliveryFeeOverride: (orderType === "delivery" && restaurant?.deliveryByDistance) ? calculatedFee : undefined,
+        // Coordenadas para cálculo de frete server-side (quando deliveryByDistance ativo)
+        customerLat: (orderType === "delivery" && restaurant?.deliveryByDistance && customerCoords) ? customerCoords.lat : undefined,
+        customerLng: (orderType === "delivery" && restaurant?.deliveryByDistance && customerCoords) ? customerCoords.lng : undefined,
         couponCode: appliedCoupon?.code || undefined,
+        // Token de idempotência — estável por checkout, evita duplicação em retry
+        idempotencyKey: checkoutKey || undefined,
       });
       setOrderDone(data);
       setCart([]);
       setCartOpen(false);
+      // Gera nova chave para o próximo pedido
+      if (crypto.randomUUID) setCheckoutKey(crypto.randomUUID());
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao realizar pedido");
     } finally {
@@ -553,6 +566,17 @@ const PublicMenu = () => {
           </Badge>
         </IconButton>
       </div>
+
+      {/* Banner de alta demanda */}
+      {restaurant?.busyMode && (
+        <Box
+          px={2} py={1}
+          style={{ background: "#FF9800", color: "white", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}
+        >
+          <span>⏳</span>
+          <span>Alta demanda no momento — pedidos podem demorar mais que o habitual. Agradecemos sua paciência!</span>
+        </Box>
+      )}
 
       {/* Conteudo */}
       <Box px={2} pb={12} pt={2}>

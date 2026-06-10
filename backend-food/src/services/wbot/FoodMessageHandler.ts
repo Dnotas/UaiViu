@@ -1,15 +1,17 @@
 import { proto, WASocket } from "baileys";
 import { v4 as uuidv4 } from "uuid";
+import { Op } from "sequelize";
 import FoodWhatsapp from "../../models/FoodWhatsapp";
 import FoodRestaurantConfig from "../../models/FoodRestaurantConfig";
 import FoodConversation from "../../models/FoodConversation";
 import FoodMessage from "../../models/FoodMessage";
+import FoodSession from "../../models/FoodSession";
 import { getIO } from "../../libs/socket";
 
 /**
  * Trata mensagens recebidas pelo WhatsApp do restaurante.
  * Comportamento: responde automaticamente com boas-vindas + link do cardápio.
- * Só responde na PRIMEIRA mensagem do cliente (evita spam).
+ * Só responde na PRIMEIRA mensagem do cliente (persiste no banco — sobrevive a restarts).
  * Persiste todas as mensagens recebidas no banco para o módulo de Conversas.
  */
 
@@ -17,21 +19,18 @@ import { getIO } from "../../libs/socket";
 // (ocorre quando há 2 instâncias wbot ativas temporariamente)
 const processedMessageIds = new Set<string>();
 
-// Boas-vindas por sessão — reseta no restart (comportamento esperado: cliente recebe link de novo)
-const greetedNumbers = new Map<number, Set<string>>();
-
-// Mapa de sessionToken → { jid, whatsappId, phone } para envio de confirmações
-// Expira em 24h para não crescer indefinidamente
-export const jidSessionMap = new Map<string, { jid: string; whatsappId: number; phone: string; expiresAt: number }>();
-
-export const getJidBySession = (token: string) => {
-  const entry = jidSessionMap.get(token);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    jidSessionMap.delete(token);
+/** Busca sessão no banco por token — sobrevive a restarts */
+export const getJidBySession = async (token: string): Promise<{ jid: string; whatsappId: number; phone: string } | null> => {
+  try {
+    const session = await FoodSession.findOne({
+      where: { token, expiresAt: { [Op.gt]: new Date() } },
+    });
+    if (!session) return null;
+    return { jid: session.jid, whatsappId: session.whatsappId, phone: session.phone };
+  } catch (err) {
+    console.error("[FoodSession] Erro ao buscar sessão:", err);
     return null;
   }
-  return entry;
 };
 
 const extractTextFromMessage = (msg: proto.IWebMessageInfo): string => {
@@ -82,8 +81,7 @@ export const handleFoodMessage = async (
 
     if (!config) return;
 
-    // Extrai telefone do JID quando possível (JIDs regulares: 5511999998888@s.whatsapp.net)
-    // Para LID (@lid) não é possível extrair o telefone
+    // Extrai telefone do JID quando possível
     let phone = "";
     if (!jid.endsWith("@lid")) {
       const raw = jid.split("@")[0].split(":")[0].replace(/\D/g, "");
@@ -118,6 +116,8 @@ export const handleFoodMessage = async (
       };
       if (!conversation.customerName && pushName) updates.customerName = pushName;
       if (!conversation.customerPhone && phone) updates.customerPhone = phone;
+      // Reabre conversa arquivada quando cliente manda nova mensagem
+      if (conversation.closedAt) updates.closedAt = null;
       await conversation.update(updates);
     }
 
@@ -138,31 +138,43 @@ export const handleFoodMessage = async (
       });
     } catch { /* socket pode não estar pronto */ }
 
-    // ── Boas-vindas (uma vez por sessão — reseta no restart) ────────────────────
-    if (!greetedNumbers.has(whatsapp.id)) greetedNumbers.set(whatsapp.id, new Set());
-    const greeted = greetedNumbers.get(whatsapp.id)!;
-    if (greeted.has(jid)) return;
-    greeted.add(jid);
+    // ── Boas-vindas — persiste no banco via greetedAt (sobrevive a restarts) ───
+    // Se já saudou antes, não envia novamente
+    if (conversation.greetedAt) return;
 
-    // Gera token de sessão vinculado ao JID real do cliente
+    // Gera token de sessão e persiste no banco (sobrevive a restarts)
     const sessionToken = uuidv4();
-    jidSessionMap.set(sessionToken, {
-      jid,
-      whatsappId: whatsapp.id,
-      phone,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
-    });
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-    if (!config.welcomeMessage) return;
+    try {
+      await FoodSession.upsert({
+        token: sessionToken,
+        companyId: whatsapp.companyId,
+        jid,
+        whatsappId: whatsapp.id,
+        phone,
+        expiresAt,
+      });
+    } catch (err) {
+      console.error("[FoodSession] Erro ao salvar sessão:", err);
+    }
+
+    if (!config.welcomeMessage) {
+      // Marca como saudado mesmo sem mensagem para não tentar novamente
+      await conversation.update({ greetedAt: new Date() });
+      return;
+    }
 
     const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?session=${sessionToken}`;
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
     await wbot.sendMessage(jid, { text: fullMessage });
 
-    // Salva a mensagem de boas-vindas na conversa (lado enviado)
+    // Marca como saudado e salva mensagem de boas-vindas
+    const now = new Date();
+    await conversation.update({ greetedAt: now });
+
     try {
-      const now = new Date();
       const savedWelcome = await FoodMessage.create({
         conversationId: conversation.id,
         fromMe: true,

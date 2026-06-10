@@ -111,6 +111,7 @@ router.get("/public/:slug/menu", async (req, res) => {
       restaurantLat: config.restaurantLat || null,
       restaurantLng: config.restaurantLng || null,
       deliveryRates: config.deliveryRates || [],
+      busyMode: config.busyMode || false,
     },
     groups
   });

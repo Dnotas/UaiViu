@@ -66,6 +66,10 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ type: DataType.JSONB, allowNull: true })
   deliveryRates: Array<{ maxKm: number; fee: number; prepMinutes: number }>;
 
+  // Modo ocupado: exibe aviso no cardápio e pode bloquear novos pedidos
+  @Column({ defaultValue: false })
+  busyMode: boolean;
+
   // Personalização visual
   @Column({ allowNull: true })
   restaurantName: string;

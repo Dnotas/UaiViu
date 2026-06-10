@@ -88,6 +88,13 @@ class FoodOrder extends Model<FoodOrder> {
   @Column({ type: DataType.TEXT })
   notes: string;
 
+  @Column({ type: DataType.TEXT, allowNull: true })
+  cancelReason: string;
+
+  // Token de idempotência para evitar pedidos duplicados (duplo clique)
+  @Column({ type: DataType.UUID, allowNull: true })
+  idempotencyKey: string;
+
   @HasMany(() => FoodOrderItem, { onDelete: "CASCADE", hooks: true })
   items: FoodOrderItem[];
 

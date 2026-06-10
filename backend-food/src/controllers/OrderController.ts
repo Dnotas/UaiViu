@@ -7,31 +7,42 @@ import FoodRestaurantConfig from "../models/FoodRestaurantConfig";
 import FoodWhatsapp from "../models/FoodWhatsapp";
 import FoodConversation from "../models/FoodConversation";
 import FoodMessage from "../models/FoodMessage";
+import FoodMenuItem from "../models/FoodMenuItem";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
 import { getJidBySession } from "../services/wbot/FoodMessageHandler";
 import FoodCustomer from "../models/FoodCustomer";
 import FoodCoupon from "../models/FoodCoupon";
+import sequelize from "../database";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Haversine — distância em km entre dois pontos geográficos */
+const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 const resolveJid = async (wbot: ReturnType<typeof getWbot>, rawPhone: string): Promise<string> => {
   let phone = rawPhone.replace(/\D/g, "");
   if (!phone.startsWith("55")) phone = `55${phone}`;
 
   try {
-    // Verifica o número no WhatsApp e obtém o JID real (resolve o problema do 9 extra no Brasil)
     const [result] = await (wbot as any).onWhatsApp(phone);
     if (result?.exists) {
       console.log(`[WA-Send] onWhatsApp resolveu: ${phone} → ${result.jid}`);
       return result.jid;
     }
 
-    // Tenta com/sem o nono dígito (DDDs que ainda não migraram)
     const altPhone = /^55\d{2}9\d{8}$/.test(phone)
-      ? phone.replace(/^(55\d{2})9/, "$1")   // remove o 9 extra
-      : phone.replace(/^(55\d{2})(\d{8})$/, "$19$2"); // adiciona o 9
+      ? phone.replace(/^(55\d{2})9/, "$1")
+      : phone.replace(/^(55\d{2})(\d{8})$/, "$19$2");
 
     const [altResult] = await (wbot as any).onWhatsApp(altPhone);
     if (altResult?.exists) {
@@ -58,7 +69,6 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
     return;
   }
 
-  // Busca a conversa primeiro para garantir o JID correto (evita JID errado via onWhatsApp)
   let conversation: FoodConversation | null = null;
   let targetJid: string | null = order.customerJid || null;
 
@@ -74,7 +84,7 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
       where: { companyId: order.companyId, customerPhone: phone }
     });
     if (conversation) {
-      targetJid = conversation.customerJid; // Usa sempre o JID salvo na conversa
+      targetJid = conversation.customerJid;
       console.log(`[WA-Send] Conversa encontrada via telefone, JID: ${targetJid}`);
     }
   }
@@ -87,7 +97,6 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
 
       let jid = targetJid;
       if (!jid) {
-        // Último recurso: resolve via onWhatsApp (pode ter variação do 9)
         jid = await resolveJid(wbot, order.customerPhone);
         console.log(`[WA-Send] JID resolvido via onWhatsApp: ${jid}`);
       }
@@ -137,8 +146,6 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   if (status) where.status = status;
 
   if (dateFrom || dateTo) {
-    // Sem sufixo "Z" → JS interpreta como horário local do servidor (UTC no AWS)
-    // Adicionamos +3h para cobrir o fuso do Brasil (UTC-3) com margem
     const from = dateFrom ? new Date(dateFrom + "T00:00:00") : new Date("2000-01-01");
     const to   = dateTo   ? new Date(dateTo   + "T23:59:59.999") : new Date();
     where.createdAt = { [Op.between]: [from, to] };
@@ -163,7 +170,6 @@ export const deleteByPeriod = async (req: Request, res: Response): Promise<Respo
   const from = new Date(dateFrom + "T00:00:00");
   const to   = new Date(dateTo   + "T23:59:59.999");
 
-  // Busca IDs dos pedidos no período
   const orders = await FoodOrder.findAll({
     where: { companyId, createdAt: { [Op.between]: [from, to] } },
     attributes: ["id"],
@@ -172,7 +178,6 @@ export const deleteByPeriod = async (req: Request, res: Response): Promise<Respo
   const ids = orders.map(o => o.id);
   if (ids.length === 0) return res.json({ deleted: 0 });
 
-  // Deleta itens e pedidos
   await FoodOrderItem.destroy({ where: { orderId: { [Op.in]: ids } } });
   await FoodOrder.destroy({ where: { id: { [Op.in]: ids } } });
 
@@ -209,7 +214,6 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
   }
   await order.update(updateData);
 
-  // Envia mensagem WhatsApp automática
   const config = await FoodRestaurantConfig.findOne({ where: { companyId } });
   if (config) {
     const msgMap: Record<string, string> = {
@@ -224,31 +228,24 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
       const cancelMsg = reason
         ? `❌ Seu pedido #${order.id} foi cancelado.\n\nMotivo: ${reason}\n\nPedimos desculpas pelo transtorno. Entre em contato se tiver dúvidas.`
         : `❌ Seu pedido #${order.id} foi cancelado.\n\nPedimos desculpas pelo transtorno.`;
-      console.log(`[Order] Pedido #${order.id} cancelado, enviando mensagem WhatsApp`);
       await sendWhatsAppStatusMessage(order, cancelMsg);
     } else if (msgMap[status]) {
-      console.log(`[Order] Status do pedido #${order.id} → '${status}', enviando mensagem WhatsApp`);
       await sendWhatsAppStatusMessage(order, msgMap[status]);
-    } else {
-      console.warn(`[Order] Mensagem para status '${status}' não configurada para empresa ${companyId}`);
     }
-  } else {
-    console.warn(`[Order] Config não encontrada para empresa ${companyId}, mensagem WhatsApp não enviada`);
   }
 
-  // Fecha conversa automaticamente ao entregar
+  // Arquiva conversa (sem deletar) quando pedido é entregue
   if (status === "delivered" && order.customerJid) {
     const conv = await FoodConversation.findOne({
       where: { companyId, customerJid: order.customerJid }
     });
     if (conv) {
-      await conv.destroy();
+      await conv.update({ closedAt: new Date() });
       const io = getIO();
       io.to(`food-company-${companyId}`).emit("food:conversation:closed", { conversationId: conv.id });
     }
   }
 
-  // Notifica via socket o painel
   const io = getIO();
   io.to(`food-company-${companyId}`).emit("food-order-update", {
     action: "update",
@@ -279,149 +276,257 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     notes,
     items,
     session,
-    deliveryFeeOverride,
+    customerLat,
+    customerLng,
     couponCode,
+    idempotencyKey,
   } = req.body;
 
   if (!items || !items.length) throw new AppError("Carrinho vazio", 400);
   if (!paymentMethod) throw new AppError("Forma de pagamento é obrigatória", 400);
   if (!customerPhone) throw new AppError("Telefone é obrigatório", 400);
 
-  // Calcula subtotal
-  const subtotal: number = items.reduce((sum: number, i: any) => sum + (i.unitPrice * i.quantity), 0);
-  // Se o restaurante usa taxa por distância e o cliente enviou o valor calculado, usa ele
-  const deliveryFee = orderType === "delivery"
-    ? (config.deliveryByDistance && deliveryFeeOverride != null ? Number(deliveryFeeOverride) : Number(config.deliveryFee))
-    : 0;
+  const normalizedPhone = customerPhone.replace(/\D/g, "");
 
-  // Valida e aplica cupom de desconto
-  let discountAmount = 0;
-  let appliedCouponCode: string | null = null;
-  if (couponCode) {
-    const coupon = await FoodCoupon.findOne({
-      where: { companyId: config.companyId, code: couponCode.toUpperCase().trim() },
+  // ── [P2] Idempotency key — evita pedido duplicado por duplo clique ──────────
+  if (idempotencyKey) {
+    const existing = await FoodOrder.findOne({
+      where: { companyId: config.companyId, idempotencyKey },
+      include: [FoodOrderItem],
     });
-    if (coupon && coupon.active &&
-        (!coupon.expiresAt || new Date() <= new Date(coupon.expiresAt)) &&
-        (coupon.usageLimit === null || coupon.usageCount < coupon.usageLimit) &&
-        (!coupon.minOrderValue || subtotal >= Number(coupon.minOrderValue))
-    ) {
-      if (coupon.discountType === "percent") {
-        discountAmount = Math.min(subtotal * (Number(coupon.discountValue) / 100), subtotal);
-      } else {
-        discountAmount = Math.min(Number(coupon.discountValue), subtotal);
-      }
-      discountAmount = Math.round(discountAmount * 100) / 100;
-      appliedCouponCode = coupon.code;
-      // Incrementa uso do cupom
-      await coupon.increment("usageCount");
+    if (existing) {
+      console.log(`[Order] Idempotência: pedido #${existing.id} já existe para chave ${idempotencyKey}`);
+      return res.status(200).json({
+        orderId: existing.id,
+        total: existing.total,
+        status: existing.status,
+        estimatedMinutes: config.estimatedDeliveryMinutes,
+      });
     }
   }
 
-  const total = subtotal + deliveryFee - discountAmount;
+  // ── [P2] Rate limiting — máx 10 pedidos por telefone por hora ───────────────
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recentCount = await FoodOrder.count({
+    where: {
+      companyId: config.companyId,
+      customerPhone: normalizedPhone,
+      createdAt: { [Op.gte]: oneHourAgo },
+    },
+  });
+  if (recentCount >= 10) {
+    throw new AppError("Muitos pedidos realizados. Aguarde antes de fazer um novo pedido.", 429);
+  }
 
-  // Resolve JID do cliente a partir da sessão (se veio pelo link do WhatsApp)
+  // ── [P1] Valida itens e busca preços reais no banco ─────────────────────────
+  const menuItemIds: number[] = items.map((i: any) => Number(i.menuItemId));
+  const dbItems = await FoodMenuItem.findAll({
+    where: {
+      id: { [Op.in]: menuItemIds },
+      companyId: config.companyId,
+      active: true,
+    },
+  });
+
+  const dbItemMap = new Map<number, FoodMenuItem>(dbItems.map(i => [i.id, i]));
+
+  for (const item of items) {
+    const dbItem = dbItemMap.get(Number(item.menuItemId));
+    if (!dbItem) {
+      throw new AppError(`Item "${item.name}" não encontrado ou indisponível`, 400);
+    }
+    if (!dbItem.available) {
+      throw new AppError(`Item "${dbItem.name}" está indisponível no momento`, 400);
+    }
+  }
+
+  // Recalcula subtotal com preços do banco (ignora unitPrice do cliente)
+  const validatedItems = items.map((i: any) => {
+    const dbItem = dbItemMap.get(Number(i.menuItemId))!;
+    return {
+      menuItemId: dbItem.id,
+      name: i.name, // nome com complementos (ex: "Pizza (mussarela, tomate)")
+      unitPrice: Number(dbItem.price),
+      quantity: Number(i.quantity) || 1,
+      notes: i.notes || null,
+    };
+  });
+
+  const subtotal: number = validatedItems.reduce(
+    (sum: number, i: any) => sum + i.unitPrice * i.quantity,
+    0
+  );
+
+  // ── [P1] Calcula taxa de entrega server-side ─────────────────────────────────
+  let deliveryFee = 0;
+  if (orderType === "delivery") {
+    if (config.deliveryByDistance) {
+      if (
+        customerLat != null && customerLng != null &&
+        config.restaurantLat && config.restaurantLng
+      ) {
+        const distKm = haversineKm(
+          Number(customerLat), Number(customerLng),
+          Number(config.restaurantLat), Number(config.restaurantLng)
+        );
+        const rates = [...(config.deliveryRates || [])].sort(
+          (a, b) => a.maxKm - b.maxKm
+        );
+        const rate = rates.find(r => distKm <= Number(r.maxKm));
+        if (!rate) {
+          throw new AppError(`Endereço fora da área de entrega (${distKm.toFixed(1)} km)`, 400);
+        }
+        deliveryFee = Number(rate.fee);
+        console.log(`[Order] Frete calculado server-side: ${distKm.toFixed(2)} km → R$ ${deliveryFee}`);
+      } else {
+        // Sem coordenadas: usa menor taxa disponível como fallback seguro
+        const rates = [...(config.deliveryRates || [])].sort((a, b) => a.fee - b.fee);
+        deliveryFee = rates.length > 0 ? Number(rates[0].fee) : Number(config.deliveryFee);
+        console.warn(`[Order] Sem coordenadas do cliente — usando taxa de fallback: R$ ${deliveryFee}`);
+      }
+    } else {
+      deliveryFee = Number(config.deliveryFee);
+    }
+  }
+
+  // ── Resolve JID do cliente (assíncrono, agora que getJidBySession é async) ──
   let customerJid: string | null = null;
   let whatsappId: number | null = null;
   if (session) {
-    const sessionData = getJidBySession(session);
+    const sessionData = await getJidBySession(session);
     if (sessionData) {
       customerJid = sessionData.jid;
       whatsappId = sessionData.whatsappId;
       console.log(`[Order] Sessão válida: JID=${customerJid}, whatsappId=${whatsappId}`);
     } else {
-      console.warn(`[Order] Sessão '${session}' não encontrada — backend pode ter reiniciado. Fallback para telefone.`);
+      console.warn(`[Order] Sessão '${session}' não encontrada — backend reiniciado ou expirou. Fallback para telefone.`);
     }
-  } else {
-    console.warn(`[Order] Pedido sem session token — sem JID salvo, usará telefone para envio.`);
   }
 
-  const order = await FoodOrder.create({
-    companyId: config.companyId,
-    customerName,
-    customerPhone: customerPhone.replace(/\D/g, ""),
-    customerAddress,
-    customerAddressNumber,
-    customerAddressComplement,
-    customerNeighborhood,
-    subtotal,
-    deliveryFee,
-    discountAmount,
-    couponCode: appliedCouponCode,
-    total,
-    status: "pending",
-    paymentMethod,
-    paymentStatus: "pending",
-    deliveryToken: uuidv4(),
-    orderType: orderType || "delivery",
-    notes,
-    customerJid,
-    whatsappId
+  // ── [P1+P3] Transação de banco — garante consistência total ─────────────────
+  let order!: FoodOrder;
+  let discountAmount = 0;
+  let appliedCouponCode: string | null = null;
+
+  await sequelize.transaction(async (t) => {
+    // ── [P1] Cupom com SELECT FOR UPDATE — sem race condition ─────────────────
+    if (couponCode) {
+      const coupon = await FoodCoupon.findOne({
+        where: { companyId: config.companyId, code: couponCode.toUpperCase().trim() },
+        lock: t.LOCK.UPDATE, // SELECT FOR UPDATE — bloqueia até o commit
+        transaction: t,
+      });
+
+      if (coupon && coupon.active &&
+          (!coupon.expiresAt || new Date() <= new Date(coupon.expiresAt)) &&
+          (!coupon.minOrderValue || subtotal >= Number(coupon.minOrderValue))
+      ) {
+        if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+          throw new AppError("Cupom esgotado", 400);
+        }
+
+        if (coupon.discountType === "percent") {
+          discountAmount = Math.min(subtotal * (Number(coupon.discountValue) / 100), subtotal);
+        } else {
+          discountAmount = Math.min(Number(coupon.discountValue), subtotal);
+        }
+        discountAmount = Math.round(discountAmount * 100) / 100;
+        appliedCouponCode = coupon.code;
+
+        await coupon.increment("usageCount", { transaction: t });
+      }
+    }
+
+    const total = subtotal + deliveryFee - discountAmount;
+
+    order = await FoodOrder.create({
+      companyId: config.companyId,
+      customerName,
+      customerPhone: normalizedPhone,
+      customerAddress,
+      customerAddressNumber,
+      customerAddressComplement,
+      customerNeighborhood,
+      subtotal,
+      deliveryFee,
+      discountAmount,
+      couponCode: appliedCouponCode,
+      total,
+      status: "confirmed",
+      paymentMethod,
+      paymentStatus: "pending",
+      deliveryToken: uuidv4(),
+      orderType: orderType || "delivery",
+      notes,
+      customerJid,
+      whatsappId,
+      idempotencyKey: idempotencyKey || null,
+    }, { transaction: t });
+
+    await Promise.all(
+      validatedItems.map((i: any) =>
+        FoodOrderItem.create({
+          orderId: order.id,
+          menuItemId: i.menuItemId,
+          name: i.name,
+          unitPrice: i.unitPrice,
+          quantity: i.quantity,
+          total: i.unitPrice * i.quantity,
+          notes: i.notes,
+        }, { transaction: t })
+      )
+    );
+
+    // Salva/atualiza dados do cliente para auto-preenchimento futuro
+    if (normalizedPhone) {
+      try {
+        await FoodCustomer.upsert({
+          companyId: config.companyId,
+          phone: normalizedPhone,
+          customerName: customerName || undefined,
+          cep: req.body.cep || undefined,
+          customerAddress: customerAddress || undefined,
+          customerAddressNumber: customerAddressNumber || undefined,
+          customerAddressComplement: customerAddressComplement || undefined,
+          customerNeighborhood: customerNeighborhood || undefined,
+        }, { transaction: t } as any);
+      } catch (e) {
+        console.warn("[Order] Erro ao salvar dados do cliente:", e);
+      }
+    }
   });
 
-  // Cria os itens
-  await Promise.all(
-    items.map((i: any) =>
-      FoodOrderItem.create({
-        orderId: order.id,
-        menuItemId: i.menuItemId,
-        name: i.name,
-        unitPrice: i.unitPrice,
-        quantity: i.quantity,
-        total: i.unitPrice * i.quantity,
-        notes: i.notes
-      })
-    )
-  );
-
-  // Salva/atualiza dados do cliente para auto-preenchimento futuro
-  if (customerPhone) {
-    const phone = customerPhone.replace(/\D/g, "");
-    try {
-      await FoodCustomer.upsert({
-        companyId: config.companyId,
-        phone,
-        customerName: customerName || undefined,
-        cep: req.body.cep || undefined,
-        customerAddress: customerAddress || undefined,
-        customerAddressNumber: customerAddressNumber || undefined,
-        customerAddressComplement: customerAddressComplement || undefined,
-        customerNeighborhood: customerNeighborhood || undefined,
-      });
-    } catch (e) {
-      console.warn("[Order] Erro ao salvar dados do cliente:", e);
-    }
-  }
-
-  // Confirma automaticamente e envia mensagem de pedido recebido
-  await order.update({ status: "confirmed" });
   console.log(`[Order] Pedido #${order.id} criado e confirmado para empresa ${config.companyId}`);
+
+  // ── Envia confirmação WhatsApp (fora da transação — efeito colateral) ────────
   if (config.msgOrderConfirmed) {
     const PAYMENT_LABEL: Record<string, string> = {
       cash: "Dinheiro na entrega", cash_money: "Dinheiro na entrega",
       cash_pix: "PIX na entrega", cash_card: "Cartão na entrega",
       pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito",
     };
-    const itemLines = items
+    const itemLines = validatedItems
       .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
       .join("\n");
     const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
-    const discountLine = discountAmount > 0 ? `\n  • Desconto (${appliedCouponCode}) — -R$ ${discountAmount.toFixed(2).replace(".", ",")}` : "";
-    const trocoLine = notes && notes.includes("Troco para") ? `\n💵 ${notes.match(/Troco para[^|]*/)?.[0]?.trim()}` : "";
+    const discountLine = discountAmount > 0
+      ? `\n  • Desconto (${appliedCouponCode}) — -R$ ${discountAmount.toFixed(2).replace(".", ",")}`
+      : "";
+    const trocoLine = notes && notes.includes("Troco para")
+      ? `\n💵 ${notes.match(/Troco para[^|]*/)?.[0]?.trim()}`
+      : "";
+    const total = subtotal + deliveryFee - discountAmount;
     const orderSummary =
       `\n\n📋 *Resumo do pedido #${order.id}:*\n${itemLines}${feeLine}${discountLine}` +
       `\n\n💰 *Total: R$ ${total.toFixed(2).replace(".", ",")}*` +
       `\n💳 Pagamento: ${PAYMENT_LABEL[paymentMethod] || paymentMethod}${trocoLine}`;
     await sendWhatsAppStatusMessage(order, config.msgOrderConfirmed + orderSummary);
-  } else {
-    console.warn(`[Order] msgOrderConfirmed não configurado — mensagem de confirmação não enviada`);
   }
 
-  // Notifica painel do restaurante via socket
   const io = getIO();
   io.to(`food-company-${config.companyId}`).emit("food-order-update", {
     action: "new",
-    order: { ...order.toJSON(), items }
+    order: { ...order.toJSON(), items: validatedItems }
   });
 
   return res.status(201).json({
@@ -460,11 +565,22 @@ export const getDeliveryInfo = async (req: Request, res: Response): Promise<Resp
 // POST /api/food/delivery/:token/confirm
 export const confirmDelivery = async (req: Request, res: Response): Promise<Response> => {
   const { token } = req.params;
+
+  // ── [P3] Atômico — evita dupla confirmação em requests simultâneos ──────────
+  const [affectedRows] = await FoodOrder.update(
+    { status: "delivered", paymentStatus: "paid" },
+    { where: { deliveryToken: token, status: { [Op.ne]: "delivered" } } }
+  );
+
+  if (affectedRows === 0) {
+    // Ou o pedido não existe, ou já foi entregue — busca para distinguir
+    const order = await FoodOrder.findOne({ where: { deliveryToken: token } });
+    if (!order) throw new AppError("Pedido não encontrado", 404);
+    throw new AppError("Pedido já foi marcado como entregue", 400);
+  }
+
   const order = await FoodOrder.findOne({ where: { deliveryToken: token } });
   if (!order) throw new AppError("Pedido não encontrado", 404);
-  if (order.status === "delivered") throw new AppError("Pedido já foi entregue", 400);
-
-  await order.update({ status: "delivered", paymentStatus: "paid" });
 
   const config = await FoodRestaurantConfig.findOne({ where: { companyId: order.companyId } });
   if (config?.msgOrderDelivered) {

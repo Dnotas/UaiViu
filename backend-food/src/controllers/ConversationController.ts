@@ -9,8 +9,9 @@ import { getIO } from "../libs/socket";
 export const listConversations = async (req: Request, res: Response) => {
   try {
     const companyId = (req as any).user?.companyId;
+    // Exibe apenas conversas abertas (closedAt IS NULL)
     const conversations = await FoodConversation.findAll({
-      where: { companyId },
+      where: { companyId, closedAt: null },
       order: [["lastMessageAt", "DESC"]],
     });
     return res.json(conversations);

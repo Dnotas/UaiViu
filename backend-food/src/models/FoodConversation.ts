@@ -35,6 +35,14 @@ class FoodConversation extends Model<FoodConversation> {
   @Column({ defaultValue: 0 })
   unreadCount: number;
 
+  // Preenchido quando o cliente recebeu a mensagem de boas-vindas pela primeira vez
+  @Column({ type: DataType.DATE, allowNull: true })
+  greetedAt: Date;
+
+  // Preenchido quando a conversa é arquivada (entrega confirmada)
+  @Column({ type: DataType.DATE, allowNull: true })
+  closedAt: Date;
+
   @HasMany(() => FoodMessage, { onDelete: "CASCADE", hooks: true })
   messages: FoodMessage[];
 
