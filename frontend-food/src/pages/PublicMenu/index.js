@@ -318,6 +318,17 @@ const PublicMenu = () => {
       }
     } catch {}
 
+    // Provedor 3: geocode.xyz — fallback gratuito sem chave
+    try {
+      const res = await axios.get(
+        `https://geocode.xyz/${encodeURIComponent(addressLine)}?json=1`,
+        { timeout: 8000 }
+      );
+      if (res.data?.latt && res.data?.longt && !res.data?.error) {
+        return { lat: parseFloat(res.data.latt), lng: parseFloat(res.data.longt) };
+      }
+    } catch {}
+
     return null;
   };
 
