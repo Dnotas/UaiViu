@@ -508,7 +508,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
           customerAddressNumber: customerAddressNumber || undefined,
           customerAddressComplement: customerAddressComplement || undefined,
           customerNeighborhood: customerNeighborhood || undefined,
-        }, { transaction: t } as any);
+        }, { conflictFields: ["companyId", "phone"], transaction: t } as any);
       } catch (e) {
         console.warn("[Order] Erro ao salvar dados do cliente:", e);
       }

@@ -148,6 +148,8 @@ const OrdersPage = () => {
     const companyId = localStorage.getItem("food_companyId");
     const socket = io(process.env.REACT_APP_BACKEND_FOOD_URL || "http://localhost:3003");
     socket.emit("joinCompany", companyId);
+    // Rejunta a sala após reconexão (ex: backend reiniciou)
+    socket.on("connect", () => socket.emit("joinCompany", companyId));
     socket.on("food-order-update", (data) => {
       if (data.action === "new") {
         setOrders(prev => [data.order, ...prev]);
@@ -169,7 +171,10 @@ const OrdersPage = () => {
       }
     });
 
-    return () => socket.disconnect();
+    // Polling de segurança: recarrega pedidos a cada 30s para não perder nada
+    const poll = setInterval(fetchOrders, 30000);
+
+    return () => { socket.disconnect(); clearInterval(poll); };
   }, [fetchOrders]);
 
   const advance = async (order) => {
