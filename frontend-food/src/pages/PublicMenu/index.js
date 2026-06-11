@@ -292,6 +292,35 @@ const PublicMenu = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
+  // Tenta geocodificar usando múltiplos provedores em cascata
+  const geocodeAddress = async (addressLine) => {
+    // Provedor 1: Nominatim (OpenStreetMap)
+    try {
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressLine)}&format=json&limit=1`,
+        { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
+      );
+      if (res.data?.length) {
+        return { lat: parseFloat(res.data[0].lat), lng: parseFloat(res.data[0].lon) };
+      }
+    } catch {}
+
+    // Provedor 2: Photon (Komoot) — fallback gratuito sem chave
+    try {
+      const res = await axios.get(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1&lang=pt`,
+        { timeout: 8000 }
+      );
+      const feat = res.data?.features?.[0];
+      if (feat) {
+        const [lon, lat] = feat.geometry.coordinates;
+        return { lat: parseFloat(lat), lng: parseFloat(lon) };
+      }
+    } catch {}
+
+    return null;
+  };
+
   // Aceita overrides para quando chamado diretamente do CEP (setState ainda não atualizou)
   const calculateDeliveryFee = async (overrideStreet = null, overrideCity = null, overrideUf = null) => {
     if (!restaurant?.deliveryByDistance) return;
@@ -309,18 +338,12 @@ const PublicMenu = () => {
     setDeliveryCalcLoading(true);
     setDeliveryCalcError(false);
     try {
-      const q = encodeURIComponent(addressLine);
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-        { headers: { "Accept-Language": "pt-BR" } }
-      );
-      if (!res.data || !res.data.length) {
+      const coords = await geocodeAddress(addressLine);
+      if (!coords) {
         setDeliveryCalcError(true);
         setDeliveryCalcLoading(false);
         return null;
       }
-      const { lat, lon } = res.data[0];
-      const coords = { lat: parseFloat(lat), lng: parseFloat(lon) };
       const distKm = haversineKm(
         coords.lat, coords.lng,
         parseFloat(restaurant.restaurantLat), parseFloat(restaurant.restaurantLng)
