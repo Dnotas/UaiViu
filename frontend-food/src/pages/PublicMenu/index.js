@@ -507,8 +507,11 @@ const PublicMenu = () => {
   const submitOrder = async () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
+    if (!form.customerName?.trim()) return toast.error("Informe seu nome");
+    if (orderType === "delivery" && !form.cep?.trim()) return toast.error("Informe o CEP");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
     if (orderType === "delivery" && !form.customerAddressNumber) return toast.error("Informe o numero da casa");
+    if (orderType === "delivery" && !form.customerNeighborhood?.trim()) return toast.error("Informe o bairro");
     // Se frete por distância ainda não calculado, tenta calcular agora e prossegue direto
     let resolvedCoords = customerCoords;
     if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
@@ -819,26 +822,26 @@ const PublicMenu = () => {
 
           <TextField
             fullWidth size="small" margin="dense"
-            label="Telefone (WhatsApp) com DDD"
+            label="Telefone (WhatsApp) com DDD *" required
             value={form.customerPhone}
             onChange={e => handlePhoneChange(e.target.value)}
             helperText={customerFound ? "✓ Dados preenchidos automaticamente" : ""}
             FormHelperTextProps={{ style: { color: "green" } }}
           />
-          <TextField fullWidth size="small" margin="dense" label="Seu nome" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
+          <TextField fullWidth size="small" margin="dense" label="Seu nome *" required value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} />
 
           {orderType === "delivery" && (
             <>
               <Grid container spacing={1} alignItems="center">
-                <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
+                <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP *" required value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
                 <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} />
+              <TextField fullWidth size="small" margin="dense" label="Endereco *" required value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} />
               <Grid container spacing={1}>
                 <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero *" required value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
+              <TextField fullWidth size="small" margin="dense" label="Bairro *" required value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
 
               {restaurant?.deliveryByDistance && (
                 <Box mt={0.5} mb={0.5} minHeight={20}>
