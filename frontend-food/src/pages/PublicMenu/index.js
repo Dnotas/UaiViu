@@ -292,20 +292,59 @@ const PublicMenu = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
+  // Valida se coordenadas são números reais e dentro dos limites globais
+  const isValidCoords = (lat, lng) =>
+    !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 &&
+    Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
   // Tenta geocodificar usando múltiplos provedores em cascata
-  const geocodeAddress = async (addressLine) => {
-    // Provedor 1: Nominatim (OpenStreetMap)
+  const geocodeAddress = async (addressLine, cep = null, simplifiedLine = null) => {
+    // Provedor 1: BrasilAPI por CEP — mais confiável para endereços brasileiros
+    if (cep) {
+      try {
+        const cepDigits = cep.replace(/\D/g, "");
+        if (cepDigits.length === 8) {
+          const res = await axios.get(
+            `https://brasilapi.com.br/api/cep/v2/${cepDigits}`,
+            { timeout: 8000 }
+          );
+          const { longitude, latitude } = res.data?.location?.coordinates || {};
+          const lat = parseFloat(latitude);
+          const lng = parseFloat(longitude);
+          if (isValidCoords(lat, lng)) return { lat, lng };
+        }
+      } catch {}
+    }
+
+    // Provedor 2: Nominatim com endereço completo
     try {
       const res = await axios.get(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressLine)}&format=json&limit=1`,
         { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
       );
       if (res.data?.length) {
-        return { lat: parseFloat(res.data[0].lat), lng: parseFloat(res.data[0].lon) };
+        const lat = parseFloat(res.data[0].lat);
+        const lng = parseFloat(res.data[0].lon);
+        if (isValidCoords(lat, lng)) return { lat, lng };
       }
     } catch {}
 
-    // Provedor 2: Photon (Komoot) — fallback gratuito sem chave
+    // Provedor 2b: Nominatim com endereço simplificado (sem número)
+    if (simplifiedLine) {
+      try {
+        const res = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(simplifiedLine)}&format=json&limit=1`,
+          { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
+        );
+        if (res.data?.length) {
+          const lat = parseFloat(res.data[0].lat);
+          const lng = parseFloat(res.data[0].lon);
+          if (isValidCoords(lat, lng)) return { lat, lng };
+        }
+      } catch {}
+    }
+
+    // Provedor 3: Photon (Komoot)
     try {
       const res = await axios.get(
         `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1&lang=pt`,
@@ -314,11 +353,12 @@ const PublicMenu = () => {
       const feat = res.data?.features?.[0];
       if (feat) {
         const [lon, lat] = feat.geometry.coordinates;
-        return { lat: parseFloat(lat), lng: parseFloat(lon) };
+        if (isValidCoords(parseFloat(lat), parseFloat(lon)))
+          return { lat: parseFloat(lat), lng: parseFloat(lon) };
       }
     } catch {}
 
-    // Provedor 3: geocode.xyz — fallback gratuito sem chave
+    // Provedor 4: geocode.xyz
     try {
       const res = await axios.get(
         `https://geocode.xyz/${encodeURIComponent(addressLine)}?json=1`,
@@ -327,9 +367,7 @@ const PublicMenu = () => {
       if (!res.data?.error) {
         const lat = parseFloat(res.data?.latt);
         const lng = parseFloat(res.data?.longt);
-        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-          return { lat, lng };
-        }
+        if (isValidCoords(lat, lng)) return { lat, lng };
       }
     } catch {}
 
@@ -349,11 +387,13 @@ const PublicMenu = () => {
 
     const addressLine = [street, form.customerAddressNumber, form.customerNeighborhood, city, uf, "Brasil"]
       .filter(Boolean).join(", ");
+    const simplifiedLine = [street, city, uf, "Brasil"]
+      .filter(Boolean).join(", ");
 
     setDeliveryCalcLoading(true);
     setDeliveryCalcError(false);
     try {
-      const coords = await geocodeAddress(addressLine);
+      const coords = await geocodeAddress(addressLine, form.cep, simplifiedLine);
       if (!coords || isNaN(coords.lat) || isNaN(coords.lng)) {
         setDeliveryCalcError(true);
         setDeliveryCalcLoading(false);
