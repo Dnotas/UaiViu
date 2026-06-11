@@ -24,7 +24,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
     msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled, pickupEnabled,
     deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
     restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
-    busyMode, storeStatus, closedMessage,
+    busyMode, storeStatus, closedMessage, divulgationMessage,
   } = req.body;
 
   let config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -46,6 +46,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       busyMode: busyMode ?? false,
       storeStatus: storeStatus || "open",
       closedMessage: closedMessage || null,
+      divulgationMessage: divulgationMessage || null,
     });
   } else {
     if (slug && slug !== config.slug) {
@@ -67,6 +68,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       busyMode: busyMode ?? config.busyMode,
       storeStatus: newStatus,
       closedMessage: closedMessage !== undefined ? closedMessage : config.closedMessage,
+      divulgationMessage: divulgationMessage !== undefined ? divulgationMessage : config.divulgationMessage,
     });
 
     // Quando a loja reabre, reseta greetedAt de todas as conversas

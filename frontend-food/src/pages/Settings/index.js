@@ -9,6 +9,9 @@ import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Divider from "@material-ui/core/Divider";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Box from "@material-ui/core/Box";
+import Tooltip from "@material-ui/core/Tooltip";
+import FileCopyIcon from "@material-ui/icons/FileCopy";
+import LinkIcon from "@material-ui/icons/Link";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel";
@@ -67,7 +70,9 @@ const SettingsPage = () => {
     busyMode: false,
     storeStatus: "open",
     closedMessage: "Olá! No momento estamos fechados. Em breve voltamos. 😊",
+    divulgationMessage: "",
   });
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -104,6 +109,11 @@ const SettingsPage = () => {
     }).catch(() => setLoadingPayment(false));
 
     api.get("/api/food/coupons").then(({ data }) => setCoupons(data || [])).catch(() => {});
+
+    api.get("/api/food/whatsapp").then(({ data }) => {
+      const connected = (data || []).find(w => w.status === "CONNECTED" && w.phone);
+      if (connected) setWhatsappPhone(connected.phone);
+    }).catch(() => {});
   }, []);
 
   const saveConfig = async () => {
@@ -776,6 +786,78 @@ const SettingsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Link de Divulgação ── */}
+      <Paper className={classes.section}>
+        <Box display="flex" alignItems="center" style={{ gap: 8, marginBottom: 8 }}>
+          <LinkIcon color="primary" />
+          <Typography variant="h6">Link de Divulgação</Typography>
+        </Box>
+        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+          Compartilhe este link nas redes sociais. Quando a pessoa clicar, o WhatsApp abre já com a mensagem configurada.
+          Ao enviar, ela recebe automaticamente o link do cardápio.
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={8}>
+            <TextField
+              fullWidth
+              label="Mensagem de divulgação (palavra-chave)"
+              value={config.divulgationMessage || ""}
+              onChange={e => setConfig(c => ({ ...c, divulgationMessage: e.target.value }))}
+              variant="outlined"
+              size="small"
+              placeholder="Ex: Quero pedir meu lanche"
+              helperText="Quando o cliente enviar exatamente essa mensagem, o bot responde com o link do cardápio."
+            />
+          </Grid>
+          <Grid item xs={12}>
+            {whatsappPhone && config.divulgationMessage ? (
+              <Box
+                display="flex"
+                alignItems="center"
+                style={{
+                  gap: 8,
+                  background: "#f5f5f5",
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  border: "1px solid #ddd",
+                  flexWrap: "wrap",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  style={{ flex: 1, wordBreak: "break-all", fontFamily: "monospace", fontSize: 13 }}
+                >
+                  {`https://wa.me/55${whatsappPhone}?text=${encodeURIComponent(config.divulgationMessage)}`}
+                </Typography>
+                <Tooltip title="Copiar link">
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<FileCopyIcon fontSize="small" />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `https://wa.me/55${whatsappPhone}?text=${encodeURIComponent(config.divulgationMessage)}`
+                      );
+                      const { toast: t } = require("react-toastify");
+                      t.success("Link copiado!");
+                    }}
+                  >
+                    Copiar
+                  </Button>
+                </Tooltip>
+              </Box>
+            ) : (
+              <Typography variant="caption" color="textSecondary">
+                {!whatsappPhone
+                  ? "Conecte o WhatsApp para gerar o link."
+                  : "Preencha a mensagem acima para gerar o link."}
+              </Typography>
+            )}
+          </Grid>
+        </Grid>
+        <Box mt={2}><Button variant="contained" color="primary" onClick={saveConfig}>Salvar</Button></Box>
+      </Paper>
 
       {/* ── Limpar histórico de pedidos ── */}
       <Paper className={classes.section} style={{ borderLeft: "4px solid #d32f2f" }}>

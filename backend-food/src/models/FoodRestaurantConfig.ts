@@ -94,6 +94,11 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ allowNull: true })
   bannerImageUrl: string;
 
+  // Mensagem de divulgação: quando o cliente envia essa palavra-chave pelo link wa.me,
+  // o bot responde automaticamente com o link do cardápio
+  @Column({ type: DataType.TEXT, allowNull: true })
+  divulgationMessage: string;
+
   @CreatedAt
   createdAt: Date;
 

@@ -14,6 +14,8 @@ import DialogActions from "@material-ui/core/DialogActions";
 import Divider from "@material-ui/core/Divider";
 import TextField from "@material-ui/core/TextField";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Switch from "@material-ui/core/Switch";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import PrintIcon from "@material-ui/icons/Print";
 import CancelIcon from "@material-ui/icons/Cancel";
@@ -130,6 +132,13 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [addressDialog, setAddressDialog] = useState({ open: false, order: null });
   const [cancelDialog, setCancelDialog] = useState({ open: false, order: null, reason: "" });
+  const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem("food_autoPrint") === "true");
+
+  const handleAutoPrintToggle = (e) => {
+    const val = e.target.checked;
+    setAutoPrint(val);
+    localStorage.setItem("food_autoPrint", String(val));
+  };
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -184,6 +193,9 @@ const OrdersPage = () => {
       await api.patch(`/api/food/orders/${order.id}/status`, { status: next });
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: next } : o));
       toast.success("Status atualizado");
+      if (autoPrint && order.status === "confirmed") {
+        printOrder(order);
+      }
     } catch (err) {
       toast.error(err?.response?.data?.error || "Erro ao atualizar status");
     }
@@ -206,7 +218,16 @@ const OrdersPage = () => {
 
   return (
     <div>
-      <Typography variant="h5" gutterBottom>Pedidos</Typography>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+        <Typography variant="h5">Pedidos</Typography>
+        <Tooltip title="Quando ativo, imprime o pedido automaticamente ao clicar em 'Iniciar Preparo'">
+          <FormControlLabel
+            control={<Switch checked={autoPrint} onChange={handleAutoPrintToggle} color="primary" size="small" />}
+            label={<Typography variant="body2">Auto-impressao ao aceitar</Typography>}
+            style={{ margin: 0 }}
+          />
+        </Tooltip>
+      </Box>
       <Grid container spacing={2}>
         {STATUS_COLUMNS.map((col) => {
           const colOrders = orders.filter(o => o.status === col.key);

@@ -173,6 +173,17 @@ export const handleFoodMessage = async (
     }
 
     // ── Loja aberta: fluxo normal de boas-vindas ────────────────────────────
+
+    // Se cliente enviou a palavra-chave de divulgação, reseta greetedAt para
+    // reenviar o link do cardápio (mesmo que já tenha sido saudado antes)
+    if (
+      config.divulgationMessage &&
+      body.trim().toLowerCase() === config.divulgationMessage.trim().toLowerCase() &&
+      conversation.greetedAt
+    ) {
+      await conversation.update({ greetedAt: null });
+    }
+
     // Se já saudou antes, não envia novamente
     if (conversation.greetedAt) return;
 
