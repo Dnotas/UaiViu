@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs";
 import FoodRestaurantConfig from "../models/FoodRestaurantConfig";
+import FoodConversation from "../models/FoodConversation";
 import AppError from "../errors/AppError";
 
 // GET /api/food/restaurant-config
@@ -23,6 +24,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
     msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled, pickupEnabled,
     deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
     restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
+    busyMode, storeStatus, closedMessage,
   } = req.body;
 
   let config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -41,6 +43,9 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       pickupEnabled, deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
       deliveryRates: deliveryRates || [],
+      busyMode: busyMode ?? false,
+      storeStatus: storeStatus || "open",
+      closedMessage: closedMessage || null,
     });
   } else {
     if (slug && slug !== config.slug) {
@@ -49,13 +54,30 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       if (existing && existing.id !== config.id) throw new AppError("Slug já está em uso.", 400);
       config.slug = s;
     }
+
+    const previousStatus = config.storeStatus;
+    const newStatus = storeStatus || config.storeStatus;
+
     await config.update({
       welcomeMessage, msgOrderConfirmed, msgOrderPreparing, msgOrderOnTheWay,
       msgOrderDelivered, deliveryEnabled, pickupEnabled, deliveryFee,
       estimatedDeliveryMinutes, restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
       deliveryRates: deliveryRates || config.deliveryRates || [],
+      busyMode: busyMode ?? config.busyMode,
+      storeStatus: newStatus,
+      closedMessage: closedMessage !== undefined ? closedMessage : config.closedMessage,
     });
+
+    // Quando a loja reabre, reseta greetedAt de todas as conversas
+    // para que os clientes recebam o link do cardápio atualizado
+    if (previousStatus !== "open" && newStatus === "open") {
+      await FoodConversation.update(
+        { greetedAt: null },
+        { where: { companyId } }
+      );
+      console.log(`[Config] Loja ${companyId} reaberta — greetedAt resetado para todas as conversas`);
+    }
   }
 
   return res.json(config);

@@ -138,7 +138,41 @@ export const handleFoodMessage = async (
       });
     } catch { /* socket pode não estar pronto */ }
 
-    // ── Boas-vindas — persiste no banco via greetedAt (sobrevive a restarts) ───
+    // ── Verifica status da loja antes de responder ────────────────────────────
+    const storeStatus = config.storeStatus || "open";
+
+    if (storeStatus === "closed_silent") {
+      // Loja fechada sem aviso — salva mensagem no histórico mas não responde
+      console.log(`[FoodMessageHandler] Loja fechada (silent) — mensagem recebida de ${jid}, sem resposta`);
+      return;
+    }
+
+    if (storeStatus === "closed_notice") {
+      // Loja fechada com aviso — envia mensagem de fechado (apenas uma vez por conversa aberta)
+      if (!conversation.greetedAt && config.closedMessage) {
+        await wbot.sendMessage(jid, { text: config.closedMessage });
+        const now = new Date();
+        // greetedAt aqui serve como "já avisou que está fechado" — será resetado quando reabrir
+        await conversation.update({ greetedAt: now });
+        try {
+          const savedNotice = await FoodMessage.create({
+            conversationId: conversation.id,
+            fromMe: true,
+            body: config.closedMessage,
+            timestamp: now,
+          });
+          await conversation.update({ lastMessage: config.closedMessage, lastMessageAt: now });
+          const io = getIO();
+          io.to(`food-company-${whatsapp.companyId}`).emit("food:conversation:message", {
+            conversationId: conversation.id,
+            message: savedNotice,
+          });
+        } catch { /* não bloqueia se falhar */ }
+      }
+      return;
+    }
+
+    // ── Loja aberta: fluxo normal de boas-vindas ────────────────────────────
     // Se já saudou antes, não envia novamente
     if (conversation.greetedAt) return;
 

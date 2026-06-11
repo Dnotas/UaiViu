@@ -65,6 +65,8 @@ const SettingsPage = () => {
     restaurantAddress: "", restaurantLat: null, restaurantLng: null,
     deliveryByDistance: false, deliveryRates: [],
     busyMode: false,
+    storeStatus: "open",
+    closedMessage: "Olá! No momento estamos fechados. Em breve voltamos. 😊",
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -347,6 +349,37 @@ const SettingsPage = () => {
               label="Modo alta demanda — exibe aviso de demora no cardápio"
             />
           </Grid>
+
+          {/* ── Status da loja ── */}
+          <Grid item xs={12}>
+            <FormControl variant="outlined" size="small" fullWidth>
+              <InputLabel>Status da loja</InputLabel>
+              <Select
+                value={config.storeStatus}
+                onChange={e => setConfig(c => ({ ...c, storeStatus: e.target.value }))}
+                label="Status da loja"
+              >
+                <MenuItem value="open">🟢 Aberta — envia cardápio normalmente</MenuItem>
+                <MenuItem value="closed_silent">🔴 Fechada — sem resposta automática</MenuItem>
+                <MenuItem value="closed_notice">🔴 Fechada — avisa o cliente com mensagem</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          {config.storeStatus === "closed_notice" && (
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Mensagem de loja fechada"
+                multiline
+                rows={2}
+                value={config.closedMessage || ""}
+                onChange={e => setConfig(c => ({ ...c, closedMessage: e.target.value }))}
+                variant="outlined"
+                size="small"
+                helperText="Enviada uma vez ao cliente quando mandar mensagem fora do horário"
+              />
+            </Grid>
+          )}
 
           <Grid item xs={12}><Divider /></Grid>
 

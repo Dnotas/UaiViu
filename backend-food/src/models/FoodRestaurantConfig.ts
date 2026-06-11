@@ -70,6 +70,17 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ defaultValue: false })
   busyMode: boolean;
 
+  // Status da loja: open | closed_silent | closed_notice
+  @Column({
+    type: DataType.ENUM("open", "closed_silent", "closed_notice"),
+    defaultValue: "open",
+  })
+  storeStatus: "open" | "closed_silent" | "closed_notice";
+
+  // Mensagem enviada ao cliente quando storeStatus = closed_notice
+  @Column({ type: DataType.TEXT, allowNull: true })
+  closedMessage: string;
+
   // Personalização visual
   @Column({ allowNull: true })
   restaurantName: string;

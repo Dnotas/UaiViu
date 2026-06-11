@@ -286,6 +286,11 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   if (!paymentMethod) throw new AppError("Forma de pagamento é obrigatória", 400);
   if (!customerPhone) throw new AppError("Telefone é obrigatório", 400);
 
+  // Bloqueia pedidos quando a loja está fechada
+  if (config.storeStatus === "closed_silent" || config.storeStatus === "closed_notice") {
+    throw new AppError("A loja está fechada no momento. Tente novamente mais tarde.", 403);
+  }
+
   const normalizedPhone = customerPhone.replace(/\D/g, "");
 
   // ── [P2] Idempotency key — evita pedido duplicado por duplo clique ──────────

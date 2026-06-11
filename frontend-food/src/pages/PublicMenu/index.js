@@ -567,12 +567,21 @@ const PublicMenu = () => {
         </IconButton>
       </div>
 
-      {/* Banner de alta demanda */}
-      {restaurant?.busyMode && (
-        <Box
-          px={2} py={1}
-          style={{ background: "#FF9800", color: "white", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}
-        >
+      {/* Banner de status da loja */}
+      {restaurant?.storeStatus === "closed_silent" && (
+        <Box px={2} py={1} style={{ background: "#e53935", color: "white", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+          <span>🔴</span>
+          <span>Loja fechada no momento. Pedidos não estão sendo aceitos.</span>
+        </Box>
+      )}
+      {restaurant?.storeStatus === "closed_notice" && (
+        <Box px={2} py={1} style={{ background: "#e53935", color: "white", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+          <span>🔴</span>
+          <span>{restaurant.closedMessage || "Loja fechada no momento. Pedidos não estão sendo aceitos."}</span>
+        </Box>
+      )}
+      {restaurant?.storeStatus === "open" && restaurant?.busyMode && (
+        <Box px={2} py={1} style={{ background: "#FF9800", color: "white", display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
           <span>⏳</span>
           <span>Alta demanda no momento — pedidos podem demorar mais que o habitual. Agradecemos sua paciência!</span>
         </Box>
@@ -818,10 +827,17 @@ const PublicMenu = () => {
             <Typography className={classes.total}>R$ {total.toFixed(2)}</Typography>
           </Box>
 
-          <Button fullWidth variant="contained" color="primary" size="large"
-            onClick={submitOrder} disabled={ordering || !cart.length}>
-            {ordering ? <CircularProgress size={24} color="inherit" /> : "Confirmar Pedido"}
-          </Button>
+          {(restaurant?.storeStatus === "closed_silent" || restaurant?.storeStatus === "closed_notice") ? (
+            <Button fullWidth variant="contained" size="large" disabled
+              style={{ background: "#ccc", color: "#666" }}>
+              🔴 Loja fechada
+            </Button>
+          ) : (
+            <Button fullWidth variant="contained" color="primary" size="large"
+              onClick={submitOrder} disabled={ordering || !cart.length}>
+              {ordering ? <CircularProgress size={24} color="inherit" /> : "Confirmar Pedido"}
+            </Button>
+          )}
         </div>
       </Drawer>
 
