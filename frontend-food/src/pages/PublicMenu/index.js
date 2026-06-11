@@ -109,27 +109,65 @@ const PublicMenu = () => {
         if (!menuRes.data.restaurant.deliveryEnabled && menuRes.data.restaurant.pickupEnabled) setOrderType("pickup");
       } catch { toast.error("Restaurante nao encontrado"); }
       finally { setLoading(false); }
+
+      // Resolve telefone: prioridade session > query param ?phone
+      const params = new URLSearchParams(window.location.search);
+      let resolvedPhone = "";
+
+      const session = params.get("session");
+      if (session) {
+        setSessionToken(session);
+        try {
+          const { data } = await axios.get(`${FOOD_API}/api/food/public/session/${session}`);
+          if (data.phone) resolvedPhone = data.phone.replace(/\D/g, "");
+        } catch {}
+      }
+      if (!resolvedPhone) {
+        const phoneParam = params.get("phone");
+        if (phoneParam) {
+          const digits = phoneParam.replace(/\D/g, "");
+          if (digits.length >= 10 && digits.length <= 13) resolvedPhone = digits;
+        }
+      }
+
+      // Com o telefone, preenche o form e busca dados do cliente (nome, endereço, etc.)
+      if (resolvedPhone) {
+        setForm(f => ({ ...f, customerPhone: resolvedPhone }));
+        try {
+          const { data: customer } = await axios.get(`${FOOD_API}/api/food/public/${slug}/customer/${resolvedPhone}`);
+          if (customer) {
+            setCustomerFound(true);
+            setForm(f => ({
+              ...f,
+              customerName: customer.customerName || f.customerName,
+              cep: customer.cep || f.cep,
+              customerAddress: customer.customerAddress || f.customerAddress,
+              customerAddressNumber: customer.customerAddressNumber || f.customerAddressNumber,
+              customerAddressComplement: customer.customerAddressComplement || f.customerAddressComplement,
+              customerNeighborhood: customer.customerNeighborhood || f.customerNeighborhood,
+            }));
+            // Calcula frete automaticamente se tiver CEP salvo
+            if (customer.cep) {
+              const cepDigits = customer.cep.replace(/\D/g, "");
+              if (cepDigits.length === 8) {
+                try {
+                  const cepRes = await axios.get(`https://viacep.com.br/ws/${cepDigits}/json/`);
+                  if (!cepRes.data.erro) {
+                    const city = cepRes.data.localidade || "";
+                    const uf = cepRes.data.uf || "";
+                    setAddressCity(city);
+                    setAddressUf(uf);
+                    const street = customer.customerAddress || cepRes.data.logradouro || "";
+                    if (street) calculateDeliveryFee(street, city, uf);
+                  }
+                } catch {}
+              }
+            }
+          }
+        } catch {}
+      }
     };
     load();
-
-    const params = new URLSearchParams(window.location.search);
-    const session = params.get("session");
-    if (session) {
-      setSessionToken(session);
-      axios.get(`${FOOD_API}/api/food/public/session/${session}`)
-        .then(({ data }) => {
-          if (data.phone) setForm(f => ({ ...f, customerPhone: data.phone }));
-        })
-        .catch(() => {});
-    }
-
-    const phone = params.get("phone");
-    if (phone) {
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length >= 10 && digits.length <= 13) {
-        setForm(f => ({ ...f, customerPhone: digits }));
-      }
-    }
   }, [slug]);
 
   // Opens complement picker or adds directly
