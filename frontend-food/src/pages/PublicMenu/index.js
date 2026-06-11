@@ -470,6 +470,7 @@ const PublicMenu = () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
+    if (orderType === "delivery" && !form.customerAddressNumber) return toast.error("Informe o numero da casa");
     // Se frete por distância ainda não calculado, tenta calcular agora e prossegue direto
     let resolvedCoords = customerCoords;
     if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
@@ -796,7 +797,7 @@ const PublicMenu = () => {
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} />
               <Grid container spacing={1}>
-                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero *" required value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />

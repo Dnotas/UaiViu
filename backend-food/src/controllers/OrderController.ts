@@ -298,6 +298,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   if (!items || !items.length) throw new AppError("Carrinho vazio", 400);
   if (!paymentMethod) throw new AppError("Forma de pagamento é obrigatória", 400);
   if (!customerPhone) throw new AppError("Telefone é obrigatório", 400);
+  if (orderType === "delivery" && !customerAddressNumber) throw new AppError("Número da casa é obrigatório", 400);
 
   // Bloqueia pedidos quando a loja está fechada
   if (config.storeStatus === "closed_silent" || config.storeStatus === "closed_notice") {
