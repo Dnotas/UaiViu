@@ -75,6 +75,7 @@ const PublicMenu = () => {
   const [calculatedFee, setCalculatedFee] = useState(null);   // null = ainda não calculou
   const [calculatedPrepMinutes, setCalculatedPrepMinutes] = useState(null);
   const [deliveryCalcLoading, setDeliveryCalcLoading] = useState(false);
+  const [deliveryCalcError, setDeliveryCalcError] = useState(false);
   const [deliveryOutOfRange, setDeliveryOutOfRange] = useState(false);
   const [deliveryDistance, setDeliveryDistance] = useState(null);
   // Coordenadas geocodificadas do cliente (enviadas ao backend para cálculo de frete server-side)
@@ -267,6 +268,7 @@ const PublicMenu = () => {
           setAddressUf(uf);
           setCalculatedFee(null);
           setDeliveryOutOfRange(false);
+          setDeliveryCalcError(false);
           setDeliveryDistance(null);
           // Auto-calcula frete assim que o CEP preenche o endereço
           if (street) {
@@ -305,6 +307,7 @@ const PublicMenu = () => {
       .filter(Boolean).join(", ");
 
     setDeliveryCalcLoading(true);
+    setDeliveryCalcError(false);
     try {
       const q = encodeURIComponent(addressLine);
       const res = await axios.get(
@@ -312,16 +315,18 @@ const PublicMenu = () => {
         { headers: { "Accept-Language": "pt-BR" } }
       );
       if (!res.data || !res.data.length) {
+        setDeliveryCalcError(true);
         setDeliveryCalcLoading(false);
-        return;
+        return null;
       }
       const { lat, lon } = res.data[0];
+      const coords = { lat: parseFloat(lat), lng: parseFloat(lon) };
       const distKm = haversineKm(
-        parseFloat(lat), parseFloat(lon),
+        coords.lat, coords.lng,
         parseFloat(restaurant.restaurantLat), parseFloat(restaurant.restaurantLng)
       );
       setDeliveryDistance(distKm);
-      setCustomerCoords({ lat: parseFloat(lat), lng: parseFloat(lon) });
+      setCustomerCoords(coords);
 
       const rates = [...(restaurant.deliveryRates || [])].sort((a, b) => a.maxKm - b.maxKm);
       const rate = rates.find(r => distKm <= parseFloat(r.maxKm));
@@ -331,13 +336,16 @@ const PublicMenu = () => {
         setCalculatedPrepMinutes(null);
         setCustomerCoords(null);
         toast.error(`Seu endereço (${distKm.toFixed(1)} km) está fora da área de entrega.`);
+        return null;
       } else {
         setDeliveryOutOfRange(false);
         setCalculatedFee(parseFloat(rate.fee));
         setCalculatedPrepMinutes(parseInt(rate.prepMinutes, 10));
+        return { fee: parseFloat(rate.fee), coords };
       }
     } catch {
-      toast.error("Erro ao calcular frete. Tente novamente.");
+      setDeliveryCalcError(true);
+      return null;
     } finally {
       setDeliveryCalcLoading(false);
     }
@@ -384,9 +392,14 @@ const PublicMenu = () => {
     if (!cart.length) return toast.error("Carrinho vazio");
     if (!form.customerPhone) return toast.error("Informe seu telefone");
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
+    // Se frete por distância ainda não calculado, tenta calcular agora e prossegue direto
+    let resolvedCoords = customerCoords;
     if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
-      await calculateDeliveryFee();
-      return toast.error("Aguarde o cálculo do frete e tente novamente.");
+      const result = await calculateDeliveryFee();
+      if (!result) {
+        return; // erro já exibido dentro de calculateDeliveryFee
+      }
+      resolvedCoords = result.coords;
     }
     if (orderType === "delivery" && restaurant?.deliveryByDistance && deliveryOutOfRange) {
       return toast.error("Seu endereço está fora da área de entrega.");
@@ -418,8 +431,8 @@ const PublicMenu = () => {
         })),
         session: sessionToken || undefined,
         // Coordenadas para cálculo de frete server-side (quando deliveryByDistance ativo)
-        customerLat: (orderType === "delivery" && restaurant?.deliveryByDistance && customerCoords) ? customerCoords.lat : undefined,
-        customerLng: (orderType === "delivery" && restaurant?.deliveryByDistance && customerCoords) ? customerCoords.lng : undefined,
+        customerLat: (orderType === "delivery" && restaurant?.deliveryByDistance && resolvedCoords) ? resolvedCoords.lat : undefined,
+        customerLng: (orderType === "delivery" && restaurant?.deliveryByDistance && resolvedCoords) ? resolvedCoords.lng : undefined,
         couponCode: appliedCoupon?.code || undefined,
         // Token de idempotência — estável por checkout, evita duplicação em retry
         idempotencyKey: checkoutKey || undefined,
@@ -703,9 +716,9 @@ const PublicMenu = () => {
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="CEP" value={form.cep} onChange={e => handleCepChange(e.target.value)} inputProps={{ maxLength: 9 }} /></Grid>
                 <Grid item xs={4}>{cepLoading && <CircularProgress size={20} style={{ marginTop: 8 }} />}</Grid>
               </Grid>
-              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} onBlur={() => calculateDeliveryFee()} />
+              <TextField fullWidth size="small" margin="dense" label="Endereco" value={form.customerAddress} onChange={e => { setForm(f => ({ ...f, customerAddress: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} />
               <Grid container spacing={1}>
-                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
+                <Grid item xs={4}><TextField fullWidth size="small" margin="dense" label="Numero" value={form.customerAddressNumber} onChange={e => { setForm(f => ({ ...f, customerAddressNumber: e.target.value })); setCalculatedFee(null); setDeliveryOutOfRange(false); setDeliveryCalcError(false); }} onBlur={() => calculateDeliveryFee()} /></Grid>
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Bairro" value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
@@ -727,6 +740,16 @@ const PublicMenu = () => {
                       {deliveryDistance?.toFixed(1)} km — Frete: R$ {calculatedFee.toFixed(2)}
                       {calculatedPrepMinutes ? ` — aprox. ${calculatedPrepMinutes} min` : ""}
                     </Typography>
+                  )}
+                  {!deliveryCalcLoading && deliveryCalcError && calculatedFee === null && !deliveryOutOfRange && (
+                    <Box display="flex" alignItems="center" mt={0.5}>
+                      <Typography variant="caption" color="error" style={{ marginRight: 8 }}>
+                        Não foi possível calcular o frete.
+                      </Typography>
+                      <Button size="small" variant="outlined" color="primary" onClick={() => calculateDeliveryFee()} style={{ fontSize: 11, padding: "2px 8px", minWidth: 0 }}>
+                        Calcular frete
+                      </Button>
+                    </Box>
                   )}
                 </Box>
               )}
