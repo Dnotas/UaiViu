@@ -324,8 +324,12 @@ const PublicMenu = () => {
         `https://geocode.xyz/${encodeURIComponent(addressLine)}?json=1`,
         { timeout: 8000 }
       );
-      if (res.data?.latt && res.data?.longt && !res.data?.error) {
-        return { lat: parseFloat(res.data.latt), lng: parseFloat(res.data.longt) };
+      if (!res.data?.error) {
+        const lat = parseFloat(res.data?.latt);
+        const lng = parseFloat(res.data?.longt);
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          return { lat, lng };
+        }
       }
     } catch {}
 
@@ -350,7 +354,7 @@ const PublicMenu = () => {
     setDeliveryCalcError(false);
     try {
       const coords = await geocodeAddress(addressLine);
-      if (!coords) {
+      if (!coords || isNaN(coords.lat) || isNaN(coords.lng)) {
         setDeliveryCalcError(true);
         setDeliveryCalcLoading(false);
         return null;
