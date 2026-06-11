@@ -214,43 +214,56 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
   }
   await order.update(updateData);
 
-  const config = await FoodRestaurantConfig.findOne({ where: { companyId } });
-  if (config) {
-    const msgMap: Record<string, string> = {
-      confirmed: config.msgOrderConfirmed,
-      preparing: config.msgOrderPreparing,
-      on_the_way: config.msgOrderOnTheWay,
-      delivered: config.msgOrderDelivered,
-    };
+  // Envia mensagem WhatsApp sem deixar falha derrubat o request
+  try {
+    const config = await FoodRestaurantConfig.findOne({ where: { companyId } });
+    if (config) {
+      const msgMap: Record<string, string> = {
+        confirmed: config.msgOrderConfirmed,
+        preparing: config.msgOrderPreparing,
+        on_the_way: config.msgOrderOnTheWay,
+        delivered: config.msgOrderDelivered,
+      };
 
-    if (status === "cancelled") {
-      const reason = req.body.reason?.trim();
-      const cancelMsg = reason
-        ? `❌ Seu pedido #${order.id} foi cancelado.\n\nMotivo: ${reason}\n\nPedimos desculpas pelo transtorno. Entre em contato se tiver dúvidas.`
-        : `❌ Seu pedido #${order.id} foi cancelado.\n\nPedimos desculpas pelo transtorno.`;
-      await sendWhatsAppStatusMessage(order, cancelMsg);
-    } else if (msgMap[status]) {
-      await sendWhatsAppStatusMessage(order, msgMap[status]);
+      if (status === "cancelled") {
+        const reason = req.body.reason?.trim();
+        const cancelMsg = reason
+          ? `❌ Seu pedido #${order.id} foi cancelado.\n\nMotivo: ${reason}\n\nPedimos desculpas pelo transtorno. Entre em contato se tiver dúvidas.`
+          : `❌ Seu pedido #${order.id} foi cancelado.\n\nPedimos desculpas pelo transtorno.`;
+        await sendWhatsAppStatusMessage(order, cancelMsg);
+      } else if (msgMap[status]) {
+        await sendWhatsAppStatusMessage(order, msgMap[status]);
+      }
     }
+  } catch (e) {
+    console.error("[updateStatus] Erro ao enviar mensagem WhatsApp (não bloqueante):", e);
   }
 
   // Arquiva conversa (sem deletar) quando pedido é entregue
-  if (status === "delivered" && order.customerJid) {
-    const conv = await FoodConversation.findOne({
-      where: { companyId, customerJid: order.customerJid }
-    });
-    if (conv) {
-      await conv.update({ closedAt: new Date() });
-      const io = getIO();
-      io.to(`food-company-${companyId}`).emit("food:conversation:closed", { conversationId: conv.id });
+  try {
+    if (status === "delivered" && order.customerJid) {
+      const conv = await FoodConversation.findOne({
+        where: { companyId, customerJid: order.customerJid }
+      });
+      if (conv) {
+        await conv.update({ closedAt: new Date() });
+        try {
+          const io = getIO();
+          io.to(`food-company-${companyId}`).emit("food:conversation:closed", { conversationId: conv.id });
+        } catch { }
+      }
     }
+  } catch (e) {
+    console.error("[updateStatus] Erro ao arquivar conversa (não bloqueante):", e);
   }
 
-  const io = getIO();
-  io.to(`food-company-${companyId}`).emit("food-order-update", {
-    action: "update",
-    order: { id: order.id, status }
-  });
+  try {
+    const io = getIO();
+    io.to(`food-company-${companyId}`).emit("food-order-update", {
+      action: "update",
+      order: { id: order.id, status }
+    });
+  } catch { }
 
   return res.json(order);
 };

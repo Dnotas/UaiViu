@@ -179,8 +179,8 @@ const OrdersPage = () => {
       await api.patch(`/api/food/orders/${order.id}/status`, { status: next });
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: next } : o));
       toast.success("Status atualizado");
-    } catch {
-      toast.error("Erro ao atualizar status");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao atualizar status");
     }
   };
 
@@ -192,8 +192,8 @@ const OrdersPage = () => {
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: "cancelled" } : o));
       setCancelDialog({ open: false, order: null, reason: "" });
       toast.success("Pedido cancelado — cliente notificado pelo WhatsApp");
-    } catch {
-      toast.error("Erro ao cancelar pedido");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao cancelar pedido");
     }
   };
 
