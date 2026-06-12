@@ -77,8 +77,9 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
     trace: () => {}, debug: () => {}, info: () => {}, warn: () => {},
     fatal: () => {}, silent: () => {},
     child() { return this; },
-    error(obj: any) {
-      if (obj?.msg === "failed to decrypt message") {
+    error(obj: any, msg?: string) {
+      const message = msg || obj?.msg || (typeof obj === "string" ? obj : "");
+      if (message === "failed to decrypt message") {
         scheduleAutoRestart(whatsapp);
       }
     },
