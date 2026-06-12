@@ -54,6 +54,10 @@ export const clearAndRestart = async (whatsapp: FoodWhatsapp): Promise<void> => 
   await initWbotSession(whatsapp);
 };
 
+// Rastreamento para auto-restart por falhas de decriptografia
+const decryptFailTimes: Map<number, number[]> = new Map();
+const lastAutoRestartAt: Map<number, number> = new Map();
+
 export const getWbot = (whatsappId: number) => {
   const wbot = sessions.get(whatsappId);
   if (!wbot) throw new Error(`Sessão WhatsApp ${whatsappId} não encontrada`);
@@ -67,11 +71,25 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
 
+  // Logger silencioso que detecta falhas de decriptografia para auto-restart
+  const baileysLogger = {
+    level: "silent",
+    trace: () => {}, debug: () => {}, info: () => {}, warn: () => {},
+    fatal: () => {}, silent: () => {},
+    child() { return this; },
+    error(obj: any) {
+      if (obj?.msg === "failed to decrypt message") {
+        scheduleAutoRestart(whatsapp);
+      }
+    },
+  } as any;
+
   const wbot = makeWASocket({
     version,
     auth: state,
     printQRInTerminal: false,
     browser: ["UaiViu Food", "Chrome", "1.0.0"],
+    logger: baileysLogger,
   });
 
   // Mapeia @lid JIDs para JIDs reais (@s.whatsapp.net) via evento de contatos
@@ -137,6 +155,26 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
       }
     }
   });
+};
+
+// Agenda auto-restart após 3 falhas de decriptografia em 60s (cooldown de 5 min)
+const scheduleAutoRestart = (whatsapp: FoodWhatsapp) => {
+  const now = Date.now();
+  if (now - (lastAutoRestartAt.get(whatsapp.id) || 0) < 5 * 60_000) return;
+
+  const recent = (decryptFailTimes.get(whatsapp.id) || []).filter(t => now - t < 60_000);
+  recent.push(now);
+  decryptFailTimes.set(whatsapp.id, recent);
+
+  if (recent.length >= 3) {
+    decryptFailTimes.set(whatsapp.id, []);
+    lastAutoRestartAt.set(whatsapp.id, now);
+    console.log(`[WBot] ⚡ Auto-restart: 3 falhas de decriptografia detectadas — reiniciando sessão ${whatsapp.id}`);
+    setTimeout(() => {
+      clearAndRestart(whatsapp).catch(err =>
+        console.error("[WBot] Erro no auto-restart:", err));
+    }, 500);
+  }
 };
 
 export const initWbotFood = async () => {
