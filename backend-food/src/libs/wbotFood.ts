@@ -13,6 +13,12 @@ import { handleFoodMessage } from "../services/wbot/FoodMessageHandler";
 
 const sessions: Map<number, ReturnType<typeof makeWASocket>> = new Map();
 
+// Mapa @lid JID → JID real (@s.whatsapp.net) por sessão
+const lidMaps: Map<number, Map<string, string>> = new Map();
+
+export const getLidMap = (whatsappId: number): Map<string, string> =>
+  lidMaps.get(whatsappId) || new Map();
+
 const SESSION_DIR = path.resolve(process.cwd(), "sessions");
 
 const getSessionPath = (whatsappId: number) =>
@@ -36,6 +42,18 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
     auth: state,
     printQRInTerminal: false,
     browser: ["UaiViu Food", "Chrome", "1.0.0"],
+  });
+
+  // Mapeia @lid JIDs para JIDs reais (@s.whatsapp.net) via evento de contatos
+  const lidMap = new Map<string, string>();
+  lidMaps.set(whatsapp.id, lidMap);
+  wbot.ev.on("contacts.upsert", (contacts) => {
+    for (const contact of contacts) {
+      const lid = (contact as any).lid as string | undefined;
+      if (lid && contact.id && !contact.id.endsWith("@lid")) {
+        lidMap.set(lid, contact.id);
+      }
+    }
   });
 
   wbot.ev.on("creds.update", saveCreds);
@@ -84,7 +102,7 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
     if (type !== "notify") return;
     for (const msg of messages) {
       if (msg.key.fromMe === false && msg.key.remoteJid) {
-        await handleFoodMessage(msg, wbot, whatsapp);
+        await handleFoodMessage(msg, wbot, whatsapp, lidMap);
       }
     }
   });
