@@ -145,9 +145,9 @@ router.get("/public/:slug/customer/:phone", async (req, res) => {
 });
 
 // Consultar dados da sessão (para preencher telefone automaticamente)
-router.get("/public/session/:token", (req, res) => {
+router.get("/public/session/:token", async (req, res) => {
   const { getJidBySession } = require("../services/wbot/FoodMessageHandler");
-  const session = getJidBySession(req.params.token);
+  const session = await getJidBySession(req.params.token);
   return res.json({ phone: session?.phone || "" });
 });
 

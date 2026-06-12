@@ -69,37 +69,34 @@ const sendWhatsAppStatusMessage = async (order: FoodOrder, message: string) => {
     return;
   }
 
+  // Busca conversa pelo JID da sessão (para o painel) — não usada para envio
   let conversation: FoodConversation | null = null;
-  let targetJid: string | null = order.customerJid || null;
-
-  if (targetJid) {
+  if (order.customerJid) {
     conversation = await FoodConversation.findOne({
-      where: { companyId: order.companyId, customerJid: targetJid }
+      where: { companyId: order.companyId, customerJid: order.customerJid }
     });
   }
-
   if (!conversation && order.customerPhone) {
     const phone = order.customerPhone.replace(/\D/g, "").replace(/^55/, "");
     conversation = await FoodConversation.findOne({
       where: { companyId: order.companyId, customerPhone: phone }
     });
-    if (conversation) {
-      targetJid = conversation.customerJid;
-      console.log(`[WA-Send] Conversa encontrada via telefone, JID: ${targetJid}`);
-    }
   }
 
-  console.log(`[WA-Send] Pedido #${order.id} → JID: ${targetJid || "não resolvido"}, conversa: ${conversation?.id || "não encontrada"}`);
+  // Sempre envia para o número digitado pelo cliente (customerPhone), não para o JID da sessão
+  if (!order.customerPhone) {
+    console.error(`[WA-Send] ❌ Pedido #${order.id}: customerPhone não informado`);
+    return;
+  }
+
+  console.log(`[WA-Send] Pedido #${order.id} → enviando para customerPhone: ${order.customerPhone}, conversa: ${conversation?.id || "não encontrada"}`);
 
   for (const wbotId of tryIds) {
     try {
       const wbot = getWbot(wbotId);
 
-      let jid = targetJid;
-      if (!jid) {
-        jid = await resolveJid(wbot, order.customerPhone);
-        console.log(`[WA-Send] JID resolvido via onWhatsApp: ${jid}`);
-      }
+      const jid = await resolveJid(wbot, order.customerPhone);
+      console.log(`[WA-Send] JID resolvido para ${order.customerPhone}: ${jid}`);
 
       await wbot.sendMessage(jid, { text: message });
       console.log(`[WA-Send] ✅ Pedido #${order.id} → mensagem enviada via whatsapp ${wbotId}`);
