@@ -83,19 +83,25 @@ export const handleFoodMessage = async (
     if (!config) return;
 
     // Extrai telefone do JID quando possível
-    // Para JIDs @lid (contas mais novas com privacidade), tenta resolver via mapa de contatos
+    // Para JIDs @lid, usa msg.key.senderPn que contém o JID real com o número de telefone
     let phone = "";
     if (!jid.endsWith("@lid")) {
       const raw = jid.split("@")[0].split(":")[0].replace(/\D/g, "");
       phone = raw.startsWith("55") && raw.length >= 12 ? raw.slice(2) : raw;
-    } else if (lidMap) {
-      const resolvedJid = lidMap.get(jid);
-      if (resolvedJid) {
-        const raw = resolvedJid.split("@")[0].split(":")[0].replace(/\D/g, "");
+    } else {
+      const senderPn: string | undefined = (msg.key as any).senderPn;
+      if (senderPn) {
+        const raw = senderPn.split("@")[0].split(":")[0].replace(/\D/g, "");
         phone = raw.startsWith("55") && raw.length >= 12 ? raw.slice(2) : raw;
-        console.log(`[FoodMessageHandler] @lid ${jid} resolvido para ${resolvedJid}, phone: ${phone}`);
-      } else {
-        console.warn(`[FoodMessageHandler] @lid ${jid} não resolvido no mapa de contatos`);
+        console.log(`[FoodMessageHandler] @lid ${jid} → senderPn: ${senderPn}, phone: ${phone}`);
+      } else if (lidMap) {
+        const resolvedJid = lidMap.get(jid);
+        if (resolvedJid) {
+          const raw = resolvedJid.split("@")[0].split(":")[0].replace(/\D/g, "");
+          phone = raw.startsWith("55") && raw.length >= 12 ? raw.slice(2) : raw;
+        } else {
+          console.warn(`[FoodMessageHandler] @lid ${jid} não resolvido`);
+        }
       }
     }
 
