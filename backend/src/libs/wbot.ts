@@ -7,7 +7,8 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   // makeInMemoryStore,
   isJidBroadcast,
-  CacheStore
+  CacheStore,
+  BufferJSON
 } from "baileys";
 import makeWALegacySocket from "baileys";
 import P from "pino";
@@ -36,6 +37,47 @@ type Session = WASocket & {
 const sessions: Session[] = [];
 
 const retriesQrCodeMap = new Map<number, number>();
+
+// Rastreamento para auto-restart por falhas de decriptografia
+const lastAutoRestartAtMap = new Map<number, number>();
+const manualRestartsSet = new Set<number>();
+
+const scheduleAutoRestart = (whatsapp: Whatsapp) => {
+  const now = Date.now();
+  if (now - (lastAutoRestartAtMap.get(whatsapp.id) || 0) < 5 * 60_000) return;
+  lastAutoRestartAtMap.set(whatsapp.id, now);
+  logger.info(`[WBot] ⚡ Auto-restart: falha de decriptografia — reiniciando sessão ${whatsapp.id}`);
+  setTimeout(() => {
+    clearAndRestartSession(whatsapp).catch(err =>
+      logger.error(`[WBot] Erro no auto-restart: ${err}`));
+  }, 500);
+};
+
+export const clearAndRestartSession = async (whatsapp: Whatsapp): Promise<void> => {
+  manualRestartsSet.add(whatsapp.id);
+
+  // Fecha wbot atual sem logout
+  const sessionIndex = sessions.findIndex(s => s.id === whatsapp.id);
+  if (sessionIndex !== -1) {
+    try { (sessions[sessionIndex] as any).ws?.close?.(); } catch {}
+    sessions.splice(sessionIndex, 1);
+  }
+
+  // Limpa keys (Signal Protocol) mas mantém creds — reconecta sem QR
+  if (whatsapp.session) {
+    try {
+      const parsed = JSON.parse(whatsapp.session, BufferJSON.reviver);
+      await whatsapp.update({
+        session: JSON.stringify({ creds: parsed.creds, keys: {} }, BufferJSON.replacer, 0)
+      });
+    } catch {
+      await whatsapp.update({ session: "" });
+    }
+  }
+
+  logger.info(`[WBot] Sessão ${whatsapp.id} reiniciada sem QR code`);
+  await StartWhatsAppSession(whatsapp, whatsapp.companyId);
+};
 
 export const getWbot = (whatsappId: number): Session => {
   const sessionIndex = sessions.findIndex(s => s.id === whatsappId);
@@ -97,8 +139,26 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         const msgRetryCounterCache = new NodeCache();
         const userDevicesCache: CacheStore = new NodeCache();
 
+        // Logger por sessão — intercepta falhas de decriptografia para auto-restart
+        const perSessionLogger = {
+          level: loggerBaileys.level,
+          trace: (...args: any[]) => (loggerBaileys as any).trace(...args),
+          debug: (...args: any[]) => (loggerBaileys as any).debug(...args),
+          info: (...args: any[]) => (loggerBaileys as any).info(...args),
+          warn: (...args: any[]) => (loggerBaileys as any).warn(...args),
+          fatal: (...args: any[]) => (loggerBaileys as any).fatal(...args),
+          child() { return this; },
+          error(obj: any, msg?: string) {
+            const message = msg || obj?.msg || (typeof obj === "string" ? obj : "");
+            if (message === "failed to decrypt message") {
+              scheduleAutoRestart(whatsapp);
+            }
+            (loggerBaileys as any).error(obj, msg);
+          },
+        } as any;
+
         wsocket = makeWASocket({
-          logger: loggerBaileys,
+          logger: perSessionLogger,
           printQRInTerminal: false,
           browser: Browsers.appropriate("Desktop"),
           auth: {
@@ -184,10 +244,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 DisconnectReason.loggedOut
               ) {
                 removeWbot(id, false);
-                setTimeout(
-                  () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                  2000
-                );
+                if (!manualRestartsSet.has(id)) {
+                  setTimeout(
+                    () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
+                    2000
+                  );
+                }
+                manualRestartsSet.delete(id);
               } else {
                 await whatsapp.update({ status: "PENDING", session: "" });
                 await DeleteBaileysService(whatsapp.id);
@@ -196,10 +259,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   session: whatsapp
                 });
                 removeWbot(id, false);
-                setTimeout(
-                  () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                  2000
-                );
+                if (!manualRestartsSet.has(id)) {
+                  setTimeout(
+                    () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
+                    2000
+                  );
+                }
+                manualRestartsSet.delete(id);
               }
             }
 

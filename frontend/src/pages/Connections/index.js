@@ -131,6 +131,15 @@ const Connections = () => {
 		}
 	};
 
+	const handleRestartSession = async whatsAppId => {
+		try {
+			await api.post(`/whatsappsession/${whatsAppId}/restart`);
+			toast.info("Sessão reiniciando... aguarde reconexão automática.");
+		} catch (err) {
+			toastError(err);
+		}
+	};
+
 	const handleOpenWhatsAppModal = () => {
 		setSelectedWhatsApp(null);
 		setWhatsAppModalOpen(true);
@@ -234,16 +243,28 @@ const Connections = () => {
 				{(whatsApp.status === "CONNECTED" ||
 					whatsApp.status === "PAIRING" ||
 					whatsApp.status === "TIMEOUT") && (
-					<Button
-						size="small"
-						variant="outlined"
-						color="secondary"
-						onClick={() => {
-							handleOpenConfirmationModal("disconnect", whatsApp.id);
-						}}
-					>
-						{i18n.t("connections.buttons.disconnect")}
-					</Button>
+					<>
+						<Button
+							size="small"
+							variant="outlined"
+							color="secondary"
+							onClick={() => {
+								handleOpenConfirmationModal("disconnect", whatsApp.id);
+							}}
+						>
+							{i18n.t("connections.buttons.disconnect")}
+						</Button>{" "}
+						{whatsApp.status === "CONNECTED" && (
+							<Button
+								size="small"
+								variant="outlined"
+								color="primary"
+								onClick={() => handleRestartSession(whatsApp.id)}
+							>
+								Reiniciar
+							</Button>
+						)}
+					</>
 				)}
 				{whatsApp.status === "OPENING" && (
 					<Button size="small" variant="outlined" disabled color="default">
