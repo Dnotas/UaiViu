@@ -166,7 +166,7 @@ const scheduleAutoRestart = (whatsapp: FoodWhatsapp) => {
   recent.push(now);
   decryptFailTimes.set(whatsapp.id, recent);
 
-  if (recent.length >= 3) {
+  if (recent.length >= 1) {
     decryptFailTimes.set(whatsapp.id, []);
     lastAutoRestartAt.set(whatsapp.id, now);
     console.log(`[WBot] ⚡ Auto-restart: 3 falhas de decriptografia detectadas — reiniciando sessão ${whatsapp.id}`);
