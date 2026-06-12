@@ -75,6 +75,17 @@ const WhatsappPage = () => {
     }
   };
 
+  const handleRestart = async () => {
+    if (!window.confirm("Reiniciar a sessão WhatsApp? A conexão será restabelecida sem precisar escanear QR code novamente.")) return;
+    try {
+      await api.post(`/api/food/whatsapp/${connection.id}/restart`);
+      setConnection(prev => ({ ...prev, status: "OPENING", qrcode: null }));
+      toast.info("Reiniciando sessão... aguarde reconexão automática");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Erro ao reiniciar sessão");
+    }
+  };
+
   const handleDisconnect = async () => {
     if (!window.confirm("Desconectar o WhatsApp?")) return;
     try {
@@ -141,6 +152,12 @@ const WhatsappPage = () => {
               {connection.status === "CONNECTED" && (
                 <Button variant="outlined" color="secondary" onClick={handleDisconnect}>
                   Desconectar
+                </Button>
+              )}
+
+              {connection.status === "CONNECTED" && (
+                <Button variant="outlined" color="primary" onClick={handleRestart}>
+                  Reiniciar Sessão
                 </Button>
               )}
 

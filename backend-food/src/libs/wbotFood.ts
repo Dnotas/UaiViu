@@ -24,6 +24,36 @@ const SESSION_DIR = path.resolve(process.cwd(), "sessions");
 const getSessionPath = (whatsappId: number) =>
   path.resolve(SESSION_DIR, `food_${whatsappId}`);
 
+// IDs aguardando restart manual — suprime auto-reconexão na próxima vez que fechar
+const manualRestarts = new Set<number>();
+
+/** Limpa arquivos de sessão corrompidos mantendo apenas creds.json (sem QR necessário) */
+export const clearAndRestart = async (whatsapp: FoodWhatsapp): Promise<void> => {
+  manualRestarts.add(whatsapp.id);
+
+  // Fecha wbot atual sem logout
+  const existing = sessions.get(whatsapp.id);
+  sessions.delete(whatsapp.id);
+  if (existing) {
+    try { (existing as any).ws?.close?.(); } catch {}
+    try { (existing as any).end?.(new Error("manual_restart")); } catch {}
+  }
+
+  // Apaga arquivos de sessão corrompidos, mantém creds.json
+  const sessionPath = getSessionPath(whatsapp.id);
+  if (fs.existsSync(sessionPath)) {
+    for (const file of fs.readdirSync(sessionPath)) {
+      if (file !== "creds.json") {
+        try { fs.unlinkSync(path.join(sessionPath, file)); } catch {}
+      }
+    }
+  }
+  console.log(`[WBot] Sessão reiniciada para whatsapp ${whatsapp.id}`);
+
+  // Inicia nova sessão com credenciais existentes
+  await initWbotSession(whatsapp);
+};
+
 export const getWbot = (whatsappId: number) => {
   const wbot = sessions.get(whatsappId);
   if (!wbot) throw new Error(`Sessão WhatsApp ${whatsappId} não encontrada`);
@@ -82,9 +112,10 @@ export const initWbotSession = async (whatsapp: FoodWhatsapp) => {
 
       sessions.delete(whatsapp.id);
 
-      if (shouldReconnect) {
+      if (shouldReconnect && !manualRestarts.has(whatsapp.id)) {
         setTimeout(() => initWbotSession(whatsapp), 5000);
       }
+      manualRestarts.delete(whatsapp.id);
     }
 
     if (connection === "open") {

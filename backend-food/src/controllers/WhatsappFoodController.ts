@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import FoodWhatsapp from "../models/FoodWhatsapp";
-import { initWbotSession, getWbot } from "../libs/wbotFood";
+import { initWbotSession, getWbot, clearAndRestart } from "../libs/wbotFood";
 import AppError from "../errors/AppError";
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
@@ -54,6 +54,17 @@ export const reconnect = async (req: Request, res: Response): Promise<Response> 
 
   await initWbotSession(whatsapp);
   return res.json(whatsapp);
+};
+
+export const restartSession = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId } = req.user;
+  const { id } = req.params;
+
+  const whatsapp = await FoodWhatsapp.findOne({ where: { id, companyId } });
+  if (!whatsapp) throw new AppError("Conexão não encontrada", 404);
+
+  await clearAndRestart(whatsapp);
+  return res.json({ message: "Sessão reiniciada" });
 };
 
 export const remove = async (req: Request, res: Response): Promise<Response> => {
