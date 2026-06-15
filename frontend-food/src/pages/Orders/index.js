@@ -43,6 +43,11 @@ const NEXT_LABEL = {
   on_the_way: "Marcar Entregue",
 };
 
+const getNextLabel = (order) => {
+  if (order.status === "preparing" && order.orderType === "pickup") return "Pronto p/ Retirada";
+  return NEXT_LABEL[order.status];
+};
+
 const PAYMENT_LABEL = {
   cash: "Pagar na entrega", cash_money: "Dinheiro na entrega",
   cash_pix: "PIX na entrega", cash_card: "Cartão na entrega",
@@ -268,7 +273,7 @@ const OrdersPage = () => {
                     {NEXT_STATUS[order.status] && (
                       <Box mt={1} display="flex" style={{ gap: 4 }}>
                         <Button size="small" variant="contained" color="primary" onClick={() => advance(order)}>
-                          {NEXT_LABEL[order.status]}
+                          {getNextLabel(order)}
                         </Button>
                         <Button size="small" variant="outlined" color="secondary"
                           onClick={() => setCancelDialog({ open: true, order, reason: "" })}>

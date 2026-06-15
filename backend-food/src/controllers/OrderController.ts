@@ -215,10 +215,13 @@ export const updateStatus = async (req: Request, res: Response): Promise<Respons
   try {
     const config = await FoodRestaurantConfig.findOne({ where: { companyId } });
     if (config) {
+      const onTheWayMsg = order.orderType === "pickup"
+        ? (config.msgOrderReadyForPickup || "✅ Seu pedido está pronto! Pode vir retirar quando quiser.")
+        : config.msgOrderOnTheWay;
       const msgMap: Record<string, string> = {
         confirmed: config.msgOrderConfirmed,
         preparing: config.msgOrderPreparing,
-        on_the_way: config.msgOrderOnTheWay,
+        on_the_way: onTheWayMsg,
         delivered: config.msgOrderDelivered,
       };
 
@@ -301,9 +304,23 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   if (orderType === "delivery" && !customerAddressNumber?.trim()) throw new AppError("Número da casa é obrigatório", 400);
   if (orderType === "delivery" && !customerNeighborhood?.trim()) throw new AppError("Bairro é obrigatório", 400);
 
-  // Bloqueia pedidos quando a loja está fechada
+  // Bloqueia pedidos quando a loja está fechada (status manual)
   if (config.storeStatus === "closed_silent" || config.storeStatus === "closed_notice") {
     throw new AppError("A loja está fechada no momento. Tente novamente mais tarde.", 403);
+  }
+
+  // Bloqueia pedidos fora do horário de funcionamento
+  if (config.businessHours && config.businessHours.length > 0) {
+    const now = new Date();
+    const day = now.getDay();
+    const hh = now.getHours().toString().padStart(2, "0");
+    const mm = now.getMinutes().toString().padStart(2, "0");
+    const current = `${hh}:${mm}`;
+    const todayHours = (config.businessHours as any[]).find((h: any) => h.dayOfWeek === day);
+    const open = todayHours && todayHours.enabled && current >= todayHours.open && current < todayHours.close;
+    if (!open) {
+      throw new AppError("A loja está fechada no momento. Tente novamente dentro do horário de funcionamento.", 403);
+    }
   }
 
   const normalizedPhone = customerPhone.replace(/\D/g, "");

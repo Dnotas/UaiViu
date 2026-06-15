@@ -1,4 +1,16 @@
 import { Router } from "express";
+
+const isStoreOpenNow = (businessHours: Array<{ dayOfWeek: number; enabled: boolean; open: string; close: string }> | null): boolean => {
+  if (!businessHours || businessHours.length === 0) return true;
+  const now = new Date();
+  const day = now.getDay();
+  const hh = now.getHours().toString().padStart(2, "0");
+  const mm = now.getMinutes().toString().padStart(2, "0");
+  const current = `${hh}:${mm}`;
+  const today = businessHours.find(h => h.dayOfWeek === day);
+  if (!today || !today.enabled) return false;
+  return current >= today.open && current < today.close;
+};
 import isAuth from "../middleware/isAuth";
 import { uploadMenu, uploadAI } from "../middleware/uploadMenu";
 
@@ -115,6 +127,8 @@ router.get("/public/:slug/menu", async (req, res) => {
       busyMode: config.busyMode || false,
       storeStatus: config.storeStatus || "open",
       closedMessage: config.closedMessage || null,
+      businessHours: config.businessHours || null,
+      isCurrentlyOpen: isStoreOpenNow(config.businessHours),
     },
     groups
   });

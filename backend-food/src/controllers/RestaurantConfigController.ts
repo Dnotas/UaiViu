@@ -21,10 +21,10 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
   const { companyId } = req.user;
   const {
     slug, welcomeMessage, msgOrderConfirmed, msgOrderPreparing,
-    msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled, pickupEnabled,
+    msgOrderOnTheWay, msgOrderReadyForPickup, msgOrderDelivered, deliveryEnabled, pickupEnabled,
     deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
     restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
-    busyMode, storeStatus, closedMessage, divulgationMessage,
+    busyMode, storeStatus, closedMessage, divulgationMessage, businessHours,
   } = req.body;
 
   let config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -39,14 +39,16 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
 
     config = await FoodRestaurantConfig.create({
       companyId, slug: finalSlug, welcomeMessage, msgOrderConfirmed,
-      msgOrderPreparing, msgOrderOnTheWay, msgOrderDelivered, deliveryEnabled,
-      pickupEnabled, deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
+      msgOrderPreparing, msgOrderOnTheWay, msgOrderReadyForPickup, msgOrderDelivered,
+      deliveryEnabled, pickupEnabled, deliveryFee, estimatedDeliveryMinutes,
+      restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
       deliveryRates: deliveryRates || [],
       busyMode: busyMode ?? false,
       storeStatus: storeStatus || "open",
       closedMessage: closedMessage || null,
       divulgationMessage: divulgationMessage || null,
+      businessHours: businessHours || null,
     });
   } else {
     if (slug && slug !== config.slug) {
@@ -61,6 +63,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
 
     await config.update({
       welcomeMessage, msgOrderConfirmed, msgOrderPreparing, msgOrderOnTheWay,
+      msgOrderReadyForPickup: msgOrderReadyForPickup !== undefined ? msgOrderReadyForPickup : config.msgOrderReadyForPickup,
       msgOrderDelivered, deliveryEnabled, pickupEnabled, deliveryFee,
       estimatedDeliveryMinutes, restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
@@ -69,6 +72,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       storeStatus: newStatus,
       closedMessage: closedMessage !== undefined ? closedMessage : config.closedMessage,
       divulgationMessage: divulgationMessage !== undefined ? divulgationMessage : config.divulgationMessage,
+      businessHours: businessHours !== undefined ? businessHours : config.businessHours,
     });
 
     // Quando a loja reabre, reseta greetedAt de todas as conversas

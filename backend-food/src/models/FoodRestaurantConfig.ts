@@ -33,6 +33,9 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ defaultValue: "🛵 Seu pedido saiu para entrega!" })
   msgOrderOnTheWay: string;
 
+  @Column({ defaultValue: "✅ Seu pedido está pronto! Pode vir retirar quando quiser." })
+  msgOrderReadyForPickup: string;
+
   @Column({ defaultValue: "🎉 Pedido entregue! Obrigado pela preferência." })
   msgOrderDelivered: string;
 
@@ -98,6 +101,10 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   // o bot responde automaticamente com o link do cardápio
   @Column({ type: DataType.TEXT, allowNull: true })
   divulgationMessage: string;
+
+  // Horário de funcionamento: [{dayOfWeek:0-6, enabled:bool, open:"HH:mm", close:"HH:mm"}]
+  @Column({ type: DataType.JSONB, allowNull: true })
+  businessHours: Array<{ dayOfWeek: number; enabled: boolean; open: string; close: string }>;
 
   @CreatedAt
   createdAt: Date;

@@ -59,18 +59,23 @@ const SettingsPage = () => {
     code: "", discountType: "percent", discountValue: "", minOrderValue: "", usageLimit: "", expiresAt: "",
   });
 
+  const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const DEFAULT_BUSINESS_HOURS = DAY_NAMES.map((_, i) => ({
+    dayOfWeek: i, enabled: true, open: "08:00", close: "22:00",
+  }));
+
   const [config, setConfig] = useState({
     slug: "", welcomeMessage: "", msgOrderConfirmed: "", msgOrderPreparing: "",
-    msgOrderOnTheWay: "", msgOrderDelivered: "", deliveryEnabled: true,
-    pickupEnabled: false, deliveryFee: 0, estimatedDeliveryMinutes: 30,
+    msgOrderOnTheWay: "", msgOrderReadyForPickup: "", msgOrderDelivered: "",
+    deliveryEnabled: true, pickupEnabled: false, deliveryFee: 0, estimatedDeliveryMinutes: 30,
     restaurantName: "", primaryColor: "#FF5722", logoUrl: "", bannerImageUrl: "",
-    // novos campos
     restaurantAddress: "", restaurantLat: null, restaurantLng: null,
     deliveryByDistance: false, deliveryRates: [],
     busyMode: false,
     storeStatus: "open",
     closedMessage: "Olá! No momento estamos fechados. Em breve voltamos. 😊",
     divulgationMessage: "",
+    businessHours: null,
   });
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -560,7 +565,8 @@ const SettingsPage = () => {
             { key: "welcomeMessage", label: "Boas-vindas (com link do cardápio)" },
             { key: "msgOrderConfirmed", label: "Pedido confirmado" },
             { key: "msgOrderPreparing", label: "Em preparo" },
-            { key: "msgOrderOnTheWay", label: "Saiu para entrega" },
+            { key: "msgOrderOnTheWay", label: "Saiu para entrega (delivery)" },
+            { key: "msgOrderReadyForPickup", label: "Pronto para retirada (retirada no local)" },
             { key: "msgOrderDelivered", label: "Pedido entregue" },
           ].map(f => (
             <Grid item xs={12} key={f.key}>
@@ -569,6 +575,88 @@ const SettingsPage = () => {
             </Grid>
           ))}
         </Grid>
+        <Box mt={2}><Button variant="contained" color="primary" onClick={saveConfig}>Salvar</Button></Box>
+      </Paper>
+
+      {/* ── Horário de Funcionamento ── */}
+      <Paper className={classes.section}>
+        <Typography variant="h6" className={classes.title}>Horário de Funcionamento</Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+          Fora do horário configurado, o cardápio exibe "Loja fechada" e novos pedidos são bloqueados.
+          Deixe todos os dias desabilitados para não usar restrição de horário.
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={!!(config.businessHours && config.businessHours.length > 0)}
+              onChange={e => setConfig(c => ({
+                ...c,
+                businessHours: e.target.checked ? DEFAULT_BUSINESS_HOURS : null,
+              }))}
+              color="primary"
+            />
+          }
+          label="Usar horário de funcionamento"
+        />
+        {config.businessHours && config.businessHours.length > 0 && (
+          <Table size="small" style={{ marginTop: 12 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Dia</TableCell>
+                <TableCell>Aberto</TableCell>
+                <TableCell>Abertura</TableCell>
+                <TableCell>Fechamento</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(config.businessHours || []).map((h, idx) => (
+                <TableRow key={h.dayOfWeek}>
+                  <TableCell>{DAY_NAMES[h.dayOfWeek]}</TableCell>
+                  <TableCell>
+                    <Switch
+                      size="small"
+                      checked={h.enabled}
+                      color="primary"
+                      onChange={e => {
+                        const updated = [...config.businessHours];
+                        updated[idx] = { ...h, enabled: e.target.checked };
+                        setConfig(c => ({ ...c, businessHours: updated }));
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      type="time"
+                      value={h.open}
+                      disabled={!h.enabled}
+                      size="small"
+                      inputProps={{ step: 300 }}
+                      onChange={e => {
+                        const updated = [...config.businessHours];
+                        updated[idx] = { ...h, open: e.target.value };
+                        setConfig(c => ({ ...c, businessHours: updated }));
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <TextField
+                      type="time"
+                      value={h.close}
+                      disabled={!h.enabled}
+                      size="small"
+                      inputProps={{ step: 300 }}
+                      onChange={e => {
+                        const updated = [...config.businessHours];
+                        updated[idx] = { ...h, close: e.target.value };
+                        setConfig(c => ({ ...c, businessHours: updated }));
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
         <Box mt={2}><Button variant="contained" color="primary" onClick={saveConfig}>Salvar</Button></Box>
       </Paper>
 
