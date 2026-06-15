@@ -454,8 +454,22 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         getBodyButton(msg) ||
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
       stickerMessage: "sticker",
-      contactMessage: msg.message?.contactMessage?.vcard,
-      contactsArrayMessage: "varios contatos",
+      contactMessage: (() => {
+        const vcard = msg.message?.contactMessage?.vcard ?? "";
+        const fn = vcard.match(/^FN:(.+)$/m)?.[1]?.trim() ?? "Contato";
+        const tel = vcard.match(/TEL[^:]*:(.+)$/m)?.[1]?.trim() ?? "";
+        return tel ? `${fn}: ${tel}` : fn;
+      })(),
+      contactsArrayMessage: (() => {
+        const contacts = msg.message?.contactsArrayMessage?.contacts ?? [];
+        if (!contacts.length) return "varios contatos";
+        return contacts.map(c => {
+          const vcard = (c as any).vcard ?? "";
+          const fn = vcard.match(/^FN:(.+)$/m)?.[1]?.trim() ?? "Contato";
+          const tel = vcard.match(/TEL[^:]*:(.+)$/m)?.[1]?.trim() ?? "";
+          return tel ? `${fn}: ${tel}` : fn;
+        }).join(", ");
+      })(),
       //locationMessage: `Latitude: ${msg.message.locationMessage?.degreesLatitude} - Longitude: ${msg.message.locationMessage?.degreesLongitude}`,
       locationMessage: msgLocation(
         msg.message?.locationMessage?.jpegThumbnail,
@@ -635,14 +649,25 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   };
 };
 
-const downloadMedia = async (msg: proto.IWebMessageInfo) => {
+const downloadMedia = async (msg: proto.IWebMessageInfo, wbot?: Session) => {
   let buffer;
   try {
     buffer = await downloadMediaMessage(msg, "buffer", {});
   } catch (err) {
-    console.error("Erro ao baixar mídia:", err);
-
-    // Trate o erro de acordo com as suas necessidades
+    // Retry com reuploadRequest quando a mediaKey expirou (caso mais comum de falha)
+    if (wbot) {
+      try {
+        buffer = await downloadMediaMessage(msg, "buffer", {},
+          { logger, reuploadRequest: wbot.updateMediaMessage }
+        );
+      } catch (err2) {
+        console.error("Erro definitivo ao baixar mídia:", err2);
+        return null;
+      }
+    } else {
+      console.error("Erro ao baixar mídia:", err);
+      return null;
+    }
   }
 
   let filename = msg.message?.documentMessage?.fileName || "";
@@ -658,7 +683,10 @@ const downloadMedia = async (msg: proto.IWebMessageInfo) => {
       ?.imageMessage ||
     msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage;
 
-  if (!mineType) console.log(msg);
+  if (!mineType) {
+    console.log(msg);
+    return null;
+  }
 
   if (!filename) {
     const ext = mimeExtension(mineType.mimetype);
@@ -1088,7 +1116,7 @@ export const verifyMediaMessage = async (
 ): Promise<Message> => {
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
-  const media = await downloadMedia(msg);
+  const media = await downloadMedia(msg, wbot);
 
   if (!media) {
     throw new Error("ERR_WAPP_DOWNLOAD_MEDIA");
@@ -2487,10 +2515,19 @@ const handleMessage = async (
         msg.key.remoteJid = resolvedJid;
         // Continua o processamento normalmente
       } else {
-        // Mensagens fromMe @lid = duplicata de dispositivo vinculado (WhatsApp Web/Desktop) → descartar
+        // Mensagens fromMe @lid = provavelmente duplicata de dispositivo vinculado
+        // Aguarda 800ms e tenta resolver o mapa novamente antes de descartar
         if (msg.key.fromMe) {
-          logger.info(`🔧 [handleMessage] Mensagem @lid fromMe SEM mapeamento descartada (duplicata multi-device) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
-          return;
+          await new Promise(r => setTimeout(r, 800));
+          const retryMap = lidPhoneMap.get(wbot.id);
+          const retryResolved = retryMap?.get(msg.key.remoteJid);
+          if (retryResolved) {
+            logger.info(`🔧 [handleMessage] @lid fromMe resolvido após retry: ${msg.key.remoteJid} → ${retryResolved} - ID: ${msg.key.id}`);
+            msg.key.remoteJid = retryResolved;
+          } else {
+            logger.info(`🔧 [handleMessage] Mensagem @lid fromMe SEM mapeamento descartada (duplicata multi-device) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - Company: ${companyId}`);
+            return;
+          }
         }
         // Mensagens de CLIENTE (fromMe=false) com @lid: NUNCA descartar
         // Tenta resolver via banco de dados (histórico de mensagens com mesmo remoteJid)
