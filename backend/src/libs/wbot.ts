@@ -54,6 +54,10 @@ const scheduleAutoRestart = (whatsapp: Whatsapp) => {
 };
 
 export const clearAndRestartSession = async (whatsapp: Whatsapp): Promise<void> => {
+  if (manualRestartsSet.has(whatsapp.id)) {
+    logger.info(`[WBot] Sessão ${whatsapp.id} já em restart, ignorando chamada duplicada`);
+    return;
+  }
   manualRestartsSet.add(whatsapp.id);
 
   // Fecha wbot atual sem logout
@@ -250,7 +254,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                     2000
                   );
                 }
-                manualRestartsSet.delete(id);
+                // NÃO deletar aqui — deixa o handler do "open" remover após conexão estável
               } else {
                 await whatsapp.update({ status: "PENDING", session: "" });
                 await DeleteBaileysService(whatsapp.id);
@@ -265,7 +269,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                     2000
                   );
                 }
-                manualRestartsSet.delete(id);
+                // NÃO deletar aqui — deixa o handler do "open" remover após conexão estável
               }
             }
 
@@ -288,6 +292,9 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 wsocket.id = whatsapp.id;
                 sessions.push(wsocket);
               }
+
+              // Conexão estabilizou — libera proteção contra restart duplicado
+              manualRestartsSet.delete(whatsapp.id);
 
               resolve(wsocket);
             }
