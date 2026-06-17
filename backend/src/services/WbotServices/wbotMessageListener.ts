@@ -530,10 +530,9 @@ export const getQuotedMessage = (msg: proto.IWebMessageInfo): any => {
   return extractMessageContent(body[Object.keys(body).values().next().value]);
 };
 export const getQuotedMessageId = (msg: proto.IWebMessageInfo) => {
-  const body = extractMessageContent(msg.message)[
-    Object.keys(msg?.message).values().next().value
-  ];
-
+  const type = getContentType(msg.message);
+  if (!type) return null;
+  const body = (msg.message as any)[type];
   return body?.contextInfo?.stanzaId;
 };
 
