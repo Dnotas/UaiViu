@@ -2582,9 +2582,24 @@ const handleMessage = async (
             if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
             lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, resolvedJid);
             msg.key.remoteJid = resolvedJid;
+          } else if (!msg.key.fromMe) {
+            // Mensagem de CLIENTE (@lid sem resolução): tenta senderPn top-level ou no key
+            const fallbackPn = (msg as any).senderPn ||
+              (msg as any).key?.senderPn ||
+              (msg as any).message?.senderKeyDistributionMessage?.groupId;
+            if (fallbackPn && String(fallbackPn).includes("@")) {
+              logger.info(`🔧 [handleMessage] @lid resolvido via senderPn fallback: ${msg.key.remoteJid} → ${fallbackPn}`);
+              if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+              lidPhoneMap.get(wbot.id).set(msg.key.remoteJid, String(fallbackPn));
+              msg.key.remoteJid = String(fallbackPn);
+            } else {
+              // Última chance: não descarta mensagem de cliente — loga e continua com @lid como está
+              logger.warn(`🔧 [handleMessage] @lid de cliente não resolvido (senderPn indisponível) - ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - pushName: ${msg.pushName || "sem nome"} - mensagem mantida`);
+              // Não faz return: deixa a mensagem ser processada com o @lid mesmo (criará contato genérico)
+            }
           } else {
-            // Nenhum método resolveu: descarta para não criar contato duplicado
-            logger.warn(`🔧 [handleMessage] @lid não resolvido por nenhum método - descartando ID: ${msg.key.id} - remoteJid: ${msg.key.remoteJid} - pushName: ${msg.pushName || "sem nome"}`);
+            // fromMe=true e sem resolução: provavelmente duplicata multi-device, descarta
+            logger.info(`🔧 [handleMessage] @lid fromMe SEM resolução descartado (duplicata) - ID: ${msg.key.id}`);
             return;
           }
         }
@@ -3542,14 +3557,24 @@ const wbotMessageListener = async (
           //   - Ticket aberto/pendente → adiciona aviso no ticket existente
           //   - Ticket fechado → FindOrCreateTicketService reabre como pendente
           //   - Primeiro contato → cria contato + ticket pendente
+          const ciphertextSenderPn = (message as any).key?.senderPn as string | undefined;
+          const ciphertextEffectiveJid = ciphertextSenderPn ||
+            (!message.key.remoteJid?.includes("@lid") ? message.key.remoteJid : null);
+
+          // Se temos senderPn para um @lid, popula o mapa para resolver mensagens futuras
+          if (ciphertextSenderPn && message.key.remoteJid?.includes("@lid")) {
+            if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+            lidPhoneMap.get(wbot.id).set(message.key.remoteJid, ciphertextSenderPn);
+            logger.info(`[BadMAC] lidPhoneMap atualizado: ${message.key.remoteJid} → ${ciphertextSenderPn}`);
+          }
+
           if (
             !message.key.fromMe &&
-            message.key.remoteJid &&
-            !message.key.remoteJid.includes("@g.us") &&
-            !message.key.remoteJid.includes("@lid")
+            ciphertextEffectiveJid &&
+            !ciphertextEffectiveJid.includes("@g.us")
           ) {
             try {
-              const number = message.key.remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
+              const number = ciphertextEffectiveJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
               const contactName = (message as any).pushName || number;
 
               // Cria contato se não existir, ou retorna o existente
@@ -3593,12 +3618,6 @@ const wbotMessageListener = async (
 
         // 4. QUARTO: Detecta e processa mensagens editadas
         const messageType = getTypeMessage(message);
-
-        // DEBUG: Log do tipo de mensagem e estrutura
-        logger.info(`[DEBUG] Tipo da mensagem: ${messageType} - ID: ${message.key.id}`);
-        if (message.message?.editedMessage) {
-          logger.info(`[DEBUG] Mensagem TEM editedMessage! Estrutura: ${JSON.stringify(Object.keys(message.message))}`);
-        }
 
         const isEditedMessage = messageType === "editedMessage";
 

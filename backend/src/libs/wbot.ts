@@ -38,20 +38,7 @@ const sessions: Session[] = [];
 
 const retriesQrCodeMap = new Map<number, number>();
 
-// Rastreamento para auto-restart por falhas de decriptografia
-const lastAutoRestartAtMap = new Map<number, number>();
 const manualRestartsSet = new Set<number>();
-
-const scheduleAutoRestart = (whatsapp: Whatsapp) => {
-  const now = Date.now();
-  if (now - (lastAutoRestartAtMap.get(whatsapp.id) || 0) < 5 * 60_000) return;
-  lastAutoRestartAtMap.set(whatsapp.id, now);
-  logger.info(`[WBot] ⚡ Auto-restart: falha de decriptografia — reiniciando sessão ${whatsapp.id}`);
-  setTimeout(() => {
-    clearAndRestartSession(whatsapp).catch(err =>
-      logger.error(`[WBot] Erro no auto-restart: ${err}`));
-  }, 500);
-};
 
 export const clearAndRestartSession = async (whatsapp: Whatsapp): Promise<void> => {
   if (manualRestartsSet.has(whatsapp.id)) {
@@ -153,10 +140,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           fatal: (...args: any[]) => (loggerBaileys as any).fatal(...args),
           child() { return this; },
           error(obj: any, msg?: string) {
-            const message = msg || obj?.msg || (typeof obj === "string" ? obj : "");
-            if (message === "failed to decrypt message") {
-              scheduleAutoRestart(whatsapp);
-            }
             (loggerBaileys as any).error(obj, msg);
           },
         } as any;
