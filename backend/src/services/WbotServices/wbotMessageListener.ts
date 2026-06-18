@@ -3610,6 +3610,65 @@ const wbotMessageListener = async (
               logger.error(`[BadMAC] Erro ao notificar ticket: ${err.message}`);
             }
           }
+
+          // Notifica ticket de grupo quando uma mensagem de participante não pôde ser decriptada
+          if (
+            !message.key.fromMe &&
+            message.key.remoteJid?.includes("@g.us")
+          ) {
+            try {
+              const groupNumber = message.key.remoteJid.replace("@g.us", "");
+              const participantPn = (message as any).key?.participantPn as string | undefined;
+              const senderNumber = participantPn
+                ? participantPn.replace("@s.whatsapp.net", "").replace(/\D/g, "")
+                : null;
+              const senderName = (message as any).pushName || senderNumber || "participante";
+
+              // Popula lidPhoneMap com participantPn para resolver mensagens futuras deste participante
+              if (participantPn && message.key.participant?.includes("@lid")) {
+                if (!lidPhoneMap.has(wbot.id)) lidPhoneMap.set(wbot.id, new Map());
+                lidPhoneMap.get(wbot.id).set(message.key.participant, participantPn);
+              }
+
+              const groupContact = await Contact.findOne({
+                where: { number: groupNumber, companyId }
+              });
+
+              if (groupContact) {
+                const groupTicket = await Ticket.findOne({
+                  where: {
+                    contactId: groupContact.id,
+                    whatsappId: wbot.id,
+                    companyId,
+                    status: ["open", "pending"] as any
+                  }
+                });
+
+                if (groupTicket) {
+                  const msgId = `badmac-${message.key.id || now}`;
+                  const existing = await Message.findByPk(msgId);
+                  if (!existing) {
+                    await CreateMessageService({
+                      messageData: {
+                        id: msgId,
+                        ticketId: groupTicket.id,
+                        contactId: groupContact.id,
+                        body: `⚠️ *Mensagem de ${senderName} não pôde ser lida (erro de criptografia).* Peça para reenviar.`,
+                        fromMe: false,
+                        read: false,
+                        mediaType: "badmac",
+                        ack: 0
+                      },
+                      companyId
+                    });
+                    logger.info(`[BadMAC] Grupo ticket #${groupTicket.id} notificado — ${senderName} (${senderNumber || "lid"})`);
+                  }
+                }
+              }
+            } catch (err) {
+              logger.error(`[BadMAC] Erro ao notificar ticket de grupo: ${err.message}`);
+            }
+          }
         }
 
         // 3. TERCEIRO: Filtra mensagens normais (protocolMessages de edição, etc)
