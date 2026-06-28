@@ -106,6 +106,14 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ type: DataType.JSONB, allowNull: true })
   businessHours: Array<{ dayOfWeek: number; enabled: boolean; open: string; close: string }>;
 
+  // Modo silencioso: após enviar o link do cardápio, responde com mensagem configurada
+  // quando o cliente manda qualquer outra mensagem (não bloqueia msgs automáticas de pedido)
+  @Column({ defaultValue: false })
+  whatsappSilentMode: boolean;
+
+  @Column({ type: DataType.TEXT, allowNull: true, defaultValue: "Olá! 😊 Não respondemos mensagens por aqui. Para fazer seu pedido, acesse nosso cardápio pelo link que enviamos." })
+  whatsappSilentMessage: string;
+
   @CreatedAt
   createdAt: Date;
 

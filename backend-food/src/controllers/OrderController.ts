@@ -148,13 +148,13 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
     where.createdAt = { [Op.between]: [from, to] };
   }
 
-  const orders = await FoodOrder.findAll({
-    where,
-    include: [FoodOrderItem],
-    order: [["createdAt", "DESC"]]
-  });
+  const [orders, config] = await Promise.all([
+    FoodOrder.findAll({ where, include: [FoodOrderItem], order: [["createdAt", "DESC"]] }),
+    FoodRestaurantConfig.findOne({ where: { companyId }, attributes: ["restaurantName"] }),
+  ]);
 
-  return res.json(orders);
+  const restaurantName = config?.restaurantName || "";
+  return res.json(orders.map(o => ({ ...o.toJSON(), restaurantName })));
 };
 
 // DELETE /api/food/orders  ?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD

@@ -76,6 +76,8 @@ const SettingsPage = () => {
     closedMessage: "Olá! No momento estamos fechados. Em breve voltamos. 😊",
     divulgationMessage: "",
     businessHours: null,
+    whatsappSilentMode: false,
+    whatsappSilentMessage: "Olá! 😊 Não respondemos mensagens por aqui. Para fazer seu pedido, acesse nosso cardápio pelo link que enviamos.",
   });
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -575,6 +577,35 @@ const SettingsPage = () => {
             </Grid>
           ))}
         </Grid>
+        <Divider style={{ margin: "16px 0" }} />
+        <Typography variant="subtitle1" className={classes.title}>Modo Silencioso (WhatsApp)</Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+          Quando ativado, se o cliente enviar uma mensagem após receber o link do cardápio, o bot responde automaticamente com a mensagem abaixo — avisando que não atendemos por WhatsApp. As mensagens automáticas de pedido (confirmado, em preparo, etc.) continuam sendo enviadas normalmente.
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={!!config.whatsappSilentMode}
+              onChange={e => setConfig(c => ({ ...c, whatsappSilentMode: e.target.checked }))}
+              color="primary"
+            />
+          }
+          label="Ativar modo silencioso"
+        />
+        {config.whatsappSilentMode && (
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            size="small"
+            style={{ marginTop: 12 }}
+            label="Mensagem enviada ao cliente"
+            value={config.whatsappSilentMessage || ""}
+            onChange={e => setConfig(c => ({ ...c, whatsappSilentMessage: e.target.value }))}
+            helperText="Enviada toda vez que o cliente mandar uma mensagem avulsa pelo WhatsApp."
+          />
+        )}
         <Box mt={2}><Button variant="contained" color="primary" onClick={saveConfig}>Salvar</Button></Box>
       </Paper>
 

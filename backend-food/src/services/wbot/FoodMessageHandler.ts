@@ -201,8 +201,33 @@ export const handleFoodMessage = async (
       await conversation.update({ greetedAt: null });
     }
 
-    // Se já saudou antes, não envia novamente
-    if (conversation.greetedAt) return;
+    // Se já saudou antes: verifica modo silencioso
+    if (conversation.greetedAt) {
+      // Modo silencioso: responde com mensagem configurada informando que não atende por aqui
+      if (config.whatsappSilentMode && config.whatsappSilentMessage) {
+        try {
+          await wbot.sendMessage(jid, { text: config.whatsappSilentMessage });
+          const now = new Date();
+          const savedSilent = await FoodMessage.create({
+            conversationId: conversation.id,
+            fromMe: true,
+            body: config.whatsappSilentMessage,
+            timestamp: now,
+          });
+          await conversation.update({ lastMessage: config.whatsappSilentMessage, lastMessageAt: now });
+          try {
+            const io = getIO();
+            io.to(`food-company-${whatsapp.companyId}`).emit("food:conversation:message", {
+              conversationId: conversation.id,
+              message: savedSilent,
+            });
+          } catch { /* socket pode não estar pronto */ }
+        } catch (err) {
+          console.error("[FoodMessageHandler] Erro ao enviar mensagem silent mode:", err);
+        }
+      }
+      return;
+    }
 
     // Gera token de sessão e persiste no banco (sobrevive a restarts)
     const sessionToken = uuidv4();

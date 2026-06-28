@@ -98,7 +98,7 @@ const printOrder = (order) => {
       .total-row td { font-size: 15px; font-weight: bold; padding-top: 8px; }
     </style>
   </head><body>
-    <h2>Na Chapa Lanches & Acai</h2>
+    <h2>${order.restaurantName || "Pedido"}</h2>
     <p class="center">Pedido #${order.id} — ${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
     <div class="divider"></div>
     <p><strong>Cliente:</strong> ${order.customerName || "—"}</p>
@@ -258,6 +258,13 @@ const OrdersPage = () => {
                         ))}
                       </Box>
                     )}
+                    {order.notes && (
+                      <Box mt={0.5} p={0.5} style={{ background: "#fff8e1", borderRadius: 4, borderLeft: "3px solid #ffc107" }}>
+                        <Typography variant="caption" display="block" style={{ color: "#795548" }}>
+                          📝 {order.notes}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box mt={1} display="flex" alignItems="center" style={{ gap: 4 }}>
                       <Tooltip title="Ver endereço">
                         <IconButton size="small" onClick={() => setAddressDialog({ open: true, order })}>
@@ -340,6 +347,11 @@ const OrdersPage = () => {
                 <Typography variant="body2"><strong>Complemento:</strong> {addressDialog.order.customerAddressComplement}</Typography>
               )}
               <Typography variant="body2"><strong>Bairro:</strong> {addressDialog.order?.customerNeighborhood || "—"}</Typography>
+            </Box>
+          )}
+          {addressDialog.order?.notes && (
+            <Box mt={1} p={1} style={{ background: "#fff8e1", borderRadius: 4, borderLeft: "3px solid #ffc107" }}>
+              <Typography variant="body2"><strong>📝 Observações:</strong> {addressDialog.order.notes}</Typography>
             </Box>
           )}
         </DialogContent>
