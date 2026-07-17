@@ -52,6 +52,8 @@ const CompaniesPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [dueDate, setDueDate] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (!user.super) return;
@@ -89,6 +91,8 @@ const CompaniesPage = () => {
   const handleEditOpen = (company) => {
     setSelected(company);
     setDueDate(company.dueDate ? moment(company.dueDate).format("YYYY-MM-DD") : "");
+    setName(company.name || "");
+    setEmail(company.email || "");
     setEditOpen(true);
   };
 
@@ -99,8 +103,8 @@ const CompaniesPage = () => {
 
   const handleSave = async () => {
     try {
-      await update({ ...selected, dueDate, status: true });
-      toast.success("Vencimento atualizado com sucesso!");
+      await update({ ...selected, dueDate, name, email, status: true });
+      toast.success("Empresa atualizada com sucesso!");
       handleEditClose();
       fetchCompanies();
     } catch (e) {
@@ -180,9 +184,26 @@ const CompaniesPage = () => {
 
       <Dialog open={editOpen} onClose={handleEditClose} maxWidth="xs" fullWidth>
         <DialogTitle>
-          Editar Vencimento — {selected?.name}
+          Editar Empresa — {selected?.name}
         </DialogTitle>
         <DialogContent>
+          <TextField
+            label="Nome"
+            fullWidth
+            variant="outlined"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ marginTop: 8 }}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ marginTop: 16 }}
+          />
           <TextField
             label="Nova data de vencimento"
             type="date"
@@ -191,7 +212,7 @@ const CompaniesPage = () => {
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 16 }}
           />
         </DialogContent>
         <DialogActions>
