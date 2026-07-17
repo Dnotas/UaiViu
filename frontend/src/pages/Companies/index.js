@@ -20,8 +20,10 @@ import {
   CircularProgress,
 } from "@material-ui/core";
 import EditIcon from "@material-ui/icons/Edit";
+import PersonIcon from "@material-ui/icons/Person";
 import moment from "moment";
 import { toast } from "react-toastify";
+import { head, isArray } from "lodash";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -30,6 +32,8 @@ import Title from "../../components/Title";
 import toastError from "../../errors/toastError";
 import useCompanies from "../../hooks/useCompanies";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import ModalUsers from "../../components/ModalUsers";
+import api from "../../services/api";
 
 const useStyles = makeStyles((theme) => ({
   root: { padding: theme.spacing(2) },
@@ -54,6 +58,9 @@ const CompaniesPage = () => {
   const [dueDate, setDueDate] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [firstUserId, setFirstUserId] = useState(null);
+  const [userCompanyId, setUserCompanyId] = useState(null);
 
   useEffect(() => {
     if (!user.super) return;
@@ -112,6 +119,30 @@ const CompaniesPage = () => {
     }
   };
 
+  const handleOpenUserModal = async (company) => {
+    try {
+      const { data } = await api.get("/users/list", {
+        params: { companyId: company.id },
+      });
+      if (isArray(data) && data.length) {
+        setFirstUserId(head(data).id);
+        setUserCompanyId(company.id);
+        setUserModalOpen(true);
+      } else {
+        toast.error("Nenhum usuário de login encontrado para essa empresa.");
+      }
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  const handleCloseUserModal = () => {
+    setUserModalOpen(false);
+    setFirstUserId(null);
+    setUserCompanyId(null);
+    fetchCompanies();
+  };
+
   if (!user.super) {
     return (
       <MainContainer>
@@ -168,9 +199,14 @@ const CompaniesPage = () => {
                     </TableCell>
                     <TableCell align="center">{renderChip(company)}</TableCell>
                     <TableCell align="center">
-                      <Tooltip title="Editar vencimento">
+                      <Tooltip title="Editar empresa">
                         <IconButton size="small" onClick={() => handleEditOpen(company)}>
                           <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Editar usuário de login">
+                        <IconButton size="small" onClick={() => handleOpenUserModal(company)}>
+                          <PersonIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -224,6 +260,13 @@ const CompaniesPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ModalUsers
+        userId={firstUserId}
+        companyId={userCompanyId}
+        open={userModalOpen}
+        onClose={handleCloseUserModal}
+      />
     </MainContainer>
   );
 };
