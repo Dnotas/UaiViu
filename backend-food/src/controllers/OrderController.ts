@@ -8,6 +8,7 @@ import FoodWhatsapp from "../models/FoodWhatsapp";
 import FoodConversation from "../models/FoodConversation";
 import FoodMessage from "../models/FoodMessage";
 import FoodMenuItem from "../models/FoodMenuItem";
+import FoodItemComplement from "../models/FoodItemComplement";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import { getWbot } from "../libs/wbotFood";
@@ -27,6 +28,19 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): nu
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+/** Extra dos complementos: os N mais baratos (expandidos por qty) são grátis, o resto paga o preço cheio */
+const calcComplementsExtra = (
+  selected: { price: number; qty: number }[],
+  freeLimit: number | null
+): number => {
+  const flat = selected.flatMap(c => Array(c.qty).fill(c.price));
+  if (!freeLimit || freeLimit <= 0) {
+    return flat.reduce((sum, p) => sum + p, 0);
+  }
+  const sorted = [...flat].sort((a, b) => a - b);
+  return sorted.slice(freeLimit).reduce((sum, p) => sum + p, 0);
 };
 
 const resolveJid = async (wbot: ReturnType<typeof getWbot>, rawPhone: string): Promise<string> => {
@@ -377,13 +391,37 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     }
   }
 
+  // Busca todos os complementos válidos dos itens do pedido, de uma vez
+  const allComplements = await FoodItemComplement.findAll({
+    where: { menuItemId: { [Op.in]: menuItemIds }, active: true },
+  });
+  const complementsByItem = new Map<number, Map<number, FoodItemComplement>>();
+  for (const c of allComplements) {
+    if (!complementsByItem.has(c.menuItemId)) complementsByItem.set(c.menuItemId, new Map());
+    complementsByItem.get(c.menuItemId)!.set(c.id, c);
+  }
+
   // Recalcula subtotal com preços do banco (ignora unitPrice do cliente)
   const validatedItems = items.map((i: any) => {
     const dbItem = dbItemMap.get(Number(i.menuItemId))!;
+    const availableComplements = complementsByItem.get(dbItem.id) || new Map();
+
+    const selectedComplements = (i.complements || [])
+      .map((c: any) => {
+        const dbComplement = availableComplements.get(Number(c.id));
+        if (!dbComplement) return null;
+        const qty = Math.max(1, Number(c.qty) || 1);
+        return { price: Number(dbComplement.price), qty };
+      })
+      .filter((c: any) => c !== null);
+
+    const complementsExtra = calcComplementsExtra(selectedComplements, dbItem.freeComplementsLimit);
+    const unitPrice = Number(dbItem.price) + complementsExtra;
+
     return {
       menuItemId: dbItem.id,
       name: i.name, // nome com complementos (ex: "Pizza (mussarela, tomate)")
-      unitPrice: Number(dbItem.price),
+      unitPrice,
       quantity: Number(i.quantity) || 1,
       notes: i.notes || null,
     };

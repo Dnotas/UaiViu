@@ -548,6 +548,7 @@ const PublicMenu = () => {
           unitPrice: i.unitPrice,
           quantity: i.quantity,
           notes: i.notes,
+          complements: (i.complements || []).map(c => ({ id: c.id, qty: c.qty || 1 })),
         })),
         session: sessionToken || undefined,
         // Coordenadas para cálculo de frete server-side (quando deliveryByDistance ativo)
