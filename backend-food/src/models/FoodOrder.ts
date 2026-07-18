@@ -37,6 +37,9 @@ class FoodOrder extends Model<FoodOrder> {
   @Column
   customerNeighborhood: string;
 
+  @Column({ allowNull: true })
+  customerCity: string;
+
   // Valores
   @Column({ type: DataType.DECIMAL(10, 2) })
   subtotal: number;

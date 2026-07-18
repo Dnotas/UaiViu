@@ -43,6 +43,42 @@ const calcComplementsExtra = (
   return sorted.slice(freeLimit).reduce((sum, p) => sum + p, 0);
 };
 
+/** Remove acentos e normaliza pra comparação de cidade/bairro (case/acento-insensível) */
+const normalizeLocation = (s: string | null | undefined): string =>
+  (s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[áàâãä]/g, "a")
+    .replace(/[éèêë]/g, "e")
+    .replace(/[íìîï]/g, "i")
+    .replace(/[óòôõö]/g, "o")
+    .replace(/[úùûü]/g, "u")
+    .replace(/ç/g, "c");
+
+/**
+ * Prioridade: cidade+bairro exato > cidade (bairro vazio = qualquer bairro da cidade).
+ * Retorna null se não houver nenhuma taxa fixa cadastrada pra essa cidade.
+ */
+const resolveLocationRate = (
+  city: string | null | undefined,
+  neighborhood: string | null | undefined,
+  rates: Array<{ city: string; neighborhood: string | null; fee: number; prepMinutes: number | null }> | null | undefined
+): { fee: number; prepMinutes: number | null } | null => {
+  const nCity = normalizeLocation(city);
+  if (!nCity || !rates?.length) return null;
+  const nNeighborhood = normalizeLocation(neighborhood);
+
+  const exact = rates.find(
+    r => normalizeLocation(r.city) === nCity && r.neighborhood && normalizeLocation(r.neighborhood) === nNeighborhood
+  );
+  if (exact) return { fee: Number(exact.fee), prepMinutes: exact.prepMinutes ?? null };
+
+  const cityWide = rates.find(r => normalizeLocation(r.city) === nCity && !r.neighborhood);
+  if (cityWide) return { fee: Number(cityWide.fee), prepMinutes: cityWide.prepMinutes ?? null };
+
+  return null;
+};
+
 const resolveJid = async (wbot: ReturnType<typeof getWbot>, rawPhone: string): Promise<string> => {
   let phone = rawPhone.replace(/\D/g, "");
   if (!phone.startsWith("55")) phone = `55${phone}`;
@@ -298,6 +334,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     customerAddressNumber,
     customerAddressComplement,
     customerNeighborhood,
+    customerCity,
     paymentMethod,
     orderType,
     notes,
@@ -439,8 +476,18 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
   );
 
   // ── [P1] Calcula taxa de entrega server-side ─────────────────────────────────
+  // Prioridade: taxa fixa por cidade+bairro > taxa fixa por cidade > tabela por distância (km) > taxa fixa geral
   let deliveryFee = 0;
-  if (orderType === "delivery") {
+  let estimatedMinutes = config.estimatedDeliveryMinutes;
+  const locationRate = orderType === "delivery"
+    ? resolveLocationRate(customerCity, customerNeighborhood, config.deliveryRatesByLocation)
+    : null;
+
+  if (orderType === "delivery" && locationRate) {
+    deliveryFee = locationRate.fee;
+    if (locationRate.prepMinutes != null) estimatedMinutes = locationRate.prepMinutes;
+    console.log(`[Order] Frete por cidade/bairro (${customerCity} / ${customerNeighborhood}): R$ ${deliveryFee}`);
+  } else if (orderType === "delivery") {
     if (config.deliveryByDistance) {
       if (
         customerLat != null && customerLng != null &&
@@ -528,6 +575,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       customerAddressNumber,
       customerAddressComplement,
       customerNeighborhood,
+      customerCity,
       subtotal,
       deliveryFee,
       discountAmount,
@@ -571,6 +619,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
           customerAddressNumber: customerAddressNumber || undefined,
           customerAddressComplement: customerAddressComplement || undefined,
           customerNeighborhood: customerNeighborhood || undefined,
+          customerCity: customerCity || undefined,
         }, { conflictFields: ["companyId", "phone"], transaction: t } as any);
       } catch (e) {
         console.warn("[Order] Erro ao salvar dados do cliente:", e);
@@ -615,7 +664,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
     orderId: order.id,
     total: order.total,
     status: order.status,
-    estimatedMinutes: config.estimatedDeliveryMinutes
+    estimatedMinutes
   });
 };
 

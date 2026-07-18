@@ -24,6 +24,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
     msgOrderOnTheWay, msgOrderReadyForPickup, msgOrderDelivered, deliveryEnabled, pickupEnabled,
     deliveryFee, estimatedDeliveryMinutes, restaurantName, primaryColor,
     restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
+    deliveryRatesByLocation,
     busyMode, storeStatus, closedMessage, divulgationMessage, businessHours,
   } = req.body;
 
@@ -44,6 +45,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
       deliveryRates: deliveryRates || [],
+      deliveryRatesByLocation: deliveryRatesByLocation || [],
       busyMode: busyMode ?? false,
       storeStatus: storeStatus || "open",
       closedMessage: closedMessage || null,
@@ -68,6 +70,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       estimatedDeliveryMinutes, restaurantName, primaryColor,
       restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance,
       deliveryRates: deliveryRates || config.deliveryRates || [],
+      deliveryRatesByLocation: deliveryRatesByLocation || config.deliveryRatesByLocation || [],
       busyMode: busyMode ?? config.busyMode,
       storeStatus: newStatus,
       closedMessage: closedMessage !== undefined ? closedMessage : config.closedMessage,

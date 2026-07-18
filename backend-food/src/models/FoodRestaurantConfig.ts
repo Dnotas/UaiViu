@@ -69,6 +69,11 @@ class FoodRestaurantConfig extends Model<FoodRestaurantConfig> {
   @Column({ type: DataType.JSONB, allowNull: true })
   deliveryRates: Array<{ maxKm: number; fee: number; prepMinutes: number }>;
 
+  // Taxas fixas por cidade/bairro, checadas ANTES da tabela por distância.
+  // [{ city: string, neighborhood: string|null (vazio = qualquer bairro da cidade), fee: number, prepMinutes: number|null }]
+  @Column({ type: DataType.JSONB, allowNull: true })
+  deliveryRatesByLocation: Array<{ city: string; neighborhood: string | null; fee: number; prepMinutes: number | null }>;
+
   // Modo ocupado: exibe aviso no cardápio e pode bloquear novos pedidos
   @Column({ defaultValue: false })
   busyMode: boolean;

@@ -124,6 +124,7 @@ router.get("/public/:slug/menu", async (req, res) => {
       restaurantLat: config.restaurantLat || null,
       restaurantLng: config.restaurantLng || null,
       deliveryRates: config.deliveryRates || [],
+      deliveryRatesByLocation: config.deliveryRatesByLocation || [],
       busyMode: config.busyMode || false,
       storeStatus: config.storeStatus || "open",
       closedMessage: config.closedMessage || null,
@@ -156,6 +157,7 @@ router.get("/public/:slug/customer/:phone", async (req, res) => {
     customerAddressNumber: customer.customerAddressNumber,
     customerAddressComplement: customer.customerAddressComplement,
     customerNeighborhood: customer.customerNeighborhood,
+    customerCity: customer.customerCity,
   });
 });
 

@@ -70,7 +70,7 @@ const SettingsPage = () => {
     deliveryEnabled: true, pickupEnabled: false, deliveryFee: 0, estimatedDeliveryMinutes: 30,
     restaurantName: "", primaryColor: "#FF5722", logoUrl: "", bannerImageUrl: "",
     restaurantAddress: "", restaurantLat: null, restaurantLng: null,
-    deliveryByDistance: false, deliveryRates: [],
+    deliveryByDistance: false, deliveryRates: [], deliveryRatesByLocation: [],
     busyMode: false,
     storeStatus: "open",
     closedMessage: "Olá! No momento estamos fechados. Em breve voltamos. 😊",
@@ -106,7 +106,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     api.get("/api/food/restaurant-config").then(({ data }) => {
-      if (data) setConfig(c => ({ ...c, ...data, deliveryRates: data.deliveryRates || [] }));
+      if (data) setConfig(c => ({ ...c, ...data, deliveryRates: data.deliveryRates || [], deliveryRatesByLocation: data.deliveryRatesByLocation || [] }));
       setLoadingConfig(false);
     }).catch(() => setLoadingConfig(false));
 
@@ -264,6 +264,26 @@ const SettingsPage = () => {
 
   const removeRate = (idx) => {
     setConfig(c => ({ ...c, deliveryRates: (c.deliveryRates || []).filter((_, i) => i !== idx) }));
+  };
+
+  // ── Tabela de taxas fixas por cidade/bairro (prioridade sobre a de distância) ──
+  const addLocationRate = () => {
+    setConfig(c => ({
+      ...c,
+      deliveryRatesByLocation: [...(c.deliveryRatesByLocation || []), { city: "", neighborhood: "", fee: "", prepMinutes: "" }],
+    }));
+  };
+
+  const updateLocationRate = (idx, field, value) => {
+    setConfig(c => {
+      const updated = [...(c.deliveryRatesByLocation || [])];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...c, deliveryRatesByLocation: updated };
+    });
+  };
+
+  const removeLocationRate = (idx) => {
+    setConfig(c => ({ ...c, deliveryRatesByLocation: (c.deliveryRatesByLocation || []).filter((_, i) => i !== idx) }));
   };
 
   const uploadImage = async (file, field, setLoading) => {
@@ -558,6 +578,81 @@ const SettingsPage = () => {
               </Button>
             </Grid>
           )}
+
+          <Grid item xs={12}>
+            <Divider style={{ margin: "8px 0" }} />
+            <Typography variant="subtitle2" gutterBottom>
+              Tabela de frete por cidade/bairro
+            </Typography>
+            <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+              Taxa fixa por cidade e bairro — tem prioridade sobre a tabela por distância acima. Deixe o bairro em branco pra aplicar em qualquer bairro dessa cidade. Ordem de prioridade: cidade+bairro exato, depois cidade, depois cai pra tabela por distância (km).
+            </Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Cidade</TableCell>
+                  <TableCell>Bairro (opcional)</TableCell>
+                  <TableCell>Tempo de preparo (min)</TableCell>
+                  <TableCell>Taxa (R$)</TableCell>
+                  <TableCell style={{ width: 40 }}></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(config.deliveryRatesByLocation || []).map((rate, idx) => (
+                  <TableRow key={idx} className={classes.rateRow}>
+                    <TableCell>
+                      <TextField
+                        size="small"
+                        value={rate.city}
+                        onChange={e => updateLocationRate(idx, "city", e.target.value)}
+                        placeholder="Ex: Vespasiano"
+                        style={{ width: 140 }}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        size="small"
+                        value={rate.neighborhood}
+                        onChange={e => updateLocationRate(idx, "neighborhood", e.target.value)}
+                        placeholder="Qualquer bairro"
+                        style={{ width: 140 }}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        size="small" type="number"
+                        value={rate.prepMinutes}
+                        onChange={e => updateLocationRate(idx, "prepMinutes", e.target.value)}
+                        inputProps={{ min: 0, step: 5 }}
+                        style={{ width: 90 }}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        size="small" type="number"
+                        value={rate.fee}
+                        onChange={e => updateLocationRate(idx, "fee", e.target.value)}
+                        inputProps={{ min: 0, step: 0.5 }}
+                        style={{ width: 90 }}
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <IconButton size="small" onClick={() => removeLocationRate(idx)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Button size="small" startIcon={<AddIcon />} onClick={addLocationRate} style={{ marginTop: 8 }}>
+              Adicionar cidade/bairro
+            </Button>
+          </Grid>
         </Grid>
 
         <Divider style={{ margin: "16px 0" }} />

@@ -34,6 +34,9 @@ class FoodCustomer extends Model<FoodCustomer> {
   @Column({ allowNull: true })
   customerNeighborhood: string;
 
+  @Column({ allowNull: true })
+  customerCity: string;
+
   @CreatedAt
   createdAt: Date;
 

@@ -63,7 +63,7 @@ const PublicMenu = () => {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [cashSubMethod, setCashSubMethod] = useState("cash_money"); // cash_money | cash_pix | cash_card
   const [trocoAmount, setTrocoAmount] = useState("");
-  const [form, setForm] = useState({ customerName: "", customerPhone: "", cep: "", customerAddress: "", customerAddressNumber: "", customerAddressComplement: "", customerNeighborhood: "", notes: "" });
+  const [form, setForm] = useState({ customerName: "", customerPhone: "", cep: "", customerAddress: "", customerAddressNumber: "", customerAddressComplement: "", customerNeighborhood: "", customerCity: "", notes: "" });
   const [ordering, setOrdering] = useState(false);
   const [orderDone, setOrderDone] = useState(null);
   const [cepLoading, setCepLoading] = useState(false);
@@ -83,6 +83,8 @@ const PublicMenu = () => {
   // cidade/UF do CEP — usados na geocodificação do endereço do cliente
   const [addressCity, setAddressCity] = useState("");
   const [addressUf, setAddressUf] = useState("");
+  // true quando o frete veio da tabela por cidade/bairro (não da tabela por km)
+  const [usedLocationRate, setUsedLocationRate] = useState(false);
 
   // Cupom de desconto
   const [couponInput, setCouponInput] = useState("");
@@ -145,6 +147,7 @@ const PublicMenu = () => {
               customerAddressNumber: customer.customerAddressNumber || f.customerAddressNumber,
               customerAddressComplement: customer.customerAddressComplement || f.customerAddressComplement,
               customerNeighborhood: customer.customerNeighborhood || f.customerNeighborhood,
+              customerCity: customer.customerCity || f.customerCity,
             }));
             // Calcula frete automaticamente se tiver CEP salvo
             if (customer.cep) {
@@ -157,6 +160,7 @@ const PublicMenu = () => {
                     const uf = cepRes.data.uf || "";
                     setAddressCity(city);
                     setAddressUf(uf);
+                    setForm(f => ({ ...f, customerCity: f.customerCity || city }));
                     const street = customer.customerAddress || cepRes.data.logradouro || "";
                     if (street) calculateDeliveryFee(street, city, uf);
                   }
@@ -266,6 +270,7 @@ const PublicMenu = () => {
             customerAddressNumber: data.customerAddressNumber || f.customerAddressNumber,
             customerAddressComplement: data.customerAddressComplement || f.customerAddressComplement,
             customerNeighborhood: data.customerNeighborhood || f.customerNeighborhood,
+            customerCity: data.customerCity || f.customerCity,
           }));
           setCustomerFound(true);
           // Calcula frete automaticamente quando endereço é preenchido via cache
@@ -279,6 +284,7 @@ const PublicMenu = () => {
                   const uf = cepRes.data.uf || "";
                   setAddressCity(city);
                   setAddressUf(uf);
+                  setForm(f => ({ ...f, customerCity: f.customerCity || city }));
                   const street = data.customerAddress || cepRes.data.logradouro || "";
                   if (street) calculateDeliveryFee(street, city, uf);
                 }
@@ -301,7 +307,7 @@ const PublicMenu = () => {
           const street = res.data.logradouro || "";
           const city = res.data.localidade || "";
           const uf = res.data.uf || "";
-          setForm(f => ({ ...f, cep: value, customerAddress: street, customerNeighborhood: res.data.bairro || "" }));
+          setForm(f => ({ ...f, cep: value, customerAddress: street, customerNeighborhood: res.data.bairro || "", customerCity: city }));
           setAddressCity(city);
           setAddressUf(uf);
           setCalculatedFee(null);
@@ -318,6 +324,35 @@ const PublicMenu = () => {
       } catch { toast.error("Erro ao buscar CEP"); }
       finally { setCepLoading(false); }
     }
+  };
+
+  // Remove acentos/caixa pra comparar cidade/bairro (mesma lógica do backend)
+  const normalizeLocation = (s) =>
+    (s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[áàâãä]/g, "a")
+      .replace(/[éèêë]/g, "e")
+      .replace(/[íìîï]/g, "i")
+      .replace(/[óòôõö]/g, "o")
+      .replace(/[úùûü]/g, "u")
+      .replace(/ç/g, "c");
+
+  // Prioridade: cidade+bairro exato > cidade (bairro vazio = qualquer bairro da cidade)
+  const resolveLocationRate = (city, neighborhood, rates) => {
+    const nCity = normalizeLocation(city);
+    if (!nCity || !rates?.length) return null;
+    const nNeighborhood = normalizeLocation(neighborhood);
+
+    const exact = rates.find(
+      r => normalizeLocation(r.city) === nCity && r.neighborhood && normalizeLocation(r.neighborhood) === nNeighborhood
+    );
+    if (exact) return { fee: parseFloat(exact.fee), prepMinutes: exact.prepMinutes ? parseInt(exact.prepMinutes, 10) : null };
+
+    const cityWide = rates.find(r => normalizeLocation(r.city) === nCity && !r.neighborhood);
+    if (cityWide) return { fee: parseFloat(cityWide.fee), prepMinutes: cityWide.prepMinutes ? parseInt(cityWide.prepMinutes, 10) : null };
+
+    return null;
   };
 
   // Haversine em km
@@ -418,12 +453,28 @@ const PublicMenu = () => {
 
   // Aceita overrides para quando chamado diretamente do CEP (setState ainda não atualizou)
   const calculateDeliveryFee = async (overrideStreet = null, overrideCity = null, overrideUf = null) => {
+    const city = overrideCity ?? addressCity;
+    const uf = overrideUf ?? addressUf;
+
+    // Prioridade 1: taxa fixa por cidade+bairro/cidade — não depende de geocodificação
+    const cityForMatch = form.customerCity?.trim() || city;
+    const locationRate = resolveLocationRate(cityForMatch, form.customerNeighborhood, restaurant?.deliveryRatesByLocation);
+    if (locationRate) {
+      setUsedLocationRate(true);
+      setDeliveryOutOfRange(false);
+      setDeliveryCalcError(false);
+      setDeliveryDistance(null);
+      setCustomerCoords(null);
+      setCalculatedFee(locationRate.fee);
+      setCalculatedPrepMinutes(locationRate.prepMinutes ?? restaurant?.estimatedMinutes ?? null);
+      return { fee: locationRate.fee, coords: null };
+    }
+    setUsedLocationRate(false);
+
     if (!restaurant?.deliveryByDistance) return;
     if (!restaurant.restaurantLat || !restaurant.restaurantLng) return;
 
     const street = overrideStreet ?? form.customerAddress;
-    const city = overrideCity ?? addressCity;
-    const uf = overrideUf ?? addressUf;
 
     if (!street) return;
 
@@ -475,7 +526,7 @@ const PublicMenu = () => {
     if (!couponInput.trim()) return;
     const currentSubtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const currentDeliveryFee = orderType === "delivery"
-      ? (restaurant?.deliveryByDistance ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
+      ? ((usedLocationRate || restaurant?.deliveryByDistance) ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
       : 0;
     setCouponLoading(true);
     try {
@@ -499,7 +550,7 @@ const PublicMenu = () => {
 
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const deliveryFee = orderType === "delivery"
-    ? (restaurant?.deliveryByDistance ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
+    ? ((usedLocationRate || restaurant?.deliveryByDistance) ? (calculatedFee ?? 0) : parseFloat(restaurant?.deliveryFee || 0))
     : 0;
   const discountAmount = appliedCoupon
     ? (appliedCoupon.discountType === "percent"
@@ -516,9 +567,10 @@ const PublicMenu = () => {
     if (orderType === "delivery" && !form.customerAddress) return toast.error("Informe o endereco");
     if (orderType === "delivery" && !form.customerAddressNumber) return toast.error("Informe o numero da casa");
     if (orderType === "delivery" && !form.customerNeighborhood?.trim()) return toast.error("Informe o bairro");
-    // Se frete por distância ainda não calculado, tenta calcular agora e prossegue direto
+    if (orderType === "delivery" && !form.customerCity?.trim()) return toast.error("Informe a cidade");
+    // Se frete ainda não calculado (por cidade/bairro ou por distância), tenta calcular agora e prossegue direto
     let resolvedCoords = customerCoords;
-    if (orderType === "delivery" && restaurant?.deliveryByDistance && calculatedFee === null) {
+    if (orderType === "delivery" && (restaurant?.deliveryByDistance || restaurant?.deliveryRatesByLocation?.length) && calculatedFee === null) {
       const result = await calculateDeliveryFee();
       if (!result) {
         return; // erro já exibido dentro de calculateDeliveryFee
@@ -867,8 +919,9 @@ const PublicMenu = () => {
                 <Grid item xs={8}><TextField fullWidth size="small" margin="dense" label="Complemento" value={form.customerAddressComplement} onChange={e => setForm(f => ({ ...f, customerAddressComplement: e.target.value }))} /></Grid>
               </Grid>
               <TextField fullWidth size="small" margin="dense" label="Bairro *" required value={form.customerNeighborhood} onChange={e => setForm(f => ({ ...f, customerNeighborhood: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
+              <TextField fullWidth size="small" margin="dense" label="Cidade *" required value={form.customerCity} onChange={e => setForm(f => ({ ...f, customerCity: e.target.value }))} onBlur={() => calculateDeliveryFee()} />
 
-              {restaurant?.deliveryByDistance && (
+              {(restaurant?.deliveryByDistance || restaurant?.deliveryRatesByLocation?.length > 0) && (
                 <Box mt={0.5} mb={0.5} minHeight={20}>
                   {deliveryCalcLoading && (
                     <Typography variant="caption" color="textSecondary">
@@ -882,7 +935,7 @@ const PublicMenu = () => {
                   )}
                   {!deliveryCalcLoading && calculatedFee !== null && !deliveryOutOfRange && (
                     <Typography variant="caption" style={{ color: "green", display: "block" }}>
-                      {deliveryDistance?.toFixed(1)} km — Frete: R$ {calculatedFee.toFixed(2)}
+                      {usedLocationRate ? "" : `${deliveryDistance?.toFixed(1)} km — `}Frete: R$ {calculatedFee.toFixed(2)}
                       {calculatedPrepMinutes ? ` — aprox. ${calculatedPrepMinutes} min` : ""}
                     </Typography>
                   )}
