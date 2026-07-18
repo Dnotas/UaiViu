@@ -36,6 +36,9 @@ class FoodOrderItem extends Model<FoodOrderItem> {
   @Column({ type: DataType.TEXT })
   notes: string;
 
+  @Column({ type: DataType.TEXT })
+  complementsText: string;
+
   @CreatedAt
   createdAt: Date;
 

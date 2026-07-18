@@ -411,16 +411,22 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
         const dbComplement = availableComplements.get(Number(c.id));
         if (!dbComplement) return null;
         const qty = Math.max(1, Number(c.qty) || 1);
-        return { price: Number(dbComplement.price), qty };
+        return { name: dbComplement.name, price: Number(dbComplement.price), qty };
       })
       .filter((c: any) => c !== null);
 
     const complementsExtra = calcComplementsExtra(selectedComplements, dbItem.freeComplementsLimit);
     const unitPrice = Number(dbItem.price) + complementsExtra;
 
+    // Texto dos acréscimos vindo do banco (não confia no nome decorado que o cliente manda)
+    const complementsText = selectedComplements.length
+      ? selectedComplements.map((c: any) => (c.qty > 1 ? `${c.qty}x ${c.name}` : c.name)).join(", ")
+      : null;
+
     return {
       menuItemId: dbItem.id,
-      name: i.name, // nome com complementos (ex: "Pizza (mussarela, tomate)")
+      name: dbItem.name,
+      complementsText,
       unitPrice,
       quantity: Number(i.quantity) || 1,
       notes: i.notes || null,
@@ -544,6 +550,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
           orderId: order.id,
           menuItemId: i.menuItemId,
           name: i.name,
+          complementsText: i.complementsText,
           unitPrice: i.unitPrice,
           quantity: i.quantity,
           total: i.unitPrice * i.quantity,
@@ -581,7 +588,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito",
     };
     const itemLines = validatedItems
-      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}${i.notes ? `\n    obs: ${i.notes}` : ""}`)
+      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}${i.complementsText ? `\n    + ${i.complementsText}` : ""}${i.notes ? `\n    obs: ${i.notes}` : ""}`)
       .join("\n");
     const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
     const discountLine = discountAmount > 0

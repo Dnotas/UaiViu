@@ -88,6 +88,7 @@ const printOrder = (order) => {
       <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
       <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
     </tr>
+    ${i.complementsText ? `<tr><td colspan="3" style="padding:0 8px">Acréscimos: ${i.complementsText}</td></tr>` : ""}
     ${i.notes ? `<tr><td colspan="3" style="padding:0 8px 6px 8px"><strong style="font-size:14px">Obs: ${i.notes}</strong></td></tr>` : ""}`
   ).join("");
 
@@ -267,8 +268,13 @@ const OrdersPage = () => {
                             <Typography variant="caption" display="block">
                               {item.quantity}x {item.name}
                             </Typography>
+                            {item.complementsText && (
+                              <Typography variant="caption" display="block" style={{ marginLeft: 8 }}>
+                                Acréscimos: {item.complementsText}
+                              </Typography>
+                            )}
                             {item.notes && (
-                              <Typography variant="caption" display="block" style={{ color: "#795548", fontWeight: "bold", marginLeft: 8 }}>
+                              <Typography variant="caption" display="block" style={{ color: "#795548", fontWeight: "bold", marginLeft: 8, fontSize: 13 }}>
                                 Obs: {item.notes}
                               </Typography>
                             )}
