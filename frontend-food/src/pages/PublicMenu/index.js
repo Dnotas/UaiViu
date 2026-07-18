@@ -356,7 +356,7 @@ const PublicMenu = () => {
     // Provedor 2: Photon (Komoot) com endereço completo
     try {
       const res = await axios.get(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1&lang=pt`,
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1`,
         { timeout: 8000 }
       );
       const feat = res.data?.features?.[0];
