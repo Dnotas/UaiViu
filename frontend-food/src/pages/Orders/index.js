@@ -140,6 +140,7 @@ const printOrder = (order) => {
   </body></html>`);
   win.document.close();
   win.focus();
+  win.addEventListener("afterprint", () => win.close());
   win.print();
 };
 
