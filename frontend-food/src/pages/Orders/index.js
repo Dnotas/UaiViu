@@ -84,9 +84,9 @@ const printOrder = (order) => {
 
   const itemsHtml = (order.items || []).map(i => `
     <tr>
-      <td style="padding:4px 8px">${i.quantity}x ${i.name}</td>
-      <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
-      <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
+      <td style="padding:4px 4px">${i.quantity}x ${i.name}</td>
+      <td style="padding:4px 2px;text-align:right;white-space:nowrap">R$&nbsp;${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
+      <td style="padding:4px 4px;text-align:right;white-space:nowrap"><strong>R$&nbsp;${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
     </tr>
     ${i.complementsText ? `<tr><td colspan="3" style="padding:0 8px">Acréscimos: ${i.complementsText}</td></tr>` : ""}
     ${i.notes ? `<tr><td colspan="3" style="padding:0 8px 6px 8px"><strong style="font-size:14px">Obs: ${i.notes}</strong></td></tr>` : ""}`
@@ -130,9 +130,9 @@ const printOrder = (order) => {
     </table>
     <div class="divider"></div>
     <table>
-      <tr><td>Subtotal</td><td style="text-align:right">R$ ${subtotal.toFixed(2)}</td></tr>
-      ${deliveryFee > 0 ? `<tr><td>Taxa de entrega</td><td style="text-align:right">R$ ${deliveryFee.toFixed(2)}</td></tr>` : ""}
-      <tr class="total-row"><td>TOTAL</td><td style="text-align:right">R$ ${parseFloat(order.total).toFixed(2)}</td></tr>
+      <tr><td>Subtotal</td><td style="text-align:right;white-space:nowrap">R$&nbsp;${subtotal.toFixed(2)}</td></tr>
+      ${deliveryFee > 0 ? `<tr><td>Taxa de entrega</td><td style="text-align:right;white-space:nowrap">R$&nbsp;${deliveryFee.toFixed(2)}</td></tr>` : ""}
+      <tr class="total-row"><td>TOTAL</td><td style="text-align:right;white-space:nowrap">R$&nbsp;${parseFloat(order.total).toFixed(2)}</td></tr>
     </table>
     ${order.notes ? `<div class="divider"></div><p><strong>Obs:</strong> ${order.notes}</p>` : ""}
     <div class="divider"></div>
