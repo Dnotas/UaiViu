@@ -63,6 +63,15 @@ const useStyles = makeStyles((theme) => ({
 
 const PAYMENT_LABEL_FULL = { cash: "Dinheiro / Pagar na entrega", cash_money: "Dinheiro na entrega", cash_pix: "PIX na entrega", cash_card: "Cartão na entrega", pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito" };
 
+// Formata telefone BR: (xx) xxxxx-xxxx (celular, 11 dígitos) ou (xx) xxxx-xxxx (fixo, 10 dígitos)
+const formatPhone = (phone) => {
+  if (!phone) return "—";
+  const digits = phone.replace(/\D/g, "").replace(/^55/, "");
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return phone;
+};
+
 const printOrder = (order) => {
   const address = order.orderType === "pickup"
     ? "Retirada no local"
@@ -75,7 +84,7 @@ const printOrder = (order) => {
 
   const itemsHtml = (order.items || []).map(i =>
     `<tr>
-      <td style="padding:4px 8px">${i.quantity}x ${i.name}${i.notes ? `<br><em style="font-size:11px">Obs: ${i.notes}</em>` : ""}</td>
+      <td style="padding:4px 8px">${i.quantity}x ${i.name}${i.notes ? `<br><strong style="font-size:11px">Obs: ${i.notes}</strong>` : ""}</td>
       <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
       <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
     </tr>`
@@ -102,7 +111,7 @@ const printOrder = (order) => {
     <p class="center">Pedido #${order.id} — ${new Date(order.createdAt).toLocaleString("pt-BR")}</p>
     <div class="divider"></div>
     <p><strong>Cliente:</strong> ${order.customerName || "—"}</p>
-    <p><strong>Telefone:</strong> ${order.customerPhone || "—"}</p>
+    <p><strong>Telefone:</strong> ${formatPhone(order.customerPhone)}</p>
     <p><strong>Endereco:</strong> ${address || "—"}</p>
     <p><strong>Pagamento:</strong> ${PAYMENT_LABEL_FULL[order.paymentMethod] || order.paymentMethod}</p>
     <div class="divider"></div>
@@ -246,7 +255,7 @@ const OrdersPage = () => {
                   <Paper key={order.id} className={classes.orderCard} elevation={2}>
                     <Typography className={classes.orderId}>#{order.id}</Typography>
                     <Typography variant="body2"><strong>{order.customerName}</strong></Typography>
-                    <Typography variant="caption">{order.customerPhone}</Typography>
+                    <Typography variant="caption">{formatPhone(order.customerPhone)}</Typography>
                     <Typography variant="body2">R$ {parseFloat(order.total).toFixed(2)}</Typography>
                     <Typography variant="caption">{PAYMENT_LABEL[order.paymentMethod] || order.paymentMethod}</Typography>
                     {order.items && (
@@ -257,7 +266,7 @@ const OrdersPage = () => {
                               {item.quantity}x {item.name}
                             </Typography>
                             {item.notes && (
-                              <Typography variant="caption" display="block" style={{ color: "#795548", fontStyle: "italic", marginLeft: 8 }}>
+                              <Typography variant="caption" display="block" style={{ color: "#795548", fontWeight: "bold", marginLeft: 8 }}>
                                 Obs: {item.notes}
                               </Typography>
                             )}
@@ -346,7 +355,7 @@ const OrdersPage = () => {
           ) : (
             <Box>
               <Typography variant="body2"><strong>Cliente:</strong> {addressDialog.order?.customerName || "—"}</Typography>
-              <Typography variant="body2"><strong>Telefone:</strong> {addressDialog.order?.customerPhone || "—"}</Typography>
+              <Typography variant="body2"><strong>Telefone:</strong> {formatPhone(addressDialog.order?.customerPhone)}</Typography>
               <Divider style={{ margin: "8px 0" }} />
               <Typography variant="body2"><strong>Rua:</strong> {addressDialog.order?.customerAddress || "—"}</Typography>
               <Typography variant="body2"><strong>Número:</strong> {addressDialog.order?.customerAddressNumber || "—"}</Typography>
