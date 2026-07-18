@@ -63,12 +63,13 @@ const useStyles = makeStyles((theme) => ({
 
 const PAYMENT_LABEL_FULL = { cash: "Dinheiro / Pagar na entrega", cash_money: "Dinheiro na entrega", cash_pix: "PIX na entrega", cash_card: "Cartão na entrega", pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito" };
 
-// Formata telefone BR: (xx) xxxxx-xxxx (celular, 11 dígitos) ou (xx) xxxx-xxxx (fixo, 10 dígitos)
+// Formata telefone BR: (xx) xxxxx-xxxx. O WhatsApp guarda o celular sem o 9
+// (10 dígitos) -- aqui é só cosmético pra exibir o número certo de ligar.
 const formatPhone = (phone) => {
   if (!phone) return "—";
-  const digits = phone.replace(/\D/g, "").replace(/^55/, "");
+  let digits = phone.replace(/\D/g, "").replace(/^55/, "");
+  if (digits.length === 10) digits = `${digits.slice(0, 2)}9${digits.slice(2)}`;
   if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return phone;
 };
 
