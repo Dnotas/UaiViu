@@ -335,9 +335,68 @@ const PublicMenu = () => {
     !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 &&
     Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
-  // Tenta geocodificar usando múltiplos provedores em cascata
+  // Tenta geocodificar usando múltiplos provedores em cascata.
+  // Prioriza provedores que usam o endereço completo (rua + número) — são mais
+  // precisos para calcular a distância real. O CEP sozinho só dá o centroide da
+  // faixa do CEP, que pode cobrir um bairro inteiro e distorcer o frete calculado.
   const geocodeAddress = async (addressLine, cep = null, simplifiedLine = null) => {
-    // Provedor 1: BrasilAPI por CEP — mais confiável para endereços brasileiros
+    // Provedor 1: Nominatim com endereço completo
+    try {
+      const res = await axios.get(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressLine)}&format=json&limit=1`,
+        { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
+      );
+      if (res.data?.length) {
+        const lat = parseFloat(res.data[0].lat);
+        const lng = parseFloat(res.data[0].lon);
+        if (isValidCoords(lat, lng)) return { lat, lng };
+      }
+    } catch {}
+
+    // Provedor 2: Photon (Komoot) com endereço completo
+    try {
+      const res = await axios.get(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1&lang=pt`,
+        { timeout: 8000 }
+      );
+      const feat = res.data?.features?.[0];
+      if (feat) {
+        const [lon, lat] = feat.geometry.coordinates;
+        if (isValidCoords(parseFloat(lat), parseFloat(lon)))
+          return { lat: parseFloat(lat), lng: parseFloat(lon) };
+      }
+    } catch {}
+
+    // Provedor 3: Nominatim com endereço simplificado (sem número)
+    if (simplifiedLine) {
+      try {
+        const res = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(simplifiedLine)}&format=json&limit=1`,
+          { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
+        );
+        if (res.data?.length) {
+          const lat = parseFloat(res.data[0].lat);
+          const lng = parseFloat(res.data[0].lon);
+          if (isValidCoords(lat, lng)) return { lat, lng };
+        }
+      } catch {}
+    }
+
+    // Provedor 4: geocode.xyz com endereço completo
+    try {
+      const res = await axios.get(
+        `https://geocode.xyz/${encodeURIComponent(addressLine)}?json=1`,
+        { timeout: 8000 }
+      );
+      if (!res.data?.error) {
+        const lat = parseFloat(res.data?.latt);
+        const lng = parseFloat(res.data?.longt);
+        if (isValidCoords(lat, lng)) return { lat, lng };
+      }
+    } catch {}
+
+    // Provedor 5 (último recurso): BrasilAPI por CEP — só o centroide da faixa
+    // do CEP, impreciso, mas serve de fallback quando nenhum endereço resolveu
     if (cep) {
       try {
         const cepDigits = cep.replace(/\D/g, "");
@@ -353,61 +412,6 @@ const PublicMenu = () => {
         }
       } catch {}
     }
-
-    // Provedor 2: Nominatim com endereço completo
-    try {
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressLine)}&format=json&limit=1`,
-        { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
-      );
-      if (res.data?.length) {
-        const lat = parseFloat(res.data[0].lat);
-        const lng = parseFloat(res.data[0].lon);
-        if (isValidCoords(lat, lng)) return { lat, lng };
-      }
-    } catch {}
-
-    // Provedor 2b: Nominatim com endereço simplificado (sem número)
-    if (simplifiedLine) {
-      try {
-        const res = await axios.get(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(simplifiedLine)}&format=json&limit=1`,
-          { headers: { "Accept-Language": "pt-BR" }, timeout: 8000 }
-        );
-        if (res.data?.length) {
-          const lat = parseFloat(res.data[0].lat);
-          const lng = parseFloat(res.data[0].lon);
-          if (isValidCoords(lat, lng)) return { lat, lng };
-        }
-      } catch {}
-    }
-
-    // Provedor 3: Photon (Komoot)
-    try {
-      const res = await axios.get(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(addressLine)}&limit=1&lang=pt`,
-        { timeout: 8000 }
-      );
-      const feat = res.data?.features?.[0];
-      if (feat) {
-        const [lon, lat] = feat.geometry.coordinates;
-        if (isValidCoords(parseFloat(lat), parseFloat(lon)))
-          return { lat: parseFloat(lat), lng: parseFloat(lon) };
-      }
-    } catch {}
-
-    // Provedor 4: geocode.xyz
-    try {
-      const res = await axios.get(
-        `https://geocode.xyz/${encodeURIComponent(addressLine)}?json=1`,
-        { timeout: 8000 }
-      );
-      if (!res.data?.error) {
-        const lat = parseFloat(res.data?.latt);
-        const lng = parseFloat(res.data?.longt);
-        if (isValidCoords(lat, lng)) return { lat, lng };
-      }
-    } catch {}
 
     return null;
   };
@@ -796,25 +800,39 @@ const PublicMenu = () => {
           <Typography variant="h6" gutterBottom>Seu Pedido</Typography>
 
           {cart.map(item => (
-            <div key={item.cartKey} className={classes.cartItem}>
-              <div>
-                <Typography variant="body2">{item.name}</Typography>
-                {item.complements?.length > 0 && (
-                  <Typography variant="caption" color="textSecondary">
-                    + {item.complements.map(c => (c.qty || 1) > 1 ? `${c.qty}x ${c.name}` : c.name).join(", ")}
-                  </Typography>
-                )}
-                <Typography variant="caption" display="block">{item.quantity}x R$ {item.unitPrice.toFixed(2)}</Typography>
+            <div key={item.cartKey} style={{ marginBottom: 12 }}>
+              <div className={classes.cartItem} style={{ marginBottom: 2 }}>
+                <div>
+                  <Typography variant="body2">{item.name}</Typography>
+                  {item.complements?.length > 0 && (
+                    <Typography variant="caption" color="textSecondary">
+                      + {item.complements.map(c => (c.qty || 1) > 1 ? `${c.qty}x ${c.name}` : c.name).join(", ")}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" display="block">{item.quantity}x R$ {item.unitPrice.toFixed(2)}</Typography>
+                </div>
+                <div className={classes.qty}>
+                  <IconButton size="small" onClick={() => removeFromCart(item.cartKey)}><RemoveIcon fontSize="small" /></IconButton>
+                  <Typography>{item.quantity}</Typography>
+                  <IconButton size="small" color="primary" onClick={() => {
+                    const origItem = (selectedGroup?.items || groups.flatMap(g => g.items || [])).find(i => i.id === item.menuItemId);
+                    if (origItem) handleAddItem(origItem);
+                    else setCart(prev => prev.map(c => c.cartKey === item.cartKey ? { ...c, quantity: c.quantity + 1 } : c));
+                  }}><AddIcon fontSize="small" /></IconButton>
+                </div>
               </div>
-              <div className={classes.qty}>
-                <IconButton size="small" onClick={() => removeFromCart(item.cartKey)}><RemoveIcon fontSize="small" /></IconButton>
-                <Typography>{item.quantity}</Typography>
-                <IconButton size="small" color="primary" onClick={() => {
-                  const origItem = (selectedGroup?.items || groups.flatMap(g => g.items || [])).find(i => i.id === item.menuItemId);
-                  if (origItem) handleAddItem(origItem);
-                  else setCart(prev => prev.map(c => c.cartKey === item.cartKey ? { ...c, quantity: c.quantity + 1 } : c));
-                }}><AddIcon fontSize="small" /></IconButton>
-              </div>
+              <TextField
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Observação deste item (ex: sem cebola)"
+                value={item.notes || ""}
+                onChange={e => {
+                  const value = e.target.value;
+                  setCart(prev => prev.map(c => c.cartKey === item.cartKey ? { ...c, notes: value } : c));
+                }}
+                InputProps={{ style: { fontSize: 12 } }}
+              />
             </div>
           ))}
 

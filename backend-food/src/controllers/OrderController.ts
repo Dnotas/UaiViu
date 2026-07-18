@@ -581,7 +581,7 @@ export const createPublicOrder = async (req: Request, res: Response): Promise<Re
       pix: "PIX", credit: "Cartão de Crédito", debit: "Cartão de Débito",
     };
     const itemLines = validatedItems
-      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}`)
+      .map((i: any) => `  • ${i.quantity}x ${i.name} — R$ ${(i.unitPrice * i.quantity).toFixed(2).replace(".", ",")}${i.notes ? `\n    obs: ${i.notes}` : ""}`)
       .join("\n");
     const feeLine = deliveryFee > 0 ? `\n  • Taxa de entrega — R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "";
     const discountLine = discountAmount > 0

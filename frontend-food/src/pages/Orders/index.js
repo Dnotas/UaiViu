@@ -75,7 +75,7 @@ const printOrder = (order) => {
 
   const itemsHtml = (order.items || []).map(i =>
     `<tr>
-      <td style="padding:4px 8px">${i.quantity}x ${i.name}</td>
+      <td style="padding:4px 8px">${i.quantity}x ${i.name}${i.notes ? `<br><em style="font-size:11px">Obs: ${i.notes}</em>` : ""}</td>
       <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
       <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
     </tr>`
@@ -252,9 +252,16 @@ const OrdersPage = () => {
                     {order.items && (
                       <Box mt={0.5}>
                         {order.items.map(item => (
-                          <Typography key={item.id} variant="caption" display="block">
-                            {item.quantity}x {item.name}
-                          </Typography>
+                          <React.Fragment key={item.id}>
+                            <Typography variant="caption" display="block">
+                              {item.quantity}x {item.name}
+                            </Typography>
+                            {item.notes && (
+                              <Typography variant="caption" display="block" style={{ color: "#795548", fontStyle: "italic", marginLeft: 8 }}>
+                                Obs: {item.notes}
+                              </Typography>
+                            )}
+                          </React.Fragment>
                         ))}
                       </Box>
                     )}
