@@ -1087,9 +1087,9 @@ const PublicMenu = () => {
 
                 return (
                   <div key={c.id} className={classes.complementRow}>
-                    <Typography variant="body2">{c.name}</Typography>
-                    <Box display="flex" alignItems="center" style={{ gap: 6 }}>
-                      <Typography variant="body2" style={{ fontWeight: "bold" }}>
+                    <Typography variant="body2" style={{ flex: 1, minWidth: 0, marginRight: 8 }}>{c.name}</Typography>
+                    <Box display="flex" alignItems="center" style={{ gap: 6, flexShrink: 0, whiteSpace: "nowrap" }}>
+                      <Typography variant="body2" style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
                         {priceLabel}
                       </Typography>
                       <div style={{ display: "flex", alignItems: "center" }}>
