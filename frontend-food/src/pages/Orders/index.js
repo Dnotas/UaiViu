@@ -98,7 +98,8 @@ const printOrder = (order) => {
     <meta charset="utf-8">
     <title>Pedido #${order.id}</title>
     <style>
-      body { font-family: monospace; font-size: 13px; margin: 16px; color: #000; }
+      @page { size: 80mm auto; margin: 0; }
+      body { font-family: monospace; font-size: 13px; margin: 0; padding: 3mm; color: #000; }
       h2 { text-align: center; margin: 4px 0; }
       .center { text-align: center; }
       .divider { border-top: 1px dashed #000; margin: 8px 0; }
