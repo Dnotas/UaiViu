@@ -26,6 +26,7 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
     restaurantAddress, restaurantLat, restaurantLng, deliveryByDistance, deliveryRates,
     deliveryRatesByLocation,
     busyMode, storeStatus, closedMessage, divulgationMessage, businessHours,
+    whatsappSilentMode, whatsappSilentMessage,
   } = req.body;
 
   let config = await FoodRestaurantConfig.findOne({ where: { companyId } });
@@ -51,6 +52,8 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       closedMessage: closedMessage || null,
       divulgationMessage: divulgationMessage || null,
       businessHours: businessHours || null,
+      whatsappSilentMode: whatsappSilentMode ?? false,
+      whatsappSilentMessage: whatsappSilentMessage || undefined,
     });
   } else {
     if (slug && slug !== config.slug) {
@@ -76,6 +79,8 @@ export const upsert = async (req: Request, res: Response): Promise<Response> => 
       closedMessage: closedMessage !== undefined ? closedMessage : config.closedMessage,
       divulgationMessage: divulgationMessage !== undefined ? divulgationMessage : config.divulgationMessage,
       businessHours: businessHours !== undefined ? businessHours : config.businessHours,
+      whatsappSilentMode: whatsappSilentMode ?? config.whatsappSilentMode,
+      whatsappSilentMessage: whatsappSilentMessage !== undefined ? whatsappSilentMessage : config.whatsappSilentMessage,
     });
 
     // Quando a loja reabre, reseta greetedAt de todas as conversas
