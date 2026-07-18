@@ -82,12 +82,13 @@ const printOrder = (order) => {
         order.customerNeighborhood,
       ].filter(Boolean).join(", ");
 
-  const itemsHtml = (order.items || []).map(i =>
-    `<tr>
-      <td style="padding:4px 8px">${i.quantity}x ${i.name}${i.notes ? `<br><strong style="font-size:11px">Obs: ${i.notes}</strong>` : ""}</td>
+  const itemsHtml = (order.items || []).map(i => `
+    <tr>
+      <td style="padding:4px 8px">${i.quantity}x ${i.name}</td>
       <td style="padding:4px 8px;text-align:right">R$ ${parseFloat(i.unitPrice || i.total / i.quantity).toFixed(2)}</td>
       <td style="padding:4px 8px;text-align:right"><strong>R$ ${parseFloat(i.total || i.unitPrice * i.quantity).toFixed(2)}</strong></td>
-    </tr>`
+    </tr>
+    ${i.notes ? `<tr><td colspan="3" style="padding:0 8px 6px 8px"><strong style="font-size:14px">Obs: ${i.notes}</strong></td></tr>` : ""}`
   ).join("");
 
   const deliveryFee = parseFloat(order.deliveryFee || 0);
