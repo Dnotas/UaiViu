@@ -11,9 +11,13 @@ import { getIO } from "../../libs/socket";
 /**
  * Trata mensagens recebidas pelo WhatsApp do restaurante.
  * Comportamento: responde automaticamente com boas-vindas + link do cardápio.
- * Só responde na PRIMEIRA mensagem do cliente (persiste no banco — sobrevive a restarts).
+ * Reenvia o cardápio se o cliente voltar a mandar mensagem depois de GREET_COOLDOWN_MS
+ * sem contato (evita spam em mensagens seguidas, mas trata como nova visita depois de um tempo).
  * Persiste todas as mensagens recebidas no banco para o módulo de Conversas.
  */
+
+// Depois de quanto tempo sem contato o cardápio é reenviado numa nova mensagem do cliente
+const GREET_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutos
 
 // Deduplicação por ID de mensagem — evita processar a mesma mensagem 2x
 // (ocorre quando há 2 instâncias wbot ativas temporariamente)
@@ -201,8 +205,13 @@ export const handleFoodMessage = async (
       await conversation.update({ greetedAt: null });
     }
 
-    // Se já saudou antes: verifica modo silencioso
-    if (conversation.greetedAt) {
+    // Considera "já saudado" só se o último contato foi há menos de GREET_COOLDOWN_MS —
+    // depois disso, a próxima mensagem do cliente recebe o cardápio de novo normalmente
+    const greetedRecently = !!conversation.greetedAt &&
+      (Date.now() - new Date(conversation.greetedAt).getTime()) < GREET_COOLDOWN_MS;
+
+    // Se já saudou recentemente: verifica modo silencioso
+    if (greetedRecently) {
       // Modo silencioso: responde com mensagem configurada informando que não atende por aqui
       if (config.whatsappSilentMode && config.whatsappSilentMessage) {
         try {
