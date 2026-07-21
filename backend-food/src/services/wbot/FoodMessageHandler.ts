@@ -255,7 +255,15 @@ export const handleFoodMessage = async (
     const menuUrl = `${process.env.PUBLIC_MENU_BASE_URL}/${config.slug}?session=${sessionToken}`;
     const fullMessage = `${config.welcomeMessage}\n\n🍽️ ${menuUrl}`;
 
-    await wbot.sendMessage(jid, { text: fullMessage });
+    // Timeouts do Baileys são comuns e transitórios — tenta 1x mais antes de desistir
+    try {
+      await wbot.sendMessage(jid, { text: fullMessage });
+    } catch (err) {
+      console.warn(`[FoodMessageHandler] ⚠️ Falha ao enviar boas-vindas para ${jid} (tentativa 1): ${(err as Error)?.message}. Tentando novamente...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await wbot.sendMessage(jid, { text: fullMessage });
+    }
+    console.log(`[FoodMessageHandler] ✅ Boas-vindas + cardápio enviados para ${jid}`);
 
     // Marca como saudado e salva mensagem de boas-vindas
     const now = new Date();
