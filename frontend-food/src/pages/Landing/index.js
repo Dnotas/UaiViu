@@ -150,7 +150,7 @@ const LandingPage = () => {
                 }}
               >
                 <Typography variant="caption" style={{ color: "#ff8a80", fontWeight: 600, letterSpacing: 1 }}>
-                  CARDÁPIO DIGITAL PELO WHATSAPP
+                  PLATAFORMA DE CARDÁPIO DIGITAL E GESTÃO DE PEDIDOS
                 </Typography>
               </Box>
 
@@ -162,23 +162,24 @@ const LandingPage = () => {
                   fontSize: "clamp(2rem, 5vw, 3.2rem)",
                 }}
               >
-                Venda mais pelo{" "}
+                Cardápio digital e gestão de pedidos direto no{" "}
                 <span style={{
                   background: `linear-gradient(90deg, ${PRIMARY}, ${SECONDARY})`,
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }}>
                   WhatsApp
-                </span>{" "}
-                com cardápio digital
+                </span>
               </Typography>
 
               <Typography
                 variant="h6"
                 style={{ color: "rgba(255,255,255,0.65)", fontWeight: 400, lineHeight: 1.7, marginBottom: 36 }}
               >
-                Seu restaurante online em minutos. Cardápio bonito, pedidos organizados,
-                entrega com taxa por distância e muito mais — tudo integrado ao WhatsApp.
+                Uma solução completa para lanchonetes, restaurantes, bares e demais
+                estabelecimentos do ramo alimentício. O cliente monta e envia o próprio
+                pedido pelo celular — reduzindo filas, eliminando erros de atendimento
+                e entregando uma experiência moderna, do pedido à retirada.
               </Typography>
 
               <Box display="flex" flexWrap="wrap" style={{ gap: 12 }}>
@@ -213,7 +214,7 @@ const LandingPage = () => {
               <Box mt={4} display="flex" flexWrap="wrap" style={{ gap: 24 }}>
                 {[
                   "Sem taxa por pedido",
-                  "Integrado ao WhatsApp",
+                  "Pedido feito pelo próprio cliente",
                   "Configuração em minutos",
                 ].map(t => (
                   <Box key={t} display="flex" alignItems="center" style={{ gap: 6 }}>
