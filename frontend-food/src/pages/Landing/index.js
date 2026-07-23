@@ -17,6 +17,9 @@ import AddCircleOutlineIcon from "@material-ui/icons/AddCircleOutline";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import ShareIcon from "@material-ui/icons/Share";
 import SettingsIcon from "@material-ui/icons/Settings";
+import NotificationsActiveIcon from "@material-ui/icons/NotificationsActive";
+import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
+import FlashOnIcon from "@material-ui/icons/FlashOn";
 
 const PRIMARY = "#e53935";
 const SECONDARY = "#ff7043";
@@ -363,6 +366,21 @@ const LandingPage = () => {
                 title: "Dashboard de Pedidos",
                 desc: "Acompanhe pedidos em tempo real, atualize status, envie mensagens automáticas e veja relatórios de vendas.",
               },
+              {
+                icon: <HourglassEmptyIcon fontSize="inherit" />,
+                title: "Redução de Filas",
+                desc: "O cliente monta e envia o próprio pedido pelo celular, sem precisar esperar atendimento. Seu estabelecimento atende mais gente com mais agilidade.",
+              },
+              {
+                icon: <NotificationsActiveIcon fontSize="inherit" />,
+                title: "Notificação de Pedido Pronto",
+                desc: "Quando o pedido fica pronto pra retirada no balcão, o cliente recebe um aviso automático no celular — sem precisar de monitor ou painel de chamada.",
+              },
+              {
+                icon: <FlashOnIcon fontSize="inherit" />,
+                title: "Sem Token, Sem Integração",
+                desc: "Tudo já vem integrado. Não precisa gerar token nem configurar API externa — os pedidos caem direto no seu painel administrativo.",
+              },
             ].map(f => (
               <Grid item xs={12} sm={6} md={4} key={f.title}>
                 <FeatureCard {...f} />
@@ -431,6 +449,9 @@ const LandingPage = () => {
                 "Complementos e adicionais por item",
                 "Link de confirmação para o motoboy",
                 "Histórico e relatório de pedidos",
+                "Notificação automática quando o pedido fica pronto",
+                "Redução de filas no atendimento",
+                "Sem token ou integração via API para começar a usar",
               ].map(item => <CheckItem key={item} text={item} />)}
             </Grid>
             <Grid item xs={12} md={6}>
