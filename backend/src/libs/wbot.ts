@@ -217,43 +217,13 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             );
 
             if (connection === "close") {
-              if ((lastDisconnect?.error as Boom)?.output?.statusCode === 403) {
-                await whatsapp.update({ status: "PENDING", session: "" });
-                await DeleteBaileysService(whatsapp.id);
-                io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                  action: "update",
-                  session: whatsapp
-                });
-                removeWbot(id, false);
-              }
-              if (
-                (lastDisconnect?.error as Boom)?.output?.statusCode !==
-                DisconnectReason.loggedOut
-              ) {
-                removeWbot(id, false);
-                if (!manualRestartsSet.has(id)) {
-                  setTimeout(
-                    () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                    2000
-                  );
-                }
-                // NÃO deletar aqui — deixa o handler do "open" remover após conexão estável
-              } else {
-                await whatsapp.update({ status: "PENDING", session: "" });
-                await DeleteBaileysService(whatsapp.id);
-                io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                  action: "update",
-                  session: whatsapp
-                });
-                removeWbot(id, false);
-                if (!manualRestartsSet.has(id)) {
-                  setTimeout(
-                    () => StartWhatsAppSession(whatsapp, whatsapp.companyId),
-                    2000
-                  );
-                }
-                // NÃO deletar aqui — deixa o handler do "open" remover após conexão estável
-              }
+              removeWbot(id, false);
+              await whatsapp.update({ status: "PENDING", session: "" });
+              await DeleteBaileysService(whatsapp.id);
+              io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
+                action: "update",
+                session: whatsapp
+              });
             }
 
             if (connection === "open") {
