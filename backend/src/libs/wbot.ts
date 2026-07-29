@@ -218,7 +218,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
             if (connection === "close") {
               removeWbot(id, false);
-              await whatsapp.update({ status: "PENDING", session: "" });
+              await whatsapp.update({ status: "DISCONNECTED", session: "" });
               await DeleteBaileysService(whatsapp.id);
               io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
                 action: "update",
