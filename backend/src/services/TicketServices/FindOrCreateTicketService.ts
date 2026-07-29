@@ -32,42 +32,30 @@ const FindOrCreateTicketService = async (
     order: [["id", "DESC"]]
   });
 
+  // Encontrou pelo whatsappId exato: atualiza conexão normalmente
   if (ticket) {
     await ticket.update({ unreadMessages, whatsappId });
   }
 
-  if (ticket?.status === "closed") {
-    await ticket.update({ queueId: null, userId: null });
-  }
-
+  // Fallback para grupos: busca ticket aberto/pendente sem filtrar por whatsappId.
+  // NÃO atualiza whatsappId para não sobrescrever a conexão correta já configurada.
   if (!ticket && groupContact) {
     ticket = await Ticket.findOne({
       where: {
-        contactId: groupContact.id
+        status: { [Op.or]: ["open", "pending"] },
+        contactId: groupContact.id,
+        companyId
       },
-      order: [["updatedAt", "DESC"]]
+      order: [["id", "DESC"]]
     });
 
     if (ticket) {
-      await ticket.update({
-        status: "pending",
-        userId: null,
-        unreadMessages,
-        queueId: null,
-        companyId
-      });
-      await FindOrCreateATicketTrakingService({
-        ticketId: ticket.id,
-        companyId,
-        whatsappId: ticket.whatsappId,
-        userId: ticket.userId
-      });
+      await ticket.update({ unreadMessages });
     }
-    const msgIsGroupBlock = await Setting.findOne({
-      where: { key: "timeCreateNewTicket" }
-    });
+  }
 
-    const value = msgIsGroupBlock ? parseInt(msgIsGroupBlock.value, 10) : 7200;
+  if (ticket?.status === "closed") {
+    await ticket.update({ queueId: null, userId: null });
   }
 
   if (!ticket && !groupContact) {
