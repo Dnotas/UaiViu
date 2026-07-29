@@ -38,7 +38,7 @@ const FindOrCreateTicketService = async (
   }
 
   // Fallback para grupos: busca ticket aberto/pendente sem filtrar por whatsappId.
-  // NÃO atualiza whatsappId para não sobrescrever a conexão correta já configurada.
+  // Se a conexão do ticket pertence a outra empresa, corrige para a conexão atual.
   if (!ticket && groupContact) {
     ticket = await Ticket.findOne({
       where: {
@@ -50,7 +50,13 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
-      await ticket.update({ unreadMessages });
+      if (ticket.whatsappId) {
+        const ticketConn = await Whatsapp.findOne({ where: { id: ticket.whatsappId } });
+        const wrongCompany = !ticketConn || ticketConn.companyId !== companyId;
+        await ticket.update(wrongCompany ? { unreadMessages, whatsappId } : { unreadMessages });
+      } else {
+        await ticket.update({ unreadMessages, whatsappId });
+      }
     }
   }
 

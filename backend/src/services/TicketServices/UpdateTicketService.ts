@@ -76,6 +76,21 @@ const UpdateTicketService = async ({
 
     const ticket = await ShowTicketService(ticketId, companyId);
 
+    // Garante que a conexão do ticket pertence à empresa correta.
+    // Evita "forbidden" ao enviar mensagens quando o ticket foi criado com conexão de outra empresa.
+    if (ticket.whatsappId) {
+      const ticketConn = await Whatsapp.findByPk(ticket.whatsappId);
+      if (ticketConn && ticketConn.companyId !== companyId) {
+        const correctConn = await Whatsapp.findOne({
+          where: { companyId, status: "CONNECTED" }
+        });
+        if (correctConn) {
+          await ticket.update({ whatsappId: correctConn.id });
+          whatsappId = correctConn.id.toString();
+        }
+      }
+    }
+
     // VALIDAÇÕES: Apenas o dono do ticket pode fazer certas ações
     if (actionUserId && ticket.status === "open" && !ticketData.forceTransfer && status !== "closed") {
       const actionUserIdNum = parseInt(actionUserId.toString());
