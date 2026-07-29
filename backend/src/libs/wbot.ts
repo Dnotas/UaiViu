@@ -218,12 +218,16 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 
             if (connection === "close") {
               removeWbot(id, false);
-              await whatsapp.update({ status: "DISCONNECTED", session: "" });
-              await DeleteBaileysService(whatsapp.id);
-              io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                action: "update",
-                session: whatsapp
-              });
+              if (closeCode === DisconnectReason.restartRequired) {
+                setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
+              } else {
+                await whatsapp.update({ status: "DISCONNECTED", session: "" });
+                await DeleteBaileysService(whatsapp.id);
+                io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
+                  action: "update",
+                  session: whatsapp
+                });
+              }
             }
 
             if (connection === "open") {
