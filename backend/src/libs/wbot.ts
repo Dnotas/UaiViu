@@ -40,6 +40,11 @@ const retriesQrCodeMap = new Map<number, number>();
 
 const manualRestartsSet = new Set<number>();
 
+// Conta quantas vezes seguidas cada sessão recebeu erro permanente.
+// Após MAX_PERMANENT_RETRIES falhas consecutivas, aí sim limpa sessão e pede QR.
+const permanentRetryMap = new Map<number, number>();
+const MAX_PERMANENT_RETRIES = 2;
+
 export const clearAndRestartSession = async (whatsapp: Whatsapp): Promise<void> => {
   if (manualRestartsSet.has(whatsapp.id)) {
     logger.info(`[WBot] Sessão ${whatsapp.id} já em restart, ignorando chamada duplicada`);
@@ -232,17 +237,35 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
               const isPermanent = closeCode != null && permanentCodes.includes(closeCode);
 
               if (isPermanent) {
-                // Sessão inválida: limpa e exige novo QR
-                logger.info(`[WBot] ${name} desconectado permanentemente (closeCode=${closeCode}), limpando sessão`);
-                await whatsapp.update({ status: "DISCONNECTED", session: "" });
-                await DeleteBaileysService(whatsapp.id);
-                io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
-                  action: "update",
-                  session: whatsapp
-                });
+                const retries = (permanentRetryMap.get(id) ?? 0) + 1;
+                if (retries <= MAX_PERMANENT_RETRIES) {
+                  // Tenta reconectar com creds existentes antes de pedir QR.
+                  // Se o celular ainda tiver o dispositivo vinculado, reconecta sem escanear.
+                  permanentRetryMap.set(id, retries);
+                  logger.info(
+                    `[WBot] ${name} erro permanente (closeCode=${closeCode}), tentativa ${retries}/${MAX_PERMANENT_RETRIES} de auto-reconexão sem QR`
+                  );
+                  if (!manualRestartsSet.has(id)) {
+                    manualRestartsSet.add(id);
+                    setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 3000);
+                  }
+                } else {
+                  // Esgotou tentativas: sessão definitivamente inválida, pede QR
+                  permanentRetryMap.delete(id);
+                  logger.info(
+                    `[WBot] ${name} desconectado permanentemente após ${MAX_PERMANENT_RETRIES} tentativas (closeCode=${closeCode}), limpando sessão`
+                  );
+                  await whatsapp.update({ status: "DISCONNECTED", session: "" });
+                  await DeleteBaileysService(whatsapp.id);
+                  io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
+                    action: "update",
+                    session: whatsapp
+                  });
+                }
               } else {
                 // Temporário (515 restartRequired, 408 connectionLost, 428 connectionClosed, undefined…)
                 // Reconecta sem apagar sessão — QR não é necessário
+                permanentRetryMap.delete(id); // queda temporária zera contador permanente
                 logger.info(`[WBot] ${name} queda temporária (closeCode=${closeCode ?? "?"}) — reconectando`);
                 if (!manualRestartsSet.has(id)) {
                   manualRestartsSet.add(id);
@@ -271,8 +294,9 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 sessions.push(wsocket);
               }
 
-              // Conexão estabilizou — libera proteção contra restart duplicado
+              // Conexão estabilizou — libera proteção contra restart duplicado e zera contador de erros permanentes
               manualRestartsSet.delete(whatsapp.id);
+              permanentRetryMap.delete(whatsapp.id);
 
               resolve(wsocket);
             }
