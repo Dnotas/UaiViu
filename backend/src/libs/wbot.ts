@@ -217,9 +217,18 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             );
 
             if (connection === "close") {
+              // Remove listeners imediatamente para evitar que este socket
+              // continue disparando eventos depois que o close foi tratado
+              wsocket?.ev.removeAllListeners("connection.update");
+              wsocket?.ev.removeAllListeners("creds.update");
               removeWbot(id, false);
+
               if (closeCode === DisconnectReason.restartRequired) {
-                setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
+                // 515: WhatsApp pedindo restart — reconecta, mas apenas UMA vez
+                if (!manualRestartsSet.has(id)) {
+                  manualRestartsSet.add(id);
+                  setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
+                }
               } else {
                 await whatsapp.update({ status: "DISCONNECTED", session: "" });
                 await DeleteBaileysService(whatsapp.id);
