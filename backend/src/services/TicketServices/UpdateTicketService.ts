@@ -77,7 +77,7 @@ const UpdateTicketService = async ({
     const ticket = await ShowTicketService(ticketId, companyId);
 
     // VALIDAÇÕES: Apenas o dono do ticket pode fazer certas ações
-    if (actionUserId && ticket.status === "open" && !ticketData.forceTransfer) {
+    if (actionUserId && ticket.status === "open" && !ticketData.forceTransfer && status !== "closed") {
       const actionUserIdNum = parseInt(actionUserId.toString());
 
       // Validar mudança de status para pending ou closed
