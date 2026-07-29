@@ -123,9 +123,12 @@ const UpdateTicketService = async ({
     }
 
     if (status !== undefined && ["closed"].indexOf(status) > -1) {
-      const whatsappInfo = ticket.whatsappId
-        ? await ShowWhatsAppService(ticket.whatsappId, companyId)
-        : null;
+      let whatsappInfo = null;
+      if (ticket.whatsappId) {
+        try {
+          whatsappInfo = await ShowWhatsAppService(ticket.whatsappId, companyId);
+        } catch { /* ignora — ticket fecha sem mensagem de conclusão */ }
+      }
       const complationMessage = whatsappInfo?.complationMessage ?? null;
       const ratingMessage = whatsappInfo?.ratingMessage ?? null;
 
