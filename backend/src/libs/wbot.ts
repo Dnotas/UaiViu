@@ -217,25 +217,37 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
             );
 
             if (connection === "close") {
-              // Remove listeners imediatamente para evitar que este socket
-              // continue disparando eventos depois que o close foi tratado
               wsocket?.ev.removeAllListeners("connection.update");
               wsocket?.ev.removeAllListeners("creds.update");
               removeWbot(id, false);
 
-              if (closeCode === DisconnectReason.restartRequired) {
-                // 515: WhatsApp pedindo restart — reconecta, mas apenas UMA vez
-                if (!manualRestartsSet.has(id)) {
-                  manualRestartsSet.add(id);
-                  setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
-                }
-              } else {
+              // Desconexões PERMANENTES: sessão inválida — precisa de novo QR
+              // 401=loggedOut, 403=forbidden/token-expirado, 440=connectionReplaced, 500=badSession
+              const permanentCodes = [
+                DisconnectReason.loggedOut,
+                DisconnectReason.forbidden,
+                DisconnectReason.connectionReplaced,
+                DisconnectReason.badSession,
+              ];
+              const isPermanent = closeCode != null && permanentCodes.includes(closeCode);
+
+              if (isPermanent) {
+                // Sessão inválida: limpa e exige novo QR
+                logger.info(`[WBot] ${name} desconectado permanentemente (closeCode=${closeCode}), limpando sessão`);
                 await whatsapp.update({ status: "DISCONNECTED", session: "" });
                 await DeleteBaileysService(whatsapp.id);
                 io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
                   action: "update",
                   session: whatsapp
                 });
+              } else {
+                // Temporário (515 restartRequired, 408 connectionLost, 428 connectionClosed, undefined…)
+                // Reconecta sem apagar sessão — QR não é necessário
+                logger.info(`[WBot] ${name} queda temporária (closeCode=${closeCode ?? "?"}) — reconectando`);
+                if (!manualRestartsSet.has(id)) {
+                  manualRestartsSet.add(id);
+                  setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
+                }
               }
             }
 
