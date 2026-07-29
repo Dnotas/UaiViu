@@ -112,26 +112,11 @@ const UpdateTicketService = async ({
     const oldUserId = ticket.user?.id;
     const oldQueueId = ticket.queueId;
 
-    if (oldStatus === "closed" || Number(whatsappId) !== ticket.whatsappId) {
-      // let otherTicket = await Ticket.findOne({
-      //   where: {
-      //     contactId: ticket.contactId,
-      //     status: { [Op.or]: ["open", "pending", "group"] },
-      //     whatsappId
-      //   }
-      // });
-      // if (otherTicket) {
-      //     otherTicket = await ShowTicketService(otherTicket.id, companyId)
-
-      //     await ticket.update({status: "closed"})
-
-      //     io.to(oldStatus).emit(`company-${companyId}-ticket`, {
-      //       action: "delete",
-      //       ticketId: ticket.id
-      //     });
-
-      //     return { ticket: otherTicket, oldStatus, oldUserId }
-      // }
+    // Só verifica duplicata ao REabrir (oldStatus=closed) ou ao trocar conexão.
+    // Nunca bloqueia quando se está fechando (status=closed).
+    // Ignora quando whatsappId é null para evitar Number(null)!==null falso positivo.
+    const whatsappIdChanged = whatsappId != null && Number(whatsappId) !== ticket.whatsappId;
+    if (status !== "closed" && (oldStatus === "closed" || whatsappIdChanged)) {
       await CheckContactOpenTickets(ticket.contact.id, whatsappId);
       chatbot = null;
       queueOptionId = null;
