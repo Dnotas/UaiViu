@@ -211,9 +211,9 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         wsocket.ev.on(
           "connection.update",
           async ({ connection, lastDisconnect, qr }) => {
+            const closeCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
             logger.info(
-              `Socket  ${name} Connection Update ${connection || ""} ${lastDisconnect || ""
-              }`
+              `Socket  ${name} Connection Update ${connection || ""} closeCode=${closeCode ?? "-"}`
             );
 
             if (connection === "close") {
