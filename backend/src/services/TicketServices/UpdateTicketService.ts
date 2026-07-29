@@ -103,7 +103,7 @@ const UpdateTicketService = async ({
     });
 
     if (isNil(whatsappId)) {
-      whatsappId = ticket.whatsappId.toString();
+      whatsappId = ticket.whatsappId?.toString() ?? null;
     }
 
     await SetTicketMessagesAsRead(ticket);
