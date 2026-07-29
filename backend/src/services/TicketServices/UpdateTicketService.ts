@@ -123,10 +123,11 @@ const UpdateTicketService = async ({
     }
 
     if (status !== undefined && ["closed"].indexOf(status) > -1) {
-      const { complationMessage, ratingMessage } = await ShowWhatsAppService(
-        ticket.whatsappId,
-        companyId
-      );
+      const whatsappInfo = ticket.whatsappId
+        ? await ShowWhatsAppService(ticket.whatsappId, companyId)
+        : null;
+      const complationMessage = whatsappInfo?.complationMessage ?? null;
+      const ratingMessage = whatsappInfo?.ratingMessage ?? null;
 
       if (setting?.value === "enabled") {
         if (ticketTraking.ratingAt == null) {
