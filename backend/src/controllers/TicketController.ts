@@ -199,6 +199,35 @@ export const update = async (
   return res.status(200).json(ticket);
 };
 
+export const closeAllPending = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { companyId } = req.user;
+
+  const tickets = await Ticket.findAll({
+    where: { companyId, status: "pending" }
+  });
+
+  await Ticket.update(
+    { status: "closed", userId: null, queueId: null },
+    { where: { companyId, status: "pending" } }
+  );
+
+  const io = getIO();
+  for (const ticket of tickets) {
+    io.to(`company-${companyId}-pending`)
+      .to(`company-${companyId}-notification`)
+      .to(String(ticket.id))
+      .emit(`company-${companyId}-ticket`, {
+        action: "delete",
+        ticketId: ticket.id
+      });
+  }
+
+  return res.status(200).json({ closed: tickets.length });
+};
+
 export const remove = async (
   req: Request,
   res: Response

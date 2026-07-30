@@ -24,9 +24,11 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, IconButton } from "@material-ui/core";
+import DoneAllIcon from "@material-ui/icons/DoneAll";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
+import api from "../../services/api";
 
 const useStyles = makeStyles(theme => ({
 	ticketsWrapper: {
@@ -245,6 +247,16 @@ const TicketsManagerTabs = () => {
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [urgentCount, setUrgentCount] = useState(0);
+  const [closeAllDialogOpen, setCloseAllDialogOpen] = useState(false);
+
+  const handleCloseAllPending = async () => {
+    try {
+      await api.put("/tickets/close-all-pending");
+    } catch (err) {
+      console.error(err);
+    }
+    setCloseAllDialogOpen(false);
+  };
 
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -449,7 +461,20 @@ const TicketsManagerTabs = () => {
                   badgeContent={pendingCount}
                   color="secondary"
                 >
-                  {i18n.t("ticketsList.pendingHeader")}
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    {i18n.t("ticketsList.pendingHeader")}
+                    {tabOpen === "pending" && pendingCount > 0 && (
+                      <Tooltip title="Finalizar todos os aguardando">
+                        <IconButton
+                          size="small"
+                          onClick={e => { e.stopPropagation(); setCloseAllDialogOpen(true); }}
+                          style={{ padding: 2, marginLeft: 4 }}
+                        >
+                          <DoneAllIcon style={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </span>
                 </Badge>
               }
               value={"pending"}
@@ -500,6 +525,23 @@ const TicketsManagerTabs = () => {
           selectedQueueIds={selectedQueueIds}
         />
       </TabPanel>
+
+      <Dialog open={closeAllDialogOpen} onClose={() => setCloseAllDialogOpen(false)}>
+        <DialogTitle>Finalizar todos os aguardando</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza? Isso irá finalizar <strong>{pendingCount}</strong> chamado(s) em aguardando.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloseAllDialogOpen(false)} color="default">
+            Cancelar
+          </Button>
+          <Button onClick={handleCloseAllPending} color="secondary" variant="contained">
+            Finalizar Todos
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

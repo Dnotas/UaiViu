@@ -7,6 +7,8 @@ const ticketRoutes = express.Router();
 
 ticketRoutes.get("/tickets", isAuth, TicketController.index);
 
+ticketRoutes.put("/tickets/close-all-pending", isAuth, TicketController.closeAllPending);
+
 ticketRoutes.get("/tickets/:ticketId", isAuth, TicketController.show);
 
 ticketRoutes.get("/ticket/kanban", isAuth, TicketController.kanban);
