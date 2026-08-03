@@ -359,6 +359,54 @@
             position: relative;
         }
 
+        .food-promo-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #fff;
+            border: 2px solid #e53935;
+            border-radius: 16px;
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(229,57,53,0.12);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .food-promo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(229,57,53,0.2);
+        }
+        .food-promo-logo {
+            height: 52px;
+            width: 52px;
+            object-fit: contain;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .food-promo-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+        .food-promo-text strong {
+            font-size: 14px;
+            font-weight: 700;
+            color: #e53935;
+            font-family: 'Inter', sans-serif;
+        }
+        .food-promo-text span {
+            font-size: 13px;
+            color: #555;
+            font-family: 'Inter', sans-serif;
+        }
+        .food-promo-arrow {
+            font-size: 20px;
+            color: #e53935;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
         .floating-card {
             position: absolute;
             background: white;
@@ -1403,6 +1451,14 @@
                     </div>
                 </div>
                 <div class="hero-image">
+                    <a href="https://food.uaiviu.com.br" target="_blank" class="food-promo-card">
+                        <img src="uaifood.jpg" alt="UaiViu Food" class="food-promo-logo" />
+                        <div class="food-promo-text">
+                            <strong>Você já conhece o UaiViu Food?</strong>
+                            <span>Clique e descubra uma nova forma de pedir comida!</span>
+                        </div>
+                        <span class="food-promo-arrow">→</span>
+                    </a>
                     <div class="dashboard-mockup">
                         <div class="mock-topbar">
                             <div class="mock-logo-text">
