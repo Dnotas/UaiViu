@@ -13,6 +13,12 @@ whatsappRoutes.get("/whatsapp/:whatsappId", isAuth, WhatsAppController.show);
 
 whatsappRoutes.put("/whatsapp/:whatsappId", isAuth, WhatsAppController.update);
 
+whatsappRoutes.post(
+  "/whatsapp/:whatsappId/pairing-code",
+  isAuth,
+  WhatsAppController.requestPairingCode
+);
+
 whatsappRoutes.delete(
   "/whatsapp/:whatsappId",
   isAuth,

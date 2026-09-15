@@ -1621,6 +1621,10 @@ const messages = {
             "Nenhum WhatsApp padrão encontrado. Verifique a página de conexões.",
         ERR_WAPP_NOT_INITIALIZED:
             "Esta sessão do WhatsApp não foi inicializada. Verifique a página de conexões.",
+        ERR_INVALID_PHONE_NUMBER:
+            "Número de telefone inválido. Informe com DDI e DDD, só números.",
+        ERR_WAPP_ALREADY_REGISTERED:
+            "Esta conexão já está pareada. Se precisar reconectar, gere um QR code novo.",
         ERR_WAPP_CHECK_CONTACT:
             "Não foi possível verificar o contato do WhatsApp. Verifique a página de conexões",
         ERR_WAPP_INVALID_CONTACT: "Este não é um número de Whatsapp válido.",

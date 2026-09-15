@@ -38,6 +38,10 @@ const sessions: Session[] = [];
 
 const retriesQrCodeMap = new Map<number, number>();
 
+// Socket cru exposto assim que é criado (antes de abrir), para permitir
+// pedir o código de pareamento por número de telefone em vez de QR.
+const pendingSockets = new Map<number, Session>();
+
 const manualRestartsSet = new Set<number>();
 
 // Conta quantas vezes seguidas cada sessão recebeu erro permanente.
@@ -72,7 +76,11 @@ export const clearAndRestartSession = async (whatsapp: Whatsapp): Promise<void> 
   }
 
   logger.info(`[WBot] Sessão ${whatsapp.id} reiniciada sem QR code`);
-  await StartWhatsAppSession(whatsapp, whatsapp.companyId);
+  try {
+    await StartWhatsAppSession(whatsapp, whatsapp.companyId);
+  } finally {
+    manualRestartsSet.delete(whatsapp.id);
+  }
 };
 
 export const getWbot = (whatsappId: number): Session => {
@@ -181,6 +189,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
           }
         });
 
+        pendingSockets.set(id, wsocket);
+
         // wsocket = makeWASocket({
         //   version,
         //   logger: loggerBaileys,
@@ -247,7 +257,10 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                   );
                   if (!manualRestartsSet.has(id)) {
                     manualRestartsSet.add(id);
-                    setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 3000);
+                    setTimeout(() => {
+                      manualRestartsSet.delete(id);
+                      StartWhatsAppSession(whatsapp, whatsapp.companyId);
+                    }, 3000);
                   }
                 } else {
                   // Esgotou tentativas: sessão definitivamente inválida, pede QR
@@ -269,7 +282,10 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 logger.info(`[WBot] ${name} queda temporária (closeCode=${closeCode ?? "?"}) — reconectando`);
                 if (!manualRestartsSet.has(id)) {
                   manualRestartsSet.add(id);
-                  setTimeout(() => StartWhatsAppSession(whatsapp, whatsapp.companyId), 2000);
+                  setTimeout(() => {
+                    manualRestartsSet.delete(id);
+                    StartWhatsAppSession(whatsapp, whatsapp.companyId);
+                  }, 2000);
                 }
               }
             }
@@ -294,9 +310,11 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
                 sessions.push(wsocket);
               }
 
-              // Conexão estabilizou — libera proteção contra restart duplicado e zera contador de erros permanentes
+              // Conexão estabilizou — libera proteção contra restart duplicado e zera contadores de erro
               manualRestartsSet.delete(whatsapp.id);
               permanentRetryMap.delete(whatsapp.id);
+              retriesQrCodeMap.delete(whatsapp.id);
+              pendingSockets.delete(whatsapp.id);
 
               resolve(wsocket);
             }
@@ -352,4 +370,48 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
       reject(error);
     }
   });
+};
+
+// Pede o código de pareamento por número de telefone em vez de QR code.
+// Precisa ser chamado logo após StartWhatsAppSession iniciar a sessão,
+// enquanto o socket ainda não está registrado (antes do QR/pareamento).
+export const requestPairingCode = async (
+  whatsappId: number,
+  phoneNumber: string
+): Promise<string> => {
+  const cleanNumber = phoneNumber.replace(/\D/g, "");
+  if (!cleanNumber || cleanNumber.length < 10) {
+    throw new AppError("ERR_INVALID_PHONE_NUMBER");
+  }
+
+  // Aguarda o socket cru ficar disponível (criado no início do initWASocket)
+  let wsocket: any = pendingSockets.get(whatsappId);
+  let waited = 0;
+  while (!wsocket && waited < 8000) {
+    await new Promise(r => setTimeout(r, 300));
+    waited += 300;
+    wsocket = pendingSockets.get(whatsappId);
+  }
+
+  if (!wsocket) {
+    throw new AppError("ERR_WAPP_NOT_INITIALIZED");
+  }
+
+  if (wsocket.authState?.creds?.registered) {
+    throw new AppError("ERR_WAPP_ALREADY_REGISTERED");
+  }
+
+  // O socket cru é exposto assim que criado, mas o WebSocket interno ainda
+  // pode não estar pronto (Connection Closed). Tenta algumas vezes.
+  let lastErr: any;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      const code = await wsocket.requestPairingCode(cleanNumber);
+      return code;
+    } catch (err: any) {
+      lastErr = err;
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
 };

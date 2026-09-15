@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import { removeWbot } from "../libs/wbot";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
+import RequestPairingCodeService from "../services/WbotServices/RequestPairingCodeService";
 
 import CreateWhatsAppService from "../services/WhatsappService/CreateWhatsAppService";
 import DeleteWhatsAppService from "../services/WhatsappService/DeleteWhatsAppService";
@@ -145,6 +146,23 @@ export const update = async (
   }
 
   return res.status(200).json(whatsapp);
+};
+
+export const requestPairingCode = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+  const { phoneNumber } = req.body;
+  const { companyId } = req.user;
+
+  const code = await RequestPairingCodeService(
+    +whatsappId,
+    companyId,
+    phoneNumber
+  );
+
+  return res.status(200).json({ code });
 };
 
 export const remove = async (

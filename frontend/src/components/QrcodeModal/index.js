@@ -2,13 +2,17 @@ import React, { useEffect, useState, useContext } from "react";
 import QRCode from "qrcode.react";
 import toastError from "../../errors/toastError";
 
-import { Dialog, DialogContent, Paper, Typography, useTheme } from "@material-ui/core";
+import { Dialog, DialogContent, Paper, Typography, useTheme, Button, TextField, CircularProgress } from "@material-ui/core";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
 const QrcodeModal = ({ open, onClose, whatsAppId }) => {
   const [qrCode, setQrCode] = useState("");
+  const [usePhoneNumber, setUsePhoneNumber] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [pairingCode, setPairingCode] = useState("");
+  const [loadingCode, setLoadingCode] = useState(false);
   const theme = useTheme();
 
   const socketManager = useContext(SocketContext);
@@ -47,6 +51,22 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
     };
   }, [whatsAppId, onClose, socketManager]);
 
+  const handleRequestPairingCode = async () => {
+    if (!phoneNumber) return;
+    setLoadingCode(true);
+    setPairingCode("");
+    try {
+      const { data } = await api.post(`/whatsapp/${whatsAppId}/pairing-code`, {
+        phoneNumber
+      });
+      setPairingCode(data.code);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" scroll="paper">
       <DialogContent>
@@ -68,11 +88,60 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
               {i18n.t("qrCodeModal.steps.four")}
             </Typography>
           </div>
-          <div>
-            {qrCode ? (
-              <QRCode value={qrCode} size={256} />
+          <div style={{ minWidth: 256 }}>
+            {!usePhoneNumber ? (
+              <>
+                {qrCode ? (
+                  <QRCode value={qrCode} size={256} />
+                ) : (
+                  <span>{i18n.t("qrCodeModal.waiting")}</span>
+                )}
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  <Button size="small" color="primary" onClick={() => setUsePhoneNumber(true)}>
+                    Conectar por número de telefone
+                  </Button>
+                </div>
+              </>
             ) : (
-              <span>{i18n.t("qrCodeModal.waiting")}</span>
+              <div style={{ textAlign: "center" }}>
+                {pairingCode ? (
+                  <>
+                    <Typography variant="body1" color="textPrimary" gutterBottom>
+                      No WhatsApp, escolha "Conectar com número de telefone" e digite:
+                    </Typography>
+                    <Typography variant="h4" component="p" style={{ letterSpacing: 4, fontWeight: "bold" }}>
+                      {pairingCode}
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <TextField
+                      label="Número (com DDI e DDD)"
+                      placeholder="5531999999999"
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                    />
+                    <Button
+                      style={{ marginTop: 12 }}
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      disabled={!phoneNumber || loadingCode}
+                      onClick={handleRequestPairingCode}
+                    >
+                      {loadingCode ? <CircularProgress size={20} /> : "Gerar código"}
+                    </Button>
+                  </>
+                )}
+                <div style={{ marginTop: 12 }}>
+                  <Button size="small" onClick={() => { setUsePhoneNumber(false); setPairingCode(""); }}>
+                    Voltar para QR code
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </Paper>

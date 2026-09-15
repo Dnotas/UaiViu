@@ -6,10 +6,21 @@ import wbotMonitor from "./wbotMonitor";
 import { logger } from "../../utils/logger";
 import * as Sentry from "@sentry/node";
 
+// Evita iniciar a mesma sessão duas vezes em paralelo (ex: clique manual +
+// retry automático quase simultâneos), o que gera sockets concorrentes e
+// closeCode=440 (connectionReplaced) no WhatsApp.
+const startingSessions = new Set<number>();
+
 export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
   companyId: number
 ): Promise<void> => {
+  if (startingSessions.has(whatsapp.id)) {
+    logger.info(`[WBot] Sessão ${whatsapp.id} já está iniciando, ignorando chamada concorrente`);
+    return;
+  }
+  startingSessions.add(whatsapp.id);
+
   await whatsapp.update({ status: "OPENING" });
 
   const io = getIO();
@@ -25,5 +36,7 @@ export const StartWhatsAppSession = async (
   } catch (err) {
     Sentry.captureException(err);
     logger.error(err);
+  } finally {
+    startingSessions.delete(whatsapp.id);
   }
 };
