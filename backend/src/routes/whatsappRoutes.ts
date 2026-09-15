@@ -19,4 +19,11 @@ whatsappRoutes.delete(
   WhatsAppController.remove
 );
 
+// QR code proxy para conexões via Instance2
+whatsappRoutes.get(
+  "/whatsapp/:whatsappId/instance2-qr",
+  isAuth,
+  WhatsAppController.instance2Qr
+);
+
 export default whatsappRoutes;

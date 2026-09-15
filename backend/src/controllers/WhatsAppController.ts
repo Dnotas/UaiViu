@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import { removeWbot } from "../libs/wbot";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
+import { instance2GetQR, sessionNameFromId } from "../helpers/instance2Client";
 
 import CreateWhatsAppService from "../services/WhatsappService/CreateWhatsAppService";
 import DeleteWhatsAppService from "../services/WhatsappService/DeleteWhatsAppService";
@@ -166,4 +167,23 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Whatsapp deleted." });
+};
+
+// Proxy de QR code para conexões via Instance2 (Oracle server)
+export const instance2Qr = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+  const { companyId } = req.user;
+
+  const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
+  if (whatsapp.provider !== "instance2") {
+    return res.status(400).json({ error: "Conexão não usa instance2" });
+  }
+
+  const sessionName = sessionNameFromId(+whatsappId);
+  const qr = await instance2GetQR(sessionName);
+
+  return res.status(200).json({ qr: qr || whatsapp.qrcode || null });
 };

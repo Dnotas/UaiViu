@@ -38,6 +38,8 @@ import aiRoutes from "./aiRoutes";
 import activationTokenRoutes from "./activationTokenRoutes";
 import syncMessagesRoutes from "./syncMessagesRoutes";
 import asaasRoutes from "./asaasRoutes";
+import healthRoutes from "./healthRoutes";
+import instance2WebhookRoutes from "./instance2WebhookRoutes";
 const routes = Router();
 
 routes.use(userRoutes);
@@ -80,5 +82,7 @@ routes.use(aiRoutes);
 routes.use(activationTokenRoutes);
 routes.use(syncMessagesRoutes);
 routes.use(asaasRoutes);
+routes.use(healthRoutes);
+routes.use(instance2WebhookRoutes);
 
 export default routes;

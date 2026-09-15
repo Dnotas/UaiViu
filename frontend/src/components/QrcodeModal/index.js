@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import QRCode from "qrcode.react";
 import toastError from "../../errors/toastError";
 
@@ -9,17 +9,33 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 
 const QrcodeModal = ({ open, onClose, whatsAppId }) => {
   const [qrCode, setQrCode] = useState("");
+  const [isInstance2, setIsInstance2] = useState(false);
   const theme = useTheme();
+  const pollRef = useRef(null);
 
   const socketManager = useContext(SocketContext);
 
+  // Detecta se é instance2 e busca QR inicial
   useEffect(() => {
     const fetchSession = async () => {
       if (!whatsAppId) return;
 
       try {
         const { data } = await api.get(`/whatsapp/${whatsAppId}`);
-        setQrCode(data.qrcode);
+        const provider = data.provider || "stable";
+        setIsInstance2(provider === "instance2");
+
+        if (provider === "instance2") {
+          // Busca QR via endpoint proxy da instance2
+          try {
+            const { data: qrData } = await api.get(`/whatsapp/${whatsAppId}/instance2-qr`);
+            if (qrData.qr) setQrCode(qrData.qr);
+          } catch {
+            // QR ainda não disponível, polling vai buscar
+          }
+        } else {
+          setQrCode(data.qrcode);
+        }
       } catch (err) {
         toastError(err);
       }
@@ -27,8 +43,35 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
     fetchSession();
   }, [whatsAppId]);
 
+  // Polling para instance2 (não usa socket — QR vem da instance2 via UaiViu proxy)
   useEffect(() => {
-    if (!whatsAppId) return;
+    if (!whatsAppId || !isInstance2 || !open) return;
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/whatsapp/${whatsAppId}/instance2-qr`);
+        if (data.qr) {
+          setQrCode(data.qr);
+        }
+        // Checa status para fechar modal quando conectar
+        const { data: sessionData } = await api.get(`/whatsapp/${whatsAppId}`);
+        if (sessionData.status === "CONNECTED") {
+          onClose();
+        }
+      } catch {
+        // ignora erros de polling
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(pollRef.current);
+    };
+  }, [whatsAppId, isInstance2, open, onClose]);
+
+  // Socket.IO para conexões Baileys normais
+  useEffect(() => {
+    if (!whatsAppId || isInstance2) return;
+
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
@@ -45,7 +88,7 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
     return () => {
       socket.disconnect();
     };
-  }, [whatsAppId, onClose, socketManager]);
+  }, [whatsAppId, isInstance2, onClose, socketManager]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" scroll="paper">
@@ -54,6 +97,11 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
           <div style={{ marginRight: "20px" }}>
             <Typography variant="h2" component="h2" color="textPrimary" gutterBottom style={{ fontFamily: "Montserrat", fontWeight: "bold", fontSize:"20px",}}>
               {i18n.t("qrCodeModal.title")}
+              {isInstance2 && (
+                <span style={{ fontSize: "13px", marginLeft: "8px", color: "#2196f3", fontWeight: "normal" }}>
+                  (Instância 2 — Oracle)
+                </span>
+              )}
             </Typography>
             <Typography variant="body1" color="textPrimary" gutterBottom>
               {i18n.t("qrCodeModal.steps.one")}
@@ -72,7 +120,11 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
             {qrCode ? (
               <QRCode value={qrCode} size={256} />
             ) : (
-              <span>{i18n.t("qrCodeModal.waiting")}</span>
+              <span>
+                {isInstance2
+                  ? "Aguardando QR da Instância 2..."
+                  : i18n.t("qrCodeModal.waiting")}
+              </span>
             )}
           </div>
         </Paper>

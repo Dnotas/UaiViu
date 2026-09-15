@@ -36,6 +36,21 @@ type Session = WASocket & {
 
 const sessions: Session[] = [];
 
+// Proxy EventEmitters para conexões via instance2 (Oracle server)
+// Chave: whatsappId  Valor: EventEmitter com interface mínima de WASocket
+const instance2Emitters = new Map<number, any>();
+
+export const registerInstance2Emitter = (whatsappId: number, emitter: any): void => {
+  instance2Emitters.set(whatsappId, emitter);
+};
+
+export const getInstance2Emitter = (whatsappId: number): any | null =>
+  instance2Emitters.get(whatsappId) || null;
+
+export const removeInstance2Emitter = (whatsappId: number): void => {
+  instance2Emitters.delete(whatsappId);
+};
+
 const retriesQrCodeMap = new Map<number, number>();
 
 const manualRestartsSet = new Set<number>();

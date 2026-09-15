@@ -5,10 +5,13 @@ import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import Whatsapp from "../../models/Whatsapp";
 import ResetGroupSession from "./ResetGroupSession";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
+import { instance2SendText, sessionNameFromId } from "../../helpers/instance2Client";
 
 import formatBody from "../../helpers/Mustache";
+import BuildJid from "../../helpers/BuildJid";
 
 interface Request {
   body: string;
@@ -30,6 +33,28 @@ const SendWhatsAppMessage = async ({
   console.log("WhatsApp ID:", ticket.whatsappId);
   console.log("Body:", body);
   console.log("Has Quoted Msg:", !!quotedMsg);
+
+  // Desvio para instance2 quando o WhatsApp usa provider remoto (Oracle)
+  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
+  if (whatsappConn?.provider === "instance2") {
+    const sessionName = sessionNameFromId(ticket.whatsappId);
+    const to = ticket.contact.number.replace(/\D/g, "");
+    const formattedBody = formatBody(body, ticket.contact);
+    try {
+      await instance2SendText(sessionName, to, formattedBody);
+      await ticket.update({ lastMessage: formattedBody });
+      // Retorna mensagem sintética compatível com WAMessage
+      return {
+        key: { id: `I2_${Date.now()}`, remoteJid: `${to}@s.whatsapp.net`, fromMe: true },
+        message: { conversation: formattedBody },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1,
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar via Instance2: ${err?.message}`);
+    }
+  }
 
   // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
   // Validar o número ANTES de enviar a mensagem
@@ -60,7 +85,7 @@ const SendWhatsAppMessage = async ({
   }
 
   // Verificar se o isGroup do ticket está consistente com a validação
-  if (ticket.isGroup !== validation.isGroup) {
+  if (!validation.isLid && ticket.isGroup !== validation.isGroup) {
     console.warn("⚠️ [AVISO] Inconsistência detectada:");
     console.warn(`  - ticket.isGroup: ${ticket.isGroup}`);
     console.warn(`  - Número indica grupo: ${validation.isGroup}`);
@@ -82,9 +107,14 @@ const SendWhatsAppMessage = async ({
     console.log("✅ Wbot obtido com sucesso");
     console.log("Wbot Status:", wbot?.user?.id || "N/A");
 
-    const number = `${ticket.contact.number}@${
-      ticket.isGroup ? "g.us" : "s.whatsapp.net"
-    }`;
+    // BuildJid decide o sufixo e, para telefone, prefere o @lid quando existe
+    // sessao Signal registrada nele — sem isso o destinatario fica preso em
+    // "Aguardando mensagem".
+    const number = await BuildJid(
+      ticket.contact.number,
+      ticket.isGroup,
+      ticket.whatsappId
+    );
     console.log("📞 Número formatado:", number);
 
     // VALIDAÇÃO ADICIONAL: Verificar se o número formatado está correto

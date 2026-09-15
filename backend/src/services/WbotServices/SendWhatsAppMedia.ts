@@ -7,9 +7,12 @@ import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
+import Whatsapp from "../../models/Whatsapp";
 import { lookup } from "mime-types";
 import formatBody from "../../helpers/Mustache";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
+import BuildJid from "../../helpers/BuildJid";
+import { instance2SendMedia, sessionNameFromId } from "../../helpers/instance2Client";
 
 interface Request {
   media: Express.Multer.File;
@@ -129,6 +132,34 @@ const SendWhatsAppMedia = async ({
   console.log("Media Type:", media.mimetype);
   console.log("Media Name:", media.originalname);
 
+  // Desvio para instance2 quando o WhatsApp usa provider remoto (Oracle)
+  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
+  if (whatsappConn?.provider === "instance2") {
+    const sessionName = sessionNameFromId(ticket.whatsappId);
+    const to = ticket.contact.number.replace(/\D/g, "");
+    try {
+      const base64 = fs.readFileSync(media.path, { encoding: "base64" });
+      await instance2SendMedia(
+        sessionName,
+        to,
+        base64,
+        media.mimetype,
+        body || "",
+        media.originalname
+      );
+      await ticket.update({ lastMessage: body || media.originalname });
+      return {
+        key: { id: `I2M_${Date.now()}`, remoteJid: `${to}@s.whatsapp.net`, fromMe: true },
+        message: { imageMessage: { caption: body } },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1,
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar mídia via Instance2: ${err?.message}`);
+    }
+  }
+
   // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
   // Validar o número ANTES de enviar a mídia
   console.log("🔒 [SEGURANÇA] Validando número do contato...");
@@ -246,7 +277,7 @@ const SendWhatsAppMedia = async ({
       };
     }
 
-    const number = `${ticket.contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`;
+    const number = await BuildJid(ticket.contact.number, ticket.isGroup, ticket?.whatsappId);
     console.log("📞 Número formatado para envio:", number);
     console.log("🔒 [SEGURANÇA] Verificação final:");
     console.log("  - Número limpo:", validation.cleanNumber);

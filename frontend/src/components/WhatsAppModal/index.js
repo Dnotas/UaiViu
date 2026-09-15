@@ -328,6 +328,21 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                     margin="dense"
                   />
                 </div>
+                <FormControl margin="dense" variant="outlined" fullWidth>
+                  <InputLabel>Provedor de Conexão</InputLabel>
+                  <Field
+                    as={Select}
+                    name="provider"
+                    label="Provedor de Conexão"
+                    fullWidth
+                  >
+                    <MenuItem value="stable">Padrão (Servidor Local)</MenuItem>
+                    <MenuItem value="beta">Beta (Servidor Local)</MenuItem>
+                    <MenuItem value="instance2">
+                      🚀 Instância 2 — Oracle (IP alternativo)
+                    </MenuItem>
+                  </Field>
+                </FormControl>
                 <QueueSelect
                   selectedQueueIds={selectedQueueIds}
                   onChange={(selectedIds) => handleChangeQueue(selectedIds)}
