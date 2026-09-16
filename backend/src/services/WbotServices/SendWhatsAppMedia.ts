@@ -7,9 +7,13 @@ import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
+import Whatsapp from "../../models/Whatsapp";
 import { lookup } from "mime-types";
 import formatBody from "../../helpers/Mustache";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
+import { isWapiBridgeConfigured, wapiBridgeSendImage, wapiBridgeSendDocument } from "../../helpers/wapiBridgeClient";
+import { markWapiBridgeSent } from "../../helpers/wapiBridgeRecentSends";
+import CreateMessageService from "../MessageServices/CreateMessageService";
 
 interface Request {
   media: Express.Multer.File;
@@ -171,6 +175,56 @@ const SendWhatsAppMedia = async ({
 
   console.log("✅ [SEGURANÇA] Número validado com sucesso");
   console.log("========================================");
+
+  // Ponte temporária via W-API (ver helpers/wapiBridgeClient.ts) — imagem ou documento
+  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
+  const mimeTypeForBridge = lookup(media.path) || media.mimetype || "";
+  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
+    const cleanNumber = ticket.contact.number.replace(/\D/g, "");
+    // Grupos precisam do sufixo @g.us — sem ele o W-API aceita a chamada
+    // (retorna sucesso) mas descarta a entrega silenciosamente.
+    const to = ticket.isGroup ? `${cleanNumber}@g.us` : cleanNumber;
+    const isImage = mimeTypeForBridge.startsWith("image/");
+    try {
+      const base64 = fs.readFileSync(media.path, { encoding: "base64" });
+      const dataUri = `data:${mimeTypeForBridge};base64,${base64}`;
+
+      if (isImage) {
+        await wapiBridgeSendImage(to, dataUri, body || undefined);
+      } else {
+        const extension =
+          media.originalname.toLowerCase().split(".").pop() ||
+          mimeTypeForBridge.split("/")[1] ||
+          "bin";
+        await wapiBridgeSendDocument(to, dataUri, extension, media.originalname, body || undefined);
+      }
+      markWapiBridgeSent(cleanNumber);
+      await ticket.update({ lastMessage: body || media.originalname });
+      const wbMessageId = `WB_${Date.now()}`;
+      await CreateMessageService({
+        messageData: {
+          id: wbMessageId,
+          ticketId: ticket.id,
+          contactId: ticket.contactId,
+          body: body || media.originalname,
+          fromMe: true,
+          read: true,
+          mediaType: isImage ? "image" : "document",
+          mediaUrl: media.filename
+        },
+        companyId: ticket.companyId
+      });
+      return {
+        key: { id: wbMessageId, remoteJid: ticket.isGroup ? to : `${to}@s.whatsapp.net`, fromMe: true },
+        message: isImage ? { imageMessage: { caption: body } } : { documentMessage: { caption: body } },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar ${isImage ? "imagem" : "documento"} via ponte W-API: ${err?.message}`);
+    }
+  }
 
   try {
     const wbot = await GetTicketWbot(ticket);

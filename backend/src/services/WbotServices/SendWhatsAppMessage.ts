@@ -5,8 +5,12 @@ import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import Whatsapp from "../../models/Whatsapp";
 import ResetGroupSession from "./ResetGroupSession";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
+import { isWapiBridgeConfigured, wapiBridgeSendText } from "../../helpers/wapiBridgeClient";
+import { markWapiBridgeSent } from "../../helpers/wapiBridgeRecentSends";
+import CreateMessageService from "../MessageServices/CreateMessageService";
 
 import formatBody from "../../helpers/Mustache";
 
@@ -73,6 +77,42 @@ const SendWhatsAppMessage = async ({
 
   console.log("✅ [SEGURANÇA] Número validado com sucesso");
   console.log("========================================");
+
+  // Ponte temporária via W-API (ver helpers/wapiBridgeClient.ts)
+  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
+  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
+    const cleanNumber = ticket.contact.number.replace(/\D/g, "");
+    // Grupos precisam do sufixo @g.us — sem ele o W-API aceita a chamada
+    // (retorna sucesso) mas descarta a entrega silenciosamente.
+    const to = ticket.isGroup ? `${cleanNumber}@g.us` : cleanNumber;
+    const formattedBody = formatBody(body, ticket.contact);
+    try {
+      await wapiBridgeSendText(to, formattedBody);
+      markWapiBridgeSent(cleanNumber);
+      await ticket.update({ lastMessage: formattedBody });
+      const wbMessageId = `WB_${Date.now()}`;
+      await CreateMessageService({
+        messageData: {
+          id: wbMessageId,
+          ticketId: ticket.id,
+          contactId: ticket.contactId,
+          body: formattedBody,
+          fromMe: true,
+          read: true
+        },
+        companyId: ticket.companyId
+      });
+      return {
+        key: { id: wbMessageId, remoteJid: ticket.isGroup ? to : `${to}@s.whatsapp.net`, fromMe: true },
+        message: { conversation: formattedBody },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar via ponte W-API: ${err?.message}`);
+    }
+  }
 
   let options = {};
 

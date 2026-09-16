@@ -19,6 +19,12 @@ const CheckContactNumber = async (
 ): Promise<IOnWhatsapp> => {
   const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
+  // Ponte via W-API não tem socket Baileys pra checar onWhatsApp — confia na
+  // validação de formato já feita antes (ValidateBrazilianNumber).
+  if (defaultWhatsapp.provider === "wapi_bridge") {
+    return { jid: `${number.replace(/\D/g, "")}@s.whatsapp.net`, exists: true };
+  }
+
   const wbot = getWbot(defaultWhatsapp.id);
   const isNumberExit = await checker(number, wbot);
 

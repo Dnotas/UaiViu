@@ -7,6 +7,10 @@ const GetProfilePicUrl = async (
 ): Promise<string> => {
   const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
+  if (defaultWhatsapp.provider === "wapi_bridge") {
+    return `${process.env.FRONTEND_URL}/nopicture.png`;
+  }
+
   const wbot = getWbot(defaultWhatsapp.id);
 
   let profilePicUrl: string;

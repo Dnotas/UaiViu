@@ -1,14 +1,36 @@
 import Whatsapp from "../models/Whatsapp";
 import GetWhatsappWbot from "./GetWhatsappWbot";
 import fs from "fs";
+import { lookup } from "mime-types";
 
 import { getMessageOptions } from "../services/WbotServices/SendWhatsAppMedia";
+import { isWapiBridgeConfigured, wapiBridgeSendText, wapiBridgeSendImage, wapiBridgeSendDocument } from "./wapiBridgeClient";
+import { markWapiBridgeSent } from "./wapiBridgeRecentSends";
+import CreateMessageService from "../services/MessageServices/CreateMessageService";
 
 export type MessageData = {
   number: number | string;
   body: string;
   mediaPath?: string;
   fileName?: string;
+  ticketId?: number;
+  contactId?: number;
+  companyId?: number;
+};
+
+// Grupo do WhatsApp usa o sufixo @g.us; contato individual usa @s.whatsapp.net.
+// O id de grupo e longo (17-18 digitos) e nunca colide com numero brasileiro,
+// que tem 12-13 digitos.
+const buildChatId = (number: number | string): string => {
+  const raw = String(number);
+
+  // Ja veio com sufixo (ex.: "1203...@g.us"): respeita como esta.
+  if (raw.includes("@")) return raw;
+
+  const digits = raw.replace(/\D/g, "");
+  return digits.length > 13
+    ? `${digits}@g.us`
+    : `${digits}@s.whatsapp.net`;
 };
 
 export const SendMessage = async (
@@ -17,8 +39,73 @@ export const SendMessage = async (
   invisibleCharacter?: string
 ): Promise<any> => {
   try {
+    // Ponte temporaria via W-API (ver helpers/wapiBridgeClient.ts)
+    if (whatsapp.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
+      const digits = String(messageData.number).replace(/\D/g, "");
+      const isGroup = digits.length > 13;
+      const to = isGroup ? `${digits}@g.us` : digits;
+      let mediaType: string | undefined;
+      let mediaFileName: string | undefined;
+
+      if (messageData.mediaPath) {
+        const mimeType = lookup(messageData.mediaPath) || "";
+        const base64 = fs.readFileSync(messageData.mediaPath, { encoding: "base64" });
+        const dataUri = `data:${mimeType};base64,${base64}`;
+
+        if (mimeType.startsWith("image/")) {
+          await wapiBridgeSendImage(to, dataUri, messageData.body || undefined);
+          mediaType = "image";
+        } else {
+          const nameForExt = messageData.fileName || messageData.mediaPath;
+          const extension =
+            nameForExt.toLowerCase().split(".").pop() ||
+            mimeType.split("/")[1] ||
+            "bin";
+          await wapiBridgeSendDocument(
+            to,
+            dataUri,
+            extension,
+            messageData.fileName,
+            messageData.body || undefined
+          );
+          mediaType = "document";
+        }
+        // mediaUrl tem que apontar pro nome físico do arquivo salvo em disco (multer
+        // prefixa com timestamp — ver config/upload.ts), não pro nome original do
+        // upload: usar fileName aqui gerava um link 404 (Cannot GET /public/...).
+        mediaFileName = messageData.mediaPath.split("/").pop();
+      } else {
+        await wapiBridgeSendText(to, messageData.body);
+      }
+      markWapiBridgeSent(digits);
+
+      const wbMessageId = `WB_${Date.now()}`;
+
+      // Sem ticketId (ex.: agendamentos antigos) nao da pra registrar a
+      // mensagem no chat — envia mesmo assim, so nao aparece no historico.
+      if (messageData.ticketId && messageData.companyId) {
+        await CreateMessageService({
+          messageData: {
+            id: wbMessageId,
+            ticketId: messageData.ticketId,
+            contactId: messageData.contactId,
+            body: messageData.body || messageData.fileName || "",
+            fromMe: true,
+            read: true,
+            ...(mediaType ? { mediaType, mediaUrl: mediaFileName } : {})
+          },
+          companyId: messageData.companyId
+        });
+      }
+
+      return { key: { id: wbMessageId, remoteJid: to, fromMe: true } };
+    }
+
     const wbot = await GetWhatsappWbot(whatsapp);
-    const chatId = `${messageData.number}@s.whatsapp.net`;
+    // Antes era sempre `${number}@s.whatsapp.net`, entao TODO agendamento para
+    // grupo falhava (o Schedule ia para status ERRO e a mensagem ficava
+    // registrada com ack=1, sem nunca ter sido entregue).
+    const chatId = buildChatId(messageData.number);
 
     let message;
 
@@ -29,13 +116,12 @@ export const SendMessage = async (
         messageData.body
       );
       if (options) {
-        const body = fs.readFileSync(messageData.mediaPath);
         message = await wbot.sendMessage(chatId, {
           ...options
         });
       }
     } else {
-      const body = `${invisibleCharacter || "\u200e"} ${messageData.body}`;
+      const body = `${invisibleCharacter || "‎"} ${messageData.body}`;
       message = await wbot.sendMessage(chatId, { text: body });
     }
 

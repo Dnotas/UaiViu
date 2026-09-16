@@ -15,6 +15,18 @@ export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
   companyId: number
 ): Promise<void> => {
+  // Conexões marcadas como ponte via W-API não usam Baileys — o envio é
+  // feito via helpers/wapiBridgeClient.ts, então não há sessão pra abrir.
+  if (whatsapp.provider === "wapi_bridge") {
+    await whatsapp.update({ status: "CONNECTED" });
+    const io = getIO();
+    io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {
+      action: "update",
+      session: whatsapp
+    });
+    return;
+  }
+
   if (startingSessions.has(whatsapp.id)) {
     logger.info(`[WBot] Sessão ${whatsapp.id} já está iniciando, ignorando chamada concorrente`);
     return;

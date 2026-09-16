@@ -98,7 +98,12 @@ async function handleSendMessage(job) {
     await SendMessage(whatsapp, messageData);
   } catch (e: any) {
     Sentry.captureException(e);
-    logger.error("MessageQueue -> SendMessage: error", e.message);
+    // logger.error(msg, arg) do pino ignora arg quando msg não tem %s — por isso
+    // o erro real nunca aparecia no log. Passar como objeto de contexto mostra tudo.
+    logger.error(
+      { errMessage: e?.message, apiErrorData: e?.response?.data, stack: e?.stack },
+      "MessageQueue -> SendMessage: error"
+    );
     throw e;
   }
 }
