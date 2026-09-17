@@ -15,9 +15,10 @@ export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
   companyId: number
 ): Promise<void> => {
-  // Conexões marcadas como ponte via W-API não usam Baileys — o envio é
-  // feito via helpers/wapiBridgeClient.ts, então não há sessão pra abrir.
-  if (whatsapp.provider === "wapi_bridge") {
+  // Conexões marcadas como ponte (W-API ou InovaChat) não usam Baileys — o
+  // envio é feito via helpers/wapiBridgeClient.ts ou inovaChatBridgeClient.ts,
+  // então não há sessão pra abrir.
+  if (whatsapp.provider === "wapi_bridge" || whatsapp.provider === "inovachat_bridge") {
     await whatsapp.update({ status: "CONNECTED" });
     const io = getIO();
     io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {

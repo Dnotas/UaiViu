@@ -10,6 +10,7 @@ import ResetGroupSession from "./ResetGroupSession";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
 import { isWapiBridgeConfigured, wapiBridgeSendText } from "../../helpers/wapiBridgeClient";
 import { markWapiBridgeSent } from "../../helpers/wapiBridgeRecentSends";
+import { inovaChatSendText } from "../../helpers/inovaChatBridgeClient";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 
 import formatBody from "../../helpers/Mustache";
@@ -80,14 +81,14 @@ const SendWhatsAppMessage = async ({
 
   // Ponte temporária via W-API (ver helpers/wapiBridgeClient.ts)
   const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
-  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
+  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured(whatsappConn)) {
     const cleanNumber = ticket.contact.number.replace(/\D/g, "");
     // Grupos precisam do sufixo @g.us — sem ele o W-API aceita a chamada
     // (retorna sucesso) mas descarta a entrega silenciosamente.
     const to = ticket.isGroup ? `${cleanNumber}@g.us` : cleanNumber;
     const formattedBody = formatBody(body, ticket.contact);
     try {
-      await wapiBridgeSendText(to, formattedBody);
+      await wapiBridgeSendText(to, formattedBody, whatsappConn);
       markWapiBridgeSent(cleanNumber);
       await ticket.update({ lastMessage: formattedBody });
       const wbMessageId = `WB_${Date.now()}`;
@@ -111,6 +112,37 @@ const SendWhatsAppMessage = async ({
     } catch (err: any) {
       Sentry.captureException(err);
       throw new AppError(`Erro ao enviar via ponte W-API: ${err?.message}`);
+    }
+  }
+
+  // Ponte pra clientes na InovaChat (ver helpers/inovaChatBridgeClient.ts).
+  if (whatsappConn?.provider === "inovachat_bridge" && whatsappConn.token) {
+    const cleanNumber = ticket.contact.number.replace(/\D/g, "");
+    const formattedBody = formatBody(body, ticket.contact);
+    try {
+      await inovaChatSendText(whatsappConn.token, cleanNumber, formattedBody);
+      await ticket.update({ lastMessage: formattedBody });
+      const icMessageId = `IC_${Date.now()}`;
+      await CreateMessageService({
+        messageData: {
+          id: icMessageId,
+          ticketId: ticket.id,
+          contactId: ticket.contactId,
+          body: formattedBody,
+          fromMe: true,
+          read: true
+        },
+        companyId: ticket.companyId
+      });
+      return {
+        key: { id: icMessageId, remoteJid: `${cleanNumber}@s.whatsapp.net`, fromMe: true },
+        message: { conversation: formattedBody },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar via ponte InovaChat: ${err?.message}`);
     }
   }
 

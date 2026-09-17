@@ -106,6 +106,15 @@ class Whatsapp extends Model<Whatsapp> {
   @Column
   token: string;
 
+  // Credenciais da instância W-API dessa conexão especifica (provider="wapi_bridge").
+  // Quando vazias, wapiBridgeClient cai pras env vars globais WAPI_INSTANCE_ID/WAPI_TOKEN
+  // (mantém a conexão "Suporte" original funcionando sem precisar preencher nada).
+  @Column
+  wapiInstanceId: string;
+
+  @Column
+  wapiInstanceToken: string;
+
   //@Default(0)
   //@Column
   //timeSendQueue: number;

@@ -6,6 +6,7 @@ import { lookup } from "mime-types";
 import { getMessageOptions } from "../services/WbotServices/SendWhatsAppMedia";
 import { isWapiBridgeConfigured, wapiBridgeSendText, wapiBridgeSendImage, wapiBridgeSendDocument } from "./wapiBridgeClient";
 import { markWapiBridgeSent } from "./wapiBridgeRecentSends";
+import { inovaChatSendText, inovaChatSendImageByUrl, inovaChatSendDocumentByUrl } from "./inovaChatBridgeClient";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 
 export type MessageData = {
@@ -40,7 +41,7 @@ export const SendMessage = async (
 ): Promise<any> => {
   try {
     // Ponte temporaria via W-API (ver helpers/wapiBridgeClient.ts)
-    if (whatsapp.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
+    if (whatsapp.provider === "wapi_bridge" && isWapiBridgeConfigured(whatsapp)) {
       const digits = String(messageData.number).replace(/\D/g, "");
       const isGroup = digits.length > 13;
       const to = isGroup ? `${digits}@g.us` : digits;
@@ -53,7 +54,7 @@ export const SendMessage = async (
         const dataUri = `data:${mimeType};base64,${base64}`;
 
         if (mimeType.startsWith("image/")) {
-          await wapiBridgeSendImage(to, dataUri, messageData.body || undefined);
+          await wapiBridgeSendImage(to, dataUri, messageData.body || undefined, whatsapp);
           mediaType = "image";
         } else {
           const nameForExt = messageData.fileName || messageData.mediaPath;
@@ -66,7 +67,8 @@ export const SendMessage = async (
             dataUri,
             extension,
             messageData.fileName,
-            messageData.body || undefined
+            messageData.body || undefined,
+            whatsapp
           );
           mediaType = "document";
         }
@@ -75,7 +77,7 @@ export const SendMessage = async (
         // upload: usar fileName aqui gerava um link 404 (Cannot GET /public/...).
         mediaFileName = messageData.mediaPath.split("/").pop();
       } else {
-        await wapiBridgeSendText(to, messageData.body);
+        await wapiBridgeSendText(to, messageData.body, whatsapp);
       }
       markWapiBridgeSent(digits);
 
@@ -99,6 +101,57 @@ export const SendMessage = async (
       }
 
       return { key: { id: wbMessageId, remoteJid: to, fromMe: true } };
+    }
+
+    // Ponte pra clientes na InovaChat (ver helpers/inovaChatBridgeClient.ts).
+    // Diferente do W-API, aqui o token e por conexao (Whatsapp.token), nao
+    // uma instancia global unica.
+    if (whatsapp.provider === "inovachat_bridge" && whatsapp.token) {
+      const digits = String(messageData.number).replace(/\D/g, "");
+      let mediaType: string | undefined;
+      let mediaFileName: string | undefined;
+
+      if (messageData.mediaPath) {
+        const mimeType = lookup(messageData.mediaPath) || "application/octet-stream";
+        const documentUrl = `${process.env.BACKEND_URL}/public/${messageData.mediaPath.split("/").pop()}`;
+        const fileName = messageData.fileName || documentUrl.split("/").pop() || "arquivo";
+
+        if (mimeType.startsWith("image/")) {
+          await inovaChatSendImageByUrl(whatsapp.token, digits, documentUrl, fileName, messageData.body || undefined);
+          mediaType = "image";
+        } else {
+          await inovaChatSendDocumentByUrl(
+            whatsapp.token,
+            digits,
+            documentUrl,
+            fileName,
+            messageData.body || undefined
+          );
+          mediaType = "document";
+        }
+        mediaFileName = messageData.mediaPath.split("/").pop();
+      } else {
+        await inovaChatSendText(whatsapp.token, digits, messageData.body);
+      }
+
+      const icMessageId = `IC_${Date.now()}`;
+
+      if (messageData.ticketId && messageData.companyId) {
+        await CreateMessageService({
+          messageData: {
+            id: icMessageId,
+            ticketId: messageData.ticketId,
+            contactId: messageData.contactId,
+            body: messageData.body || messageData.fileName || "",
+            fromMe: true,
+            read: true,
+            ...(mediaType ? { mediaType, mediaUrl: mediaFileName } : {})
+          },
+          companyId: messageData.companyId
+        });
+      }
+
+      return { key: { id: icMessageId, remoteJid: `${digits}@s.whatsapp.net`, fromMe: true } };
     }
 
     const wbot = await GetWhatsappWbot(whatsapp);
@@ -127,6 +180,8 @@ export const SendMessage = async (
 
     return message;
   } catch (err: any) {
-    throw new Error(err);
+    // new Error(err) quando err não é um Error de verdade vira "[object Object]"
+    // (perde a causa real) — serializa em JSON pra aparecer no log de verdade.
+    throw err instanceof Error ? err : new Error(JSON.stringify(err));
   }
 };

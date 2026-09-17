@@ -1,0 +1,13 @@
+{
+  "name": "wppconnect-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@wppconnect-team/wppconnect": "^1.37.4",
+    "express": "^4.19.2"
+  }
+}

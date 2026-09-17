@@ -11,6 +11,7 @@ import Contact from "../models/Contact";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
+import { Op } from "sequelize";
 import { wapiBridgeDownloadMedia } from "../helpers/wapiBridgeClient";
 import { consumeWapiBridgeEcho } from "../helpers/wapiBridgeRecentSends";
 
@@ -44,7 +45,8 @@ const MEDIA_KEY_BY_TYPE: Record<string, string> = {
 // wbotMessageListener.downloadMedia — pra tocar/exibir direto no chamado.
 const downloadAndSaveMedia = async (
   msgContent: any,
-  mediaType: string
+  mediaType: string,
+  whatsapp: Whatsapp
 ): Promise<{ filename: string; mimeType: string } | null> => {
   const media = msgContent?.[MEDIA_KEY_BY_TYPE[mediaType]];
   if (!media?.mediaKey || !media?.directPath) return null;
@@ -57,7 +59,8 @@ const downloadAndSaveMedia = async (
     media.mediaKey,
     media.directPath,
     downloadType,
-    mimeType
+    mimeType,
+    whatsapp
   );
   if (!fileLink) return null;
 
@@ -115,10 +118,20 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
       return res.status(200).json({ ok: true, skipped: "status/newsletter/broadcast chat" });
     }
 
-    // Só existe uma conexão "ponte" hoje — quando houver mais de uma, trocar
-    // esse findOne por um mapeamento instanceId -> whatsappId de verdade.
+    // Cada conexão wapi_bridge tem sua própria instância W-API (Whatsapp.wapiInstanceId).
+    // A conexão "Suporte" original não tem essa coluna preenchida (usa só a env var
+    // global) — por isso o fallback: instanceId bate com a coluna OU (coluna vazia
+    // E instanceId é o da env var global, ou seja, é a instância "default").
     const whatsapp = await Whatsapp.findOne({
-      where: { provider: "wapi_bridge" }
+      where: {
+        provider: "wapi_bridge",
+        [Op.or]: [
+          { wapiInstanceId: instanceId },
+          ...(instanceId === process.env.WAPI_INSTANCE_ID
+            ? [{ wapiInstanceId: { [Op.is]: null } as any }]
+            : [])
+        ]
+      }
     });
 
     if (!whatsapp) {
@@ -172,7 +185,7 @@ export const receive = async (req: Request, res: Response): Promise<Response> =>
     let mediaFilename: string | null = null;
     if (mediaType) {
       try {
-        const saved = await downloadAndSaveMedia(msgContent, mediaType);
+        const saved = await downloadAndSaveMedia(msgContent, mediaType, whatsapp);
         if (saved) mediaFilename = saved.filename;
       } catch (mediaErr: any) {
         logger.error(`[WapiWebhook] Falha ao baixar mídia (${mediaType}): ${mediaErr?.message}`);

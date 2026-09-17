@@ -19,9 +19,9 @@ const CheckContactNumber = async (
 ): Promise<IOnWhatsapp> => {
   const defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
-  // Ponte via W-API não tem socket Baileys pra checar onWhatsApp — confia na
-  // validação de formato já feita antes (ValidateBrazilianNumber).
-  if (defaultWhatsapp.provider === "wapi_bridge") {
+  // Pontes (W-API ou InovaChat) não têm socket Baileys pra checar onWhatsApp —
+  // confia na validação de formato já feita antes (ValidateBrazilianNumber).
+  if (defaultWhatsapp.provider === "wapi_bridge" || defaultWhatsapp.provider === "inovachat_bridge") {
     return { jid: `${number.replace(/\D/g, "")}@s.whatsapp.net`, exists: true };
   }
 
