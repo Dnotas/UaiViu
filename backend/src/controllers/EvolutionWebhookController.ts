@@ -89,20 +89,16 @@ async function handleConnectionUpdate(
 
   if (state === "open") {
     await whatsapp.update({ status: "CONNECTED", qrcode: "" });
-    io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {
+    io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
       action: "update",
       session: { ...whatsapp.get({ plain: true }), status: "CONNECTED", qrcode: "" },
     });
     logger.info(`[EvolutionWebhook] whatsappId=${whatsappId} CONECTADO via webhook`);
   } else if (state === "close") {
-    if (whatsapp.status === "CONNECTED") {
-      await whatsapp.update({ status: "DISCONNECTED" });
-      io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {
-        action: "update",
-        session: { ...whatsapp.get({ plain: true }), status: "DISCONNECTED" },
-      });
-      logger.warn(`[EvolutionWebhook] whatsappId=${whatsappId} desconectou via webhook`);
-    }
+    // Eventos "close" do webhook são ignorados — podem chegar fora de ordem
+    // (retry de eventos que falharam). O polling em StartEvolutionSession
+    // detecta desconexão real e atualiza o status corretamente.
+    logger.info(`[EvolutionWebhook] whatsappId=${whatsappId} close event ignorado (polling cuida disso)`);
   }
 }
 
@@ -121,7 +117,7 @@ async function handleQrcodeUpdated(
   await whatsapp.update({ qrcode: qr, status: "qrcode" });
 
   const io = getIO();
-  io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {
+  io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
     action: "update",
     session: { ...whatsapp.get({ plain: true }), qrcode: qr, status: "qrcode" },
   });

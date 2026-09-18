@@ -79,7 +79,7 @@ export const StartEvolutionSession = async (
   logger.info(`[Evolution] Iniciando sessão ${instanceName} (whatsappId=${whatsapp.id})`);
 
   await whatsapp.update({ status: "OPENING" });
-  io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
     action: "update",
     session: whatsapp,
   });
@@ -121,7 +121,7 @@ const pollEvolutionStatus = async (
         qrRetries = 0;
         if (whatsapp.status !== "CONNECTED") {
           await whatsapp.update({ status: "CONNECTED", qrcode: "" });
-          io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+          io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
             action: "update",
             session: { ...whatsapp.get({ plain: true }), status: "CONNECTED", qrcode: "" },
           });
@@ -135,7 +135,7 @@ const pollEvolutionStatus = async (
         if (whatsapp.status === "CONNECTED") {
           // Sessão que já estava conectada e caiu — marcar como desconectado e parar
           await whatsapp.update({ status: "DISCONNECTED" });
-          io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+          io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
             action: "update",
             session: { ...whatsapp.get({ plain: true }), status: "DISCONNECTED" },
           });
@@ -150,7 +150,7 @@ const pollEvolutionStatus = async (
         if (qr) {
           qrRetries++;
           await whatsapp.update({ qrcode: qr, status: "qrcode" });
-          io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+          io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
             action: "update",
             session: { ...whatsapp.get({ plain: true }), qrcode: qr, status: "qrcode" },
           });
@@ -165,7 +165,7 @@ const pollEvolutionStatus = async (
       if (qr && qr !== whatsapp.qrcode) {
         qrRetries++;
         await whatsapp.update({ qrcode: qr, status: "qrcode" });
-        io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+        io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsappSession`, {
           action: "update",
           session: { ...whatsapp.get({ plain: true }), qrcode: qr, status: "qrcode" },
         });

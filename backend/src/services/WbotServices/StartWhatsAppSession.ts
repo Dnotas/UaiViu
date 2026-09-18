@@ -11,6 +11,7 @@ import { StartEvolutionSession } from "./StartEvolutionSession";
 // retry automático quase simultâneos), o que gera sockets concorrentes e
 // closeCode=440 (connectionReplaced) no WhatsApp.
 const startingSessions = new Set<number>();
+const startingEvolutionSessions = new Set<number>();
 
 export const StartWhatsAppSession = async (
   whatsapp: Whatsapp,
@@ -22,7 +23,7 @@ export const StartWhatsAppSession = async (
   if (whatsapp.provider === "wapi_bridge" || whatsapp.provider === "inovachat_bridge") {
     await whatsapp.update({ status: "CONNECTED" });
     const io = getIO();
-    io.to(`company-${whatsapp.companyId}-mainchannel`).emit("whatsappSession", {
+    io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
       action: "update",
       session: whatsapp
     });
@@ -31,11 +32,18 @@ export const StartWhatsAppSession = async (
 
   // Conexões com provider "evolution" usam Evolution API no servidor Oracle
   if (whatsapp.provider === "evolution") {
+    if (startingEvolutionSessions.has(whatsapp.id)) {
+      logger.info(`[Evolution] Sessão ${whatsapp.id} já está iniciando, ignorando chamada concorrente`);
+      return;
+    }
+    startingEvolutionSessions.add(whatsapp.id);
     try {
       await StartEvolutionSession(whatsapp, companyId);
     } catch (err) {
       Sentry.captureException(err);
       logger.error(`[Evolution] Erro ao iniciar sessão ${whatsapp.id}: ${err}`);
+    } finally {
+      startingEvolutionSessions.delete(whatsapp.id);
     }
     return;
   }
