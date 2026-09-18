@@ -23,7 +23,11 @@ const EvolutionWebhookController = {
     // Segurança: validar apenas o nome da instância (só instâncias nossas são processadas).
     // O Evolution API envia apikey por instância (UUID), não a chave global —
     // verificação por chave foi removida para evitar rejeição de webhooks legítimos.
-    logger.info(`[EvolutionWebhook] event=${event} instance=${instanceName}`);
+    // Evolution API v2 envia nomes de evento em lowercase com ponto (ex: "messages.upsert")
+    // enquanto alguns docs descrevem SCREAMING_SNAKE_CASE. Normalizamos para comparação segura.
+    const normalizedEvent = (event as string || "").toUpperCase().replace(/\./g, "_");
+
+    logger.info(`[EvolutionWebhook] event=${event} (normalized=${normalizedEvent}) instance=${instanceName}`);
 
     if (!event || !instanceName || !data) {
       return res.status(400).json({ error: "Payload incompleto" });
@@ -36,32 +40,39 @@ const EvolutionWebhookController = {
     }
 
     // Eventos de conexão tratados diretamente (sem precisar do proxy)
-    if (event === "CONNECTION_UPDATE") {
+    if (normalizedEvent === "CONNECTION_UPDATE") {
       await handleConnectionUpdate(whatsappId, data);
       return res.status(200).json({ ok: true });
     }
 
-    if (event === "QRCODE_UPDATED") {
+    if (normalizedEvent === "QRCODE_UPDATED") {
       await handleQrcodeUpdated(whatsappId, data);
       return res.status(200).json({ ok: true });
     }
 
     // Eventos de mensagens: repassa ao proxy wbotMessageListener
-    if (event === "MESSAGES_UPSERT") {
+    if (normalizedEvent === "MESSAGES_UPSERT") {
       const proxy = getEvolutionEmitter(whatsappId);
       if (!proxy) {
         logger.warn(
-          `[EvolutionWebhook] Nenhum emitter para whatsappId=${whatsappId}`
+          `[EvolutionWebhook] Nenhum emitter para whatsappId=${whatsappId} — backend precisa reiniciar ou sessão não iniciada`
         );
         return res.status(200).json({ ok: false, reason: "session_not_ready" });
       }
 
       try {
-        // Normaliza para o formato Baileys que wbotMessageListener espera
-        const messages = Array.isArray(data) ? data : [data];
+        // Evolution API pode enviar data como array, objeto único, ou { messages: [...] }
+        let messages: any[];
+        if (Array.isArray(data)) {
+          messages = data;
+        } else if (data.messages && Array.isArray(data.messages)) {
+          messages = data.messages;
+        } else {
+          messages = [data];
+        }
         proxy.ev.emit("messages.upsert", { messages, type: "notify" });
         logger.info(
-          `[EvolutionWebhook] MESSAGES_UPSERT repassado para whatsappId=${whatsappId}`
+          `[EvolutionWebhook] messages.upsert repassado para whatsappId=${whatsappId} (${messages.length} msg)`
         );
       } catch (err: any) {
         logger.error(
