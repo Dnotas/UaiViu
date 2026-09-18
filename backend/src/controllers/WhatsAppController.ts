@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
-import { removeWbot } from "../libs/wbot";
+import { removeWbot, removeEvolutionEmitter } from "../libs/wbot";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
 import RequestPairingCodeService from "../services/WbotServices/RequestPairingCodeService";
+import { evolutionGetQR, instanceNameFromId } from "../helpers/evolutionClient";
 
 import CreateWhatsAppService from "../services/WhatsappService/CreateWhatsAppService";
 import DeleteWhatsAppService from "../services/WhatsappService/DeleteWhatsAppService";
@@ -24,7 +25,7 @@ interface WhatsappData {
   //sendIdQueue?: number;
   //timeSendQueue?: number;
   transferQueueId?: number;
-  timeToTransfer?: number;  
+  timeToTransfer?: number;
   promptId?: number;
   maxUseBotQueues?: number;
   timeUseBotQueues?: number;
@@ -81,7 +82,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     //timeSendQueue,
     //sendIdQueue,
 	  transferQueueId,
-	  timeToTransfer,	
+	  timeToTransfer,
     promptId,
     maxUseBotQueues,
     timeUseBotQueues,
@@ -131,6 +132,12 @@ export const update = async (
     whatsappId,
     companyId
   });
+
+  if (whatsappData.provider) {
+    try { removeWbot(whatsapp.id); } catch {}
+    removeEvolutionEmitter(whatsapp.id);
+    StartWhatsAppSession(whatsapp, companyId).catch(() => {});
+  }
 
   const io = getIO();
   io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-whatsapp`, {
@@ -184,4 +191,23 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Whatsapp deleted." });
+};
+
+// Proxy de QR code para conexões via Evolution API (Oracle server)
+export const evolutionQr = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+  const { companyId } = req.user;
+
+  const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
+  if (whatsapp.provider !== "evolution") {
+    return res.status(400).json({ error: "Conexão não usa evolution" });
+  }
+
+  const instanceName = instanceNameFromId(+whatsappId);
+  const qr = await evolutionGetQR(instanceName);
+
+  return res.status(200).json({ qr: qr || whatsapp.qrcode || null });
 };

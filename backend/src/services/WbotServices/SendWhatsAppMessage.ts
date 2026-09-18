@@ -11,6 +11,7 @@ import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
 import { isWapiBridgeConfigured, wapiBridgeSendText } from "../../helpers/wapiBridgeClient";
 import { markWapiBridgeSent } from "../../helpers/wapiBridgeRecentSends";
 import { inovaChatSendText } from "../../helpers/inovaChatBridgeClient";
+import { evolutionSendText, instanceNameFromId } from "../../helpers/evolutionClient";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 
 import formatBody from "../../helpers/Mustache";
@@ -143,6 +144,26 @@ const SendWhatsAppMessage = async ({
     } catch (err: any) {
       Sentry.captureException(err);
       throw new AppError(`Erro ao enviar via ponte InovaChat: ${err?.message}`);
+    }
+  }
+
+  // Evolution API (Oracle server — provider='evolution')
+  if (whatsappConn?.provider === "evolution") {
+    const instanceName = instanceNameFromId(ticket.whatsappId);
+    const to = ticket.contact.number.replace(/\D/g, "");
+    const formattedBody = formatBody(body, ticket.contact);
+    try {
+      await evolutionSendText(instanceName, to, formattedBody);
+      await ticket.update({ lastMessage: formattedBody });
+      return {
+        key: { id: `EV_${Date.now()}`, remoteJid: `${to}@s.whatsapp.net`, fromMe: true },
+        message: { conversation: formattedBody },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1,
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar via Evolution API: ${err?.message}`);
     }
   }
 

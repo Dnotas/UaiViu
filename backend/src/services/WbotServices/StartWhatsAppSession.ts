@@ -5,6 +5,7 @@ import { getIO } from "../../libs/socket";
 import wbotMonitor from "./wbotMonitor";
 import { logger } from "../../utils/logger";
 import * as Sentry from "@sentry/node";
+import { StartEvolutionSession } from "./StartEvolutionSession";
 
 // Evita iniciar a mesma sessão duas vezes em paralelo (ex: clique manual +
 // retry automático quase simultâneos), o que gera sockets concorrentes e
@@ -25,6 +26,17 @@ export const StartWhatsAppSession = async (
       action: "update",
       session: whatsapp
     });
+    return;
+  }
+
+  // Conexões com provider "evolution" usam Evolution API no servidor Oracle
+  if (whatsapp.provider === "evolution") {
+    try {
+      await StartEvolutionSession(whatsapp, companyId);
+    } catch (err) {
+      Sentry.captureException(err);
+      logger.error(`[Evolution] Erro ao iniciar sessão ${whatsapp.id}: ${err}`);
+    }
     return;
   }
 

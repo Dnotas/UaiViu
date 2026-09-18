@@ -39,9 +39,11 @@ import activationTokenRoutes from "./activationTokenRoutes";
 import syncMessagesRoutes from "./syncMessagesRoutes";
 import asaasRoutes from "./asaasRoutes";
 import wapiWebhookRoutes from "./wapiWebhookRoutes";
+import evolutionWebhookRoutes from "./evolutionWebhookRoutes";
 const routes = Router();
 
 routes.use(wapiWebhookRoutes);
+routes.use(evolutionWebhookRoutes);
 routes.use(userRoutes);
 routes.use("/auth", authRoutes);
 routes.use(settingRoutes);

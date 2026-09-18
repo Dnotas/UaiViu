@@ -25,4 +25,11 @@ whatsappRoutes.delete(
   WhatsAppController.remove
 );
 
+// QR code proxy para conexões via Evolution API
+whatsappRoutes.get(
+  "/whatsapp/:whatsappId/evolution-qr",
+  isAuth,
+  WhatsAppController.evolutionQr
+);
+
 export default whatsappRoutes;

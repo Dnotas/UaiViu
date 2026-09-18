@@ -13,6 +13,7 @@ import formatBody from "../../helpers/Mustache";
 import ValidateBrazilianNumber from "../../helpers/ValidateBrazilianNumber";
 import { isWapiBridgeConfigured, wapiBridgeSendImage, wapiBridgeSendDocument } from "../../helpers/wapiBridgeClient";
 import { markWapiBridgeSent } from "../../helpers/wapiBridgeRecentSends";
+import { evolutionSendMedia, instanceNameFromId } from "../../helpers/evolutionClient";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 
 interface Request {
@@ -133,6 +134,74 @@ const SendWhatsAppMedia = async ({
   console.log("Media Type:", media.mimetype);
   console.log("Media Name:", media.originalname);
 
+  // Ponte temporária via W-API
+  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
+  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured(whatsappConn)) {
+    const cleanNumber = ticket.contact.number.replace(/\D/g, "");
+    const to = ticket.isGroup ? `${cleanNumber}@g.us` : cleanNumber;
+    const mimeType = media.mimetype || lookup(media.path) || "application/octet-stream";
+    const typeMessage = mimeType.split("/")[0];
+    try {
+      const base64 = fs.readFileSync(media.path, { encoding: "base64" });
+      if (typeMessage === "image") {
+        await wapiBridgeSendImage(to, base64, body || "", whatsappConn);
+      } else {
+        await wapiBridgeSendDocument(to, base64, mimeType, media.originalname, body || "", whatsappConn);
+      }
+      markWapiBridgeSent(cleanNumber);
+      await ticket.update({ lastMessage: body || media.originalname });
+      const wbMessageId = `WBM_${Date.now()}`;
+      await CreateMessageService({
+        messageData: {
+          id: wbMessageId,
+          ticketId: ticket.id,
+          contactId: ticket.contactId,
+          body: body || media.originalname,
+          fromMe: true,
+          read: true,
+          mediaUrl: media.filename
+        },
+        companyId: ticket.companyId
+      });
+      return {
+        key: { id: wbMessageId, remoteJid: ticket.isGroup ? to : `${to}@s.whatsapp.net`, fromMe: true },
+        message: { imageMessage: { caption: body } },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar mídia via ponte W-API: ${err?.message}`);
+    }
+  }
+
+  // Evolution API (Oracle server — provider='evolution')
+  if (whatsappConn?.provider === "evolution") {
+    const instanceName = instanceNameFromId(ticket.whatsappId);
+    const to = ticket.contact.number.replace(/\D/g, "");
+    try {
+      const base64 = fs.readFileSync(media.path, { encoding: "base64" });
+      await evolutionSendMedia(
+        instanceName,
+        to,
+        base64,
+        media.mimetype,
+        body || "",
+        media.originalname
+      );
+      await ticket.update({ lastMessage: body || media.originalname });
+      return {
+        key: { id: `EVM_${Date.now()}`, remoteJid: `${to}@s.whatsapp.net`, fromMe: true },
+        message: { imageMessage: { caption: body } },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 1,
+      } as unknown as WAMessage;
+    } catch (err: any) {
+      Sentry.captureException(err);
+      throw new AppError(`Erro ao enviar mídia via Evolution API: ${err?.message}`);
+    }
+  }
+
   // ⚠️ VALIDAÇÃO CRÍTICA DE SEGURANÇA ⚠️
   // Validar o número ANTES de enviar a mídia
   console.log("🔒 [SEGURANÇA] Validando número do contato...");
@@ -175,56 +244,6 @@ const SendWhatsAppMedia = async ({
 
   console.log("✅ [SEGURANÇA] Número validado com sucesso");
   console.log("========================================");
-
-  // Ponte temporária via W-API (ver helpers/wapiBridgeClient.ts) — imagem ou documento
-  const whatsappConn = await Whatsapp.findByPk(ticket.whatsappId);
-  const mimeTypeForBridge = lookup(media.path) || media.mimetype || "";
-  if (whatsappConn?.provider === "wapi_bridge" && isWapiBridgeConfigured()) {
-    const cleanNumber = ticket.contact.number.replace(/\D/g, "");
-    // Grupos precisam do sufixo @g.us — sem ele o W-API aceita a chamada
-    // (retorna sucesso) mas descarta a entrega silenciosamente.
-    const to = ticket.isGroup ? `${cleanNumber}@g.us` : cleanNumber;
-    const isImage = mimeTypeForBridge.startsWith("image/");
-    try {
-      const base64 = fs.readFileSync(media.path, { encoding: "base64" });
-      const dataUri = `data:${mimeTypeForBridge};base64,${base64}`;
-
-      if (isImage) {
-        await wapiBridgeSendImage(to, dataUri, body || undefined);
-      } else {
-        const extension =
-          media.originalname.toLowerCase().split(".").pop() ||
-          mimeTypeForBridge.split("/")[1] ||
-          "bin";
-        await wapiBridgeSendDocument(to, dataUri, extension, media.originalname, body || undefined);
-      }
-      markWapiBridgeSent(cleanNumber);
-      await ticket.update({ lastMessage: body || media.originalname });
-      const wbMessageId = `WB_${Date.now()}`;
-      await CreateMessageService({
-        messageData: {
-          id: wbMessageId,
-          ticketId: ticket.id,
-          contactId: ticket.contactId,
-          body: body || media.originalname,
-          fromMe: true,
-          read: true,
-          mediaType: isImage ? "image" : "document",
-          mediaUrl: media.filename
-        },
-        companyId: ticket.companyId
-      });
-      return {
-        key: { id: wbMessageId, remoteJid: ticket.isGroup ? to : `${to}@s.whatsapp.net`, fromMe: true },
-        message: isImage ? { imageMessage: { caption: body } } : { documentMessage: { caption: body } },
-        messageTimestamp: Math.floor(Date.now() / 1000),
-        status: 1
-      } as unknown as WAMessage;
-    } catch (err: any) {
-      Sentry.captureException(err);
-      throw new AppError(`Erro ao enviar ${isImage ? "imagem" : "documento"} via ponte W-API: ${err?.message}`);
-    }
-  }
 
   try {
     const wbot = await GetTicketWbot(ticket);
