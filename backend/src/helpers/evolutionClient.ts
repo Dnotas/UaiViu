@@ -30,6 +30,7 @@ export const evolutionCreateInstance = async (
       `${url}/instance/create`,
       {
         instanceName,
+        integration: "WHATSAPP-BAILEYS",
         webhook: {
           enabled: true,
           url: webhookUrl,
@@ -62,7 +63,9 @@ export const evolutionGetQR = async (
       `${url}/instance/connect/${instanceName}`,
       { headers: headers(), timeout: 8000 }
     );
-    return (data as any).base64 || null;
+    // Retorna o texto bruto do QR (campo "code"), não o base64 da imagem PNG.
+    // O frontend do UaiViu usa uma lib de QR que precisa do texto, não da imagem.
+    return (data as any).code || null;
   } catch {
     return null;
   }

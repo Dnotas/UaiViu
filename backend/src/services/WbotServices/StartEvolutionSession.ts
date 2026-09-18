@@ -133,14 +133,30 @@ const pollEvolutionStatus = async (
 
       if (state === "close") {
         if (whatsapp.status === "CONNECTED") {
+          // Sessão que já estava conectada e caiu — marcar como desconectado e parar
           await whatsapp.update({ status: "DISCONNECTED" });
           io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
             action: "update",
             session: { ...whatsapp.get({ plain: true }), status: "DISCONNECTED" },
           });
           logger.warn(`[Evolution] Sessão ${instanceName} desconectou`);
+          removeEvolutionEmitter(whatsapp.id);
+          return;
         }
-        removeEvolutionEmitter(whatsapp.id);
+        // Estado inicial após create — acionar conexão chamando /instance/connect
+        // que inicia a autenticação e retorna QR inline
+        logger.info(`[Evolution] Acionando conexão para ${instanceName}`);
+        const qr = await evolutionGetQR(instanceName);
+        if (qr) {
+          qrRetries++;
+          await whatsapp.update({ qrcode: qr, status: "qrcode" });
+          io.to(`company-${companyId}-mainchannel`).emit("whatsappSession", {
+            action: "update",
+            session: { ...whatsapp.get({ plain: true }), qrcode: qr, status: "qrcode" },
+          });
+          logger.info(`[Evolution] QR obtido para ${instanceName} (tentativa ${qrRetries})`);
+        }
+        setTimeout(poll, POLL_INTERVAL_MS);
         return;
       }
 

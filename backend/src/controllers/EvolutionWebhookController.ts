@@ -18,12 +18,12 @@ import { logger } from "../utils/logger";
  */
 const EvolutionWebhookController = {
   handle: async (req: Request, res: Response): Promise<Response> => {
-    const expectedKey = process.env.EVOLUTION_API_KEY;
-    const { event, instance: instanceName, data, apikey } = req.body;
+    const { event, instance: instanceName, data } = req.body;
 
-    if (expectedKey && apikey !== expectedKey) {
-      return res.status(401).json({ error: "apikey inválida" });
-    }
+    // Segurança: validar apenas o nome da instância (só instâncias nossas são processadas).
+    // O Evolution API envia apikey por instância (UUID), não a chave global —
+    // verificação por chave foi removida para evitar rejeição de webhooks legítimos.
+    logger.info(`[EvolutionWebhook] event=${event} instance=${instanceName}`);
 
     if (!event || !instanceName || !data) {
       return res.status(400).json({ error: "Payload incompleto" });
@@ -108,9 +108,11 @@ async function handleConnectionUpdate(
 
 async function handleQrcodeUpdated(
   whatsappId: number,
-  data: { qrcode?: { base64?: string } }
+  data: { qrcode?: { code?: string; base64?: string } }
 ): Promise<void> {
-  const qr = data?.qrcode?.base64;
+  // Usar o texto bruto do QR ("code"), não o base64 da imagem PNG.
+  // O frontend usa uma lib que precisa do texto para renderizar o QR.
+  const qr = data?.qrcode?.code || data?.qrcode?.base64;
   if (!qr) return;
 
   const whatsapp = await Whatsapp.findByPk(whatsappId);
